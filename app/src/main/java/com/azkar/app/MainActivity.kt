@@ -84,4 +84,10 @@ class MainActivity : AppCompatActivity() {
     fun pop() {
         supportFragmentManager.popBackStack()
     }
+
+    /** Resets the back stack and shows Home. */
+    fun goHome() {
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+    }
 }

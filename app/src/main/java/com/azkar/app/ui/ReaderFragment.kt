@@ -115,6 +115,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
         (view as SwipeLayout).apply {
             card = view.findViewById(R.id.card)
             canPage = { dir -> if (dir > 0) i < last else i > 0 }
+            // Only the LAST zikr, and only once its own count is complete, leaves the reader.
+            canFinish = { i == last && count >= items[i].target }
+            onFinish = { nav().goHome() }
             onPage = { dir ->
                 i += dir; count = 0
                 arScroll.scrollTo(0, 0)

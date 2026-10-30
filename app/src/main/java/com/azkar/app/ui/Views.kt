@@ -45,6 +45,9 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var card: View? = null
     var canPage: ((Int) -> Boolean)? = null
     var onPage: ((Int) -> Unit)? = null
+    var canFinish: (() -> Boolean)? = null
+    var onFinish: (() -> Unit)? = null
+    private var rawDx = 0f
 
     private val vc = android.view.ViewConfiguration.get(ctx)
     private val slop = vc.scaledTouchSlop
@@ -142,6 +145,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
 
     private fun drag(dx: Float) {
         val c = card ?: return
+        rawDx = dx
         val d = dx - kotlin.math.sign(dx) * slop
         val ok = canPage?.invoke(dirOf(d)) ?: false
         val t = if (ok) d else d * 0.25f          // rubber band at the first/last azkar
@@ -158,16 +162,22 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         val ok = canPage?.invoke(dir) ?: false
         val farEnough = kotlin.math.abs(t) > width * 0.28f
         val flung = kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(t) && kotlin.math.abs(t) > slop * 2
+        val rawFar = kotlin.math.abs(rawDx) > width * 0.2f ||
+            (kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(rawDx) && kotlin.math.abs(rawDx) > slop * 2)
+        val finish = up && dir == 1 && !ok && rawFar && (canFinish?.invoke() == true)
+        rawDx = 0f
         if (up && ok && (farEnough || flung)) commit(c, dir)
+        else if (finish) { c.translationX = 0f; c.alpha = 1f; onFinish?.invoke() }
         else c.animate().translationX(0f).alpha(1f).setDuration(200)
             .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
     }
 
-    /** Next zikr, or a small bounce if this is the last one (never leaves the reader). */
+    /** Next zikr; on the last one, leaves only if its count is complete, otherwise a small bounce. */
     fun next() {
         val c = card ?: return
         if (busy) return
         if (canPage?.invoke(1) == true) commit(c, 1)
+        else if (canFinish?.invoke() == true) onFinish?.invoke()
         else c.animate().translationX(-12 * dp).setDuration(90)
             .withEndAction { c.animate().translationX(0f).setDuration(160).start() }.start()
     }

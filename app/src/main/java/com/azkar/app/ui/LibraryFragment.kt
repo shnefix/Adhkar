@@ -8,7 +8,9 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
+import android.content.res.ColorStateList
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Store
@@ -21,15 +23,13 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val list = view.findViewById<LinearLayout>(R.id.list)
         val search = view.findViewById<EditText>(R.id.search)
 
+        fun count(n: Int) = if (n == 1) "1 zikr" else "$n azkar"
+
         fun render(q: String) {
             list.removeAllViews()
             val query = q.trim().lowercase()
             val shown = Builtins.library.filter {
                 query.isEmpty() || it.title.lowercase().contains(query) || it.libraryArabic.contains(query)
-            }
-            val mine = Store.libraryZikrs().filter { z ->
-                query.isEmpty() || z.arabic.contains(query) || z.note.lowercase().contains(query) ||
-                    Store.folderName(z.folderId).lowercase().contains(query)
             }
             shown.forEachIndexed { i, c ->
                 val v = layoutInflater.inflate(R.layout.item_library, list, false)
@@ -39,22 +39,28 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
                 v.setOnClickListener { nav().push(ReaderFragment.of(c.key)) }
                 list.addView(v, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
             }
-            if (mine.isNotEmpty()) {
-                list.addView(Ui.caps(ctx, "My azkar"), Ui.lp(top = if (shown.isNotEmpty()) 20 else 0, ctx = ctx))
-                mine.forEachIndexed { i, z ->
-                    val v = layoutInflater.inflate(R.layout.item_library_zikr, list, false)
-                    v.findViewById<TextView>(R.id.chip).apply {
-                        text = Store.folderName(z.folderId)
-                        setTextColor(ctx.getColor(if (z.folderId == null || Store.isBuiltinFolder(z.folderId)) R.color.teal else R.color.gold))
+
+            // Folders: yours (Family, Friday, ...) plus "Anytime" for azkar with no folder.
+            val anytimeN = Store.zikrs().count { it.folderId == null }
+            val folderRows = Store.folders().map { Triple(it.id, it.name, Store.zikrsIn(it.id).size) } +
+                (if (anytimeN > 0) listOf(Triple("anytime", "Anytime", anytimeN)) else emptyList())
+            val folders = folderRows.filter { query.isEmpty() || it.second.lowercase().contains(query) }
+            if (folders.isNotEmpty()) {
+                list.addView(Ui.caps(ctx, "My folders"), Ui.lp(top = if (shown.isNotEmpty()) 20 else 0, ctx = ctx))
+                folders.forEachIndexed { i, (id, name, n) ->
+                    val v = layoutInflater.inflate(R.layout.item_library, list, false)
+                    v.findViewById<ImageView>(R.id.ic).apply {
+                        setImageResource(R.drawable.ic_folder_1p75)
+                        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(ctx.getColor(R.color.gold)))
                     }
-                    v.findViewById<TextView>(R.id.rep).text = "×${z.repeat}"
-                    v.findViewById<TextView>(R.id.ar).text = z.arabic
-                    v.findViewById<TextView>(R.id.note).apply {
-                        text = z.note
-                        visibility = if (z.note.isBlank()) View.GONE else View.VISIBLE
+                    v.findViewById<TextView>(R.id.title).text = name
+                    v.findViewById<TextView>(R.id.sub_ar).apply {
+                        text = count(n)
+                        textSize = 14f
+                        typeface = Ui.font(ctx, R.font.dm_sans_regular)
+                        textDirection = View.TEXT_DIRECTION_LTR
                     }
-                    v.setOnClickListener { nav().push(ReaderFragment.of(Store.readerKey(z), Store.readerIndex(z))) }
-                    v.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
+                    v.setOnClickListener { nav().push(FolderFragment.of(id)) }
                     list.addView(v, Ui.lp(top = if (i > 0) 8 else 10, ctx = ctx))
                 }
             }

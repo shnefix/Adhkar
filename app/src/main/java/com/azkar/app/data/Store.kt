@@ -172,6 +172,7 @@ object Store {
     // ---------- Reader content ----------
     /** Built-in azkar for a collection followed by azkar the user filed in it. */
     fun readerItems(key: String): List<ReaderItem> {
+        if (key == "anytime") return zikrs().filter { it.folderId == null }.map { ReaderItem(it.arabic, it.repeat) }
         if (key.startsWith("zikr:")) {
             return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat)) } ?: emptyList()
         }
@@ -179,12 +180,10 @@ object Store {
         return base + zikrsIn(key).map { ReaderItem(it.arabic, it.repeat) }
     }
 
-    /** Reader key that opens [z] inside its own collection/folder ("Anytime" azkar open on their own). */
-    fun readerKey(z: Zikr): String = z.folderId ?: "zikr:${z.id}"
+    fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
 
-    /** Position of [z] inside that reader list. */
     fun readerIndex(z: Zikr): Int {
-        val f = z.folderId ?: return 0
+        val f = z.folderId ?: return zikrs().filter { it.folderId == null }.indexOfFirst { it.id == z.id }.coerceAtLeast(0)
         val base = Builtins.byKey(f)?.items?.size ?: 0
         return base + zikrsIn(f).indexOfFirst { it.id == z.id }.coerceAtLeast(0)
     }
