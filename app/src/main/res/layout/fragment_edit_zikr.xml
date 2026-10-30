@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
+<LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<FrameLayout android:id="@+id/btn_close" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Cancel" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_close_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+<TextView style="@style/TB" android:text="Edit zikr" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<View android:layout_width="44dp" android:layout_height="44dp"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Arabic text" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:textColorHint="#757575"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Meaning or note (optional)" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<EditText style="@style/T" android:id="@+id/note" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:hint="Meaning or note" android:textColorHint="#757575" android:gravity="center_vertical"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Repeat" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="Times to recite" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="48dp" android:gravity="center_vertical" android:background="@drawable/bg_in24">
+<FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="Fewer repeats" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+<TextView style="@style/TB" android:text="3" android:textSize="20sp" android:textColor="@color/text" android:id="@+id/n" android:gravity="center" android:minWidth="44dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="More repeats" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Folder" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<com.azkar.app.ui.FlowLayout android:id="@+id/chips" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="16dp"/>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_save" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="16dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_check_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
+<TextView style="@style/TB" android:text="Save changes" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_delete" android:layout_height="48dp" android:gravity="center" android:background="@drawable/bg_danger24" android:clickable="true" android:focusable="true" android:layout_marginTop="12dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_trash_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/danger"/>
+<TextView style="@style/TB" android:text="Delete zikr" android:textSize="16sp" android:textColor="@color/danger" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+</LinearLayout>
+</ScrollView>

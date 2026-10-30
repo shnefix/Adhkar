@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0D2124</color>
+    <color name="text">#EDF4F1</color>
+    <color name="card">#153237</color>
+    <color name="border">#234A4B</color>
+    <color name="card2">#1B3E43</color>
+    <color name="border2">#2B5A58</color>
+    <color name="gold">#E8B44A</color>
+    <color name="teal">#7FD1B9</color>
+    <color name="muted">#9DB8B3</color>
+    <color name="light">#C3D6D1</color>
+    <color name="arabic">#F6EFD9</color>
+    <color name="nav_bg">#0A1A1D</color>
+    <color name="nav_border">#1F4143</color>
+    <color name="track">#24504F</color>
+    <color name="danger">#F4A59B</color>
+    <color name="icon_bg">#153237</color>
+</resources>

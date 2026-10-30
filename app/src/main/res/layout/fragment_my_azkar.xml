@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
+<ScrollView android:id="@+id/scroll" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingBottom="88dp" android:clipToPadding="false" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
+<LinearLayout android:orientation="vertical" android:id="@+id/content" android:paddingTop="60dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="My azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="Dhikr and duas you have added yourself." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_add" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="16dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
+<TextView style="@style/TB" android:text="Add new zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="0dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/folders" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+<TextView style="@style/Caps" android:text="Saved" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/saved" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+</ScrollView>
+<include layout="@layout/view_nav" android:layout_width="match_parent" android:layout_height="88dp" android:layout_gravity="bottom"/>
+</FrameLayout>
