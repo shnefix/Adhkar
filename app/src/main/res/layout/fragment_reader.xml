@@ -28,11 +28,6 @@
 </com.azkar.app.ui.RingView>
 <LinearLayout android:orientation="horizontal" android:layout_height="24dp" android:gravity="center" android:layout_marginTop="14dp" android:layout_width="match_parent">
 <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:id="@+id/hint" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_marginStart="8dp" android:gravity="center_vertical" android:layout_height="wrap_content">
-<ImageView android:src="@drawable/ic_chev_r_2p25" android:layout_width="16dp" android:layout_height="16dp" android:tint="@color/gold" android:alpha="0.45"/>
-<ImageView android:src="@drawable/ic_chev_r_2p25" android:layout_width="16dp" android:layout_height="16dp" android:tint="@color/gold" android:alpha="0.75" android:layout_marginStart="-8dp"/>
-<ImageView android:src="@drawable/ic_chev_r_2p25" android:layout_width="16dp" android:layout_height="16dp" android:tint="@color/gold" android:layout_marginStart="-8dp"/>
-</LinearLayout>
 </LinearLayout>
 </LinearLayout>
 </com.azkar.app.ui.SwipeLayout>
