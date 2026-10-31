@@ -13,7 +13,7 @@ import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.View
-import android.widget.EditText
+import android.widget.EditTextwwwww
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
