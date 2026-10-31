@@ -17,6 +17,7 @@ object Store {
     private const val K_PLACE = "home_place"
     private const val K_TRANS = "show_translation"
     private const val K_SIZE = "arabic_size"
+    private const val K_THEME = "theme_mode"
     private const val K_REM = "reminder_"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
@@ -231,6 +232,10 @@ object Store {
     /** 0 = small, 1 = medium (default), 2 = large. */
     fun arabicSize() = sp.getInt(K_SIZE, 1)
     fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
+
+    /** 0 = current teal theme (default), 1 = OLED black. */
+    fun theme() = sp.getInt(K_THEME, 0)
+    fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
 
     fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
 

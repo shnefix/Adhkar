@@ -9,9 +9,10 @@
         <item name="android:textColor">@color/text</item>
         <item name="android:fontFamily">@font/dm_sans_regular</item>
         <item name="android:textColorHint">@color/muted</item>
-        <item name="android:textColorHighlight">#55E8B44A</item>
+        <item name="android:textColorHighlight">@color/gold_highlight</item>
         <item name="colorControlActivated">@color/gold</item>
         <item name="android:forceDarkAllowed">false</item>
+        <item name="alertDialogTheme">@style/AzkarAlertDialog</item>
     </style>
 
     <!-- Base text -->
@@ -39,4 +40,5 @@
         <item name="android:stateListAnimator">@null</item>
         <item name="android:includeFontPadding">false</item>
     </style>
+    <style name="AzkarAlertDialog" parent="Theme.AppCompat.Dialog.Alert"/>
 </resources>

@@ -1,0 +1,644 @@
+ 
+============================== 
+FILE: app\src\main\java\com\azkar\app\ui\Ui.kt 
+============================== 
+package com.azkar.app.ui
+
+import android.content.Context
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.annotation.ColorRes
+import androidx.core.content.res.ResourcesCompat
+import com.azkar.app.MainActivity
+import com.azkar.app.R
+import androidx.fragment.app.Fragment
+
+fun Fragment.nav(): MainActivity = requireActivity() as MainActivity
+
+object Ui {
+    fun px(ctx: Context, dp: Float): Float = dp * ctx.resources.displayMetrics.density
+    fun pxi(ctx: Context, dp: Float): Int = px(ctx, dp).toInt()
+    fun color(ctx: Context, @ColorRes id: Int) = ctx.getColor(id)
+
+    fun shape(ctx: Context, fill: Int?, stroke: Int?, radiusDp: Float, dashed: Boolean = false): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = px(ctx, radiusDp)
+            if (fill != null) setColor(fill) else setColor(0)
+            if (stroke != null) {
+                if (dashed) setStroke(pxi(ctx, 1f), stroke, px(ctx, 3f), px(ctx, 3f))
+                else setStroke(pxi(ctx, 1f), stroke)
+            }
+        }
+
+    fun font(ctx: Context, id: Int) = ResourcesCompat.getFont(ctx, id)
+
+    /** Small helper for the "Caps" section labels. */
+    fun caps(ctx: Context, text: String): TextView =
+        TextView(ctx, null, 0, R.style.Caps).apply { this.text = text }
+
+    fun lp(w: Int = ViewGroup.LayoutParams.MATCH_PARENT, h: Int = ViewGroup.LayoutParams.WRAP_CONTENT, top: Int = 0, ctx: Context? = null): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(w, h).also { if (ctx != null && top != 0) it.topMargin = pxi(ctx, top.toFloat()) }
+
+    /** Rows of [cols] equally wide cells with [gap]dp between them. */
+    fun grid(ctx: Context, cells: List<View>, cols: Int, gap: Int): LinearLayout {
+        val root = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        cells.chunked(cols).forEachIndexed { r, rowCells ->
+            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for (c in 0 until cols) {
+                val cell = rowCells.getOrNull(c) ?: View(ctx)
+                val p = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                if (c > 0) p.marginStart = pxi(ctx, gap.toFloat())
+                row.addView(cell, p)
+            }
+            root.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
+                if (r > 0) it.topMargin = pxi(ctx, gap.toFloat())
+            })
+        }
+        return root
+    }
+
+    /** Folder/choice chip used on Add and Edit zikr. */
+    fun chip(ctx: Context, label: String, on: Boolean, isNew: Boolean, onClick: () -> Unit): TextView {
+        val gold = ctx.getColor(R.color.gold)
+        return TextView(ctx, null, 0, R.style.TB).apply {
+            text = label
+            textSize = 15f
+            gravity = Gravity.CENTER
+            minHeight = pxi(ctx, 44f)
+            setPadding(pxi(ctx, 16f), 0, pxi(ctx, 16f), 0)
+            setTextColor(if (on) ctx.getColor(R.color.bg) else if (isNew) gold else ctx.getColor(R.color.text))
+            background = if (on) shape(ctx, gold, gold, 22f)
+            else if (isNew) shape(ctx, null, gold, 22f, dashed = true)
+            else shape(ctx, null, ctx.getColor(R.color.border2), 22f)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+    }
+}
+ 
+============================== 
+FILE: app\src\main\java\com\azkar\app\ui\Views.kt 
+============================== 
+package com.azkar.app.ui
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.util.AttributeSet
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import com.azkar.app.R
+
+/** 140dp ring: track #24504F, progress arc from 12 o'clock clockwise, 122dp inner disc #0D2124. */
+class RingView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : FrameLayout(ctx, attrs) {
+    private var deg = 0f
+    private var arcColor = context.getColor(R.color.gold)
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.track) }
+    private val arc = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.bg) }
+
+    init { setWillNotDraw(false) }
+
+    fun setProgress(degrees: Float, color: Int) {
+        deg = degrees; arcColor = color; invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val d = resources.displayMetrics.density
+        val cx = width / 2f
+        val cy = height / 2f
+        val r = 70f * d
+        canvas.drawCircle(cx, cy, r, track)
+        if (deg > 0f) {
+            arc.color = arcColor
+            canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -90f, deg, true, arc)
+        }
+        canvas.drawCircle(cx, cy, 61f * d, inner)
+    }
+}
+
+/** Card-follows-finger swipe layout. dir: +1 = next (swipe left), -1 = previous (swipe right). */
+class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : LinearLayout(ctx, attrs) {
+    var card: View? = null
+    var canPage: ((Int) -> Boolean)? = null
+    var onPage: ((Int) -> Unit)? = null
+    var canFinish: (() -> Boolean)? = null
+    var onFinish: (() -> Unit)? = null
+    private var rawDx = 0f
+    private var finishing = false
+
+    private val vc = android.view.ViewConfiguration.get(ctx)
+    private val slop = vc.scaledTouchSlop
+    private val minFling = vc.scaledMinimumFlingVelocity * 8f
+    private val dp = resources.displayMetrics.density
+    private var downX = 0f
+    private var downY = 0f
+    private var dragging = false
+    private var tapOk = false
+    private var busy = false
+    private var vt: android.view.VelocityTracker? = null
+
+    /** Stops the system back gesture from stealing swipes that start at the screen edge. */
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            val w = r - l
+            val h = b - t
+            val c = card
+            val cy = if (c != null) (c.top + c.bottom) / 2 else h / 2
+            val half = (100 * dp).toInt()
+            val top = (cy - half).coerceAtLeast(0)
+            val bottom = (cy + half).coerceAtMost(h)
+            val edge = (40 * dp).toInt()
+            setSystemGestureExclusionRects(
+                listOf(android.graphics.Rect(0, top, edge, bottom), android.graphics.Rect(w - edge, top, w, bottom))
+            )
+        }
+    }
+
+    private fun inCard(x: Float, y: Float): Boolean {
+        val c = card ?: return false
+        return x >= c.left && x <= c.right && y >= c.top && y <= c.bottom
+    }
+
+    private fun far(e: MotionEvent) =
+        kotlin.math.hypot(e.x - downX, e.y - downY) > slop
+
+    private fun horizontal(e: MotionEvent) =
+        kotlin.math.abs(e.x - downX) > slop && kotlin.math.abs(e.x - downX) > kotlin.math.abs(e.y - downY) * 1.2f
+
+    private fun start(e: MotionEvent) {
+        downX = e.x; downY = e.y; dragging = false
+        tapOk = inCard(e.x, e.y)
+        vt?.recycle(); vt = android.view.VelocityTracker.obtain(); vt?.addMovement(e)
+    }
+
+    private fun finishTap(e: MotionEvent) {
+        if (tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) next()
+        tapOk = false
+    }
+
+    private fun cleanup() { vt?.recycle(); vt = null }
+
+    override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+        if (busy) return true
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> start(e)
+            MotionEvent.ACTION_MOVE -> {
+                vt?.addMovement(e)
+                if (!dragging && far(e)) tapOk = false
+                if (!dragging && horizontal(e)) { dragging = true; parent?.requestDisallowInterceptTouchEvent(true) }
+            }
+            MotionEvent.ACTION_UP -> { if (!dragging) finishTap(e); cleanup() }
+            MotionEvent.ACTION_CANCEL -> { tapOk = false; cleanup() }
+        }
+        return dragging
+    }
+
+    override fun onTouchEvent(e: MotionEvent): Boolean {
+        if (busy) return true
+        if (vt == null) vt = android.view.VelocityTracker.obtain()
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> start(e)
+            MotionEvent.ACTION_MOVE -> {
+                vt?.addMovement(e)
+                if (!dragging && far(e)) tapOk = false
+                if (!dragging && horizontal(e)) { dragging = true; parent?.requestDisallowInterceptTouchEvent(true) }
+                if (dragging) drag(e.x - downX)
+            }
+            MotionEvent.ACTION_UP -> {
+                vt?.addMovement(e)
+                if (dragging) release(true) else finishTap(e)
+                dragging = false; cleanup()
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                if (dragging) release(false)
+                dragging = false; tapOk = false; cleanup()
+            }
+        }
+        return true
+    }
+
+    private fun dirOf(t: Float) = if (t < 0f) 1 else -1   // finger moved left -> next
+
+    private fun drag(dx: Float) {
+        val c = card ?: return
+        rawDx = dx
+        val d = dx - kotlin.math.sign(dx) * slop
+        val ok = canPage?.invoke(dirOf(d)) ?: false
+        val t = if (ok) d else d * 0.25f          // rubber band at the first/last azkar
+        c.translationX = t
+        c.alpha = 1f - 0.6f * minOf(kotlin.math.abs(t) / width.coerceAtLeast(1), 1f)
+    }
+
+    private fun release(up: Boolean) {
+        val c = card ?: return
+        vt?.computeCurrentVelocity(1000)
+        val vx = vt?.xVelocity ?: 0f
+        val t = c.translationX
+        val dir = dirOf(t)
+        val ok = canPage?.invoke(dir) ?: false
+        val farEnough = kotlin.math.abs(t) > width * 0.28f
+        val flung = kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(t) && kotlin.math.abs(t) > slop * 2
+        val rawFar = kotlin.math.abs(rawDx) > 48 * dp ||
+            (kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(rawDx))
+        val finish = up && dir == 1 && !ok && rawFar && (canFinish?.invoke() == true)
+        rawDx = 0f
+        if (up && ok && (farEnough || flung)) commit(c, dir)
+        else if (finish) { c.animate().cancel(); c.translationX = 0f; c.alpha = 1f; fireFinish() }
+        else c.animate().translationX(0f).alpha(1f).setDuration(200)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+    }
+
+    private fun fireFinish() {
+        if (finishing) return
+        finishing = true
+        post { onFinish?.invoke() }   // never change fragments in the middle of touch dispatch
+    }
+
+    /** Next zikr; on the last one, leaves only if its count is complete, otherwise a small bounce. */
+    fun next() {
+        val c = card ?: return
+        if (busy || finishing) return
+        if (canPage?.invoke(1) == true) commit(c, 1)
+        else if (canFinish?.invoke() == true) fireFinish()
+        else c.animate().translationX(-12 * dp).setDuration(90)
+            .withEndAction { c.animate().translationX(0f).setDuration(160).start() }.start()
+    }
+
+    private fun commit(c: View, dir: Int) {
+        busy = true
+        val w = width.toFloat()
+        c.animate().translationX(-dir * w).alpha(0f).setDuration(140)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                onPage?.invoke(dir)
+                c.translationX = dir * w * 0.35f   // new card enters from the side you swiped toward
+                c.alpha = 0f
+                c.animate().translationX(0f).alpha(1f).setDuration(220)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction { busy = false }.start()
+            }.start()
+    }
+}
+
+/** 52x32 track with 24dp knob, right-aligned in a 56x44 touch area. */
+class ToggleSwitch @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : View(ctx, attrs) {
+    var on = false
+        set(v) { field = v; invalidate() }
+    var onToggle: ((Boolean) -> Unit)? = null
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    init {
+        isClickable = true
+        isFocusable = true
+        setOnClickListener { on = !on; onToggle?.invoke(on) }
+    }
+
+    override fun onDraw(c: Canvas) {
+        val d = resources.displayMetrics.density
+        val left = width - 52f * d
+        val top = (height - 32f * d) / 2f
+        p.color = context.getColor(if (on) R.color.gold else R.color.track)
+        c.drawRoundRect(RectF(left, top, left + 52f * d, top + 32f * d), 16f * d, 16f * d, p)
+        p.color = context.getColor(if (on) R.color.bg else R.color.muted)
+        val kx = left + (if (on) 24f else 4f) * d + 12f * d
+        c.drawCircle(kx, top + 4f * d + 12f * d, 12f * d, p)
+    }
+}
+
+/** Wrapping row layout with 8dp gaps (flex-wrap). */
+class FlowLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : ViewGroup(ctx, attrs) {
+    private val gap = (8 * resources.displayMetrics.density).toInt()
+
+    override fun onMeasure(wSpec: Int, hSpec: Int) {
+        val maxW = MeasureSpec.getSize(wSpec) - paddingLeft - paddingRight
+        var x = 0; var y = 0; var lineH = 0
+        for (i in 0 until childCount) {
+            val c = getChildAt(i)
+            if (c.visibility == GONE) continue
+            c.measure(MeasureSpec.makeMeasureSpec(maxW, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            if (x > 0 && x + c.measuredWidth > maxW) { x = 0; y += lineH + gap; lineH = 0 }
+            x += c.measuredWidth + gap
+            lineH = maxOf(lineH, c.measuredHeight)
+        }
+        setMeasuredDimension(MeasureSpec.getSize(wSpec), y + lineH + paddingTop + paddingBottom)
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        val maxW = r - l - paddingLeft - paddingRight
+        var x = 0; var y = 0; var lineH = 0
+        for (i in 0 until childCount) {
+            val c = getChildAt(i)
+            if (c.visibility == GONE) continue
+            if (x > 0 && x + c.measuredWidth > maxW) { x = 0; y += lineH + gap; lineH = 0 }
+            c.layout(paddingLeft + x, paddingTop + y, paddingLeft + x + c.measuredWidth, paddingTop + y + c.measuredHeight)
+            x += c.measuredWidth + gap
+            lineH = maxOf(lineH, c.measuredHeight)
+        }
+    }
+}
+ 
+============================== 
+FILE: app\src\main\java\com\azkar\app\ui\Tabs.kt 
+============================== 
+package com.azkar.app.ui
+
+import android.content.res.ColorStateList
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import com.azkar.app.R
+
+enum class Tab(val root: Int, val ic: Int, val tx: Int) {
+    HOME(R.id.nav_home, R.id.nav_home_ic, R.id.nav_home_tx),
+    LIBRARY(R.id.nav_library, R.id.nav_library_ic, R.id.nav_library_tx),
+    MY(R.id.nav_my, R.id.nav_my_ic, R.id.nav_my_tx),
+    REMINDERS(R.id.nav_rem, R.id.nav_rem_ic, R.id.nav_rem_tx)
+}
+
+/** Colours the bottom bar for [active] (gold + bold) and wires tab switching. */
+fun Fragment.bindNav(view: View, active: Tab) {
+    val ctx = requireContext()
+    val gold = ctx.getColor(R.color.gold)
+    val muted = ctx.getColor(R.color.muted)
+    val bold = Ui.font(ctx, R.font.dm_sans_bold)
+    val medium = Ui.font(ctx, R.font.dm_sans_medium)
+    for (t in Tab.values()) {
+        val on = t == active
+        view.findViewById<ImageView>(t.ic).imageTintList = ColorStateList.valueOf(if (on) gold else muted)
+        view.findViewById<TextView>(t.tx).apply {
+            setTextColor(if (on) gold else muted)
+            typeface = if (on) bold else medium
+        }
+        view.findViewById<View>(t.root).setOnClickListener { nav().openTab(t) }
+    }
+}
+ 
+============================== 
+FILE: app\src\main\java\com\azkar\app\ui\ReaderFragment.kt 
+============================== 
+package com.azkar.app.ui
+
+import android.os.Bundle
+import android.os.SystemClock
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.core.os.bundleOf
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.fragment.app.Fragment
+import com.azkar.app.R
+import com.azkar.app.data.Builtins
+import com.azkar.app.data.Store
+
+class ReaderFragment : Fragment(R.layout.fragment_reader) {
+    private lateinit var rn: ReaderNav
+    private var lastBack = 0L
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::rn.isInitialized) { outState.putInt("i", rn.index); outState.putInt("count", rn.count) }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val ctx = requireContext()
+        view.keepScreenOn = true
+        view.isHapticFeedbackEnabled = false
+        view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
+        view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
+
+        val key = requireArguments().getString("key") ?: "morning"
+        val items = Store.readerItems(key)
+        if (items.isEmpty()) { nav().pop(); return }
+        rn = ReaderNav(
+            items.map { it.target },
+            savedInstanceState?.getInt("i") ?: requireArguments().getInt("start", 0),
+            savedInstanceState?.getInt("count") ?: 0
+        )
+        val folderTitle = Store.folderName(key)
+        val title = if (key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") &&
+            Builtins.byKey(key)?.title == folderTitle) "$folderTitle azkar" else folderTitle
+        val sizeSp = intArrayOf(20, 26, 32)[Store.arabicSize().coerceIn(0, 2)]
+        val gold = ctx.getColor(R.color.gold)
+        val teal = ctx.getColor(R.color.teal)
+        val track = ctx.getColor(R.color.track)
+
+        // Full screen: small margins plus whatever the cutout / bars need.
+        val d = resources.displayMetrics.density
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            v.setPadding((16 * d).toInt() + b.left, (12 * d).toInt() + b.top, (16 * d).toInt() + b.right, (16 * d).toInt() + b.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(view)
+
+        // A stray system back (edge swipe) must not close the reader: it needs a second press.
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastBack < 2000) nav().pop()
+                else { lastBack = now; Toast.makeText(ctx, "Press back again to leave", Toast.LENGTH_SHORT).show() }
+            }
+        })
+
+        view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
+        view.findViewById<TextView>(R.id.title).text = title
+        val ar = view.findViewById<TextView>(R.id.ar).apply {
+            textSize = sizeSp.toFloat()
+            val lhPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sizeSp * 1.85f, resources.displayMetrics)
+            androidx.core.widget.TextViewCompat.setLineHeight(this, lhPx.toInt())
+        }
+        val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
+        val segs = view.findViewById<LinearLayout>(R.id.segs)
+        val ring = view.findViewById<RingView>(R.id.ring)
+        val countTv = view.findViewById<TextView>(R.id.count)
+        val sub = view.findViewById<TextView>(R.id.sub)
+        val hint = view.findViewById<TextView>(R.id.hint)
+        val pos = view.findViewById<TextView>(R.id.pos)
+
+        fun render() {
+            val i = rn.index
+            val cur = items[i]
+            val done = rn.isDone
+            ar.text = cur.arabic
+            pos.text = "${i + 1} of ${items.size}"
+            segs.removeAllViews()
+            items.indices.forEach { k ->
+                val c = if (k < i) teal else if (k == i) gold else track
+                val seg = View(ctx).apply { background = Ui.shape(ctx, c, null, 2f) }
+                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 4f), 1f)
+                if (k > 0) p.marginStart = Ui.pxi(ctx, 6f)
+                segs.addView(seg, p)
+            }
+            countTv.text = rn.count.toString()
+            sub.text = if (done) "Done" else "of ${cur.target}"
+            ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
+            ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
+            hint.text = if (rn.isLast && cur.target > 1)
+                (if (done) "You have finished this collection" else "Tap the circle to count") else ""
+        }
+
+        ring.setOnClickListener {
+            if (rn.tapRing()) render()
+        }
+
+        (view as SwipeLayout).apply {
+            card = view.findViewById(R.id.card)
+            canPage = { dir -> rn.canPage(dir) }
+            canFinish = { rn.canFinish() }          // last zikr AND its own count complete
+            onFinish = { android.util.Log.d("AzkarNav", "finish: i=${rn.index} count=${rn.count}"); nav().goHome() }
+            onPage = { dir ->
+                if (dir > 0) rn.next() else rn.prev()
+                arScroll.scrollTo(0, 0)
+                render()
+            }
+        }
+        render()
+    }
+
+    private fun immersive(on: Boolean) {
+        val w = requireActivity().window
+        val c = WindowCompat.getInsetsController(w, w.decorView)
+        if (on) {
+            c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            c.hide(WindowInsetsCompat.Type.systemBars())
+        } else c.show(WindowInsetsCompat.Type.systemBars())
+    }
+
+    override fun onResume() { super.onResume(); immersive(true) }
+    override fun onDestroyView() { immersive(false); super.onDestroyView() }
+
+    companion object {
+        fun of(key: String, start: Int = 0) = ReaderFragment().apply { arguments = bundleOf("key" to key, "start" to start) }
+    }
+}
+ 
+============================== 
+FILE: app\src\main\res\layout\notification_reminder.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:padding="12dp" android:background="@drawable/bg_card20"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
+        <TextView android:id="@+id/n_title" android:fontFamily="@font/dm_sans_bold" android:textSize="15sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/n_body" android:fontFamily="@font/dm_sans_regular" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    </LinearLayout>
+    <TextView android:id="@+id/n_ar" android:fontFamily="@font/amiri_bold" android:textSize="22sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout> 
+============================== 
+FILE: app\src\main\res\layout\dialog_reminder.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Title" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<EditText style="@style/T" android:id="@+id/r_title" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="e.g. Afternoon azkar" android:textColorHint="#757575"/>
+<TextView style="@style/TB" android:text="Message" android:textSize="14sp" android:textColor="@color/light" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<EditText style="@style/T" android:id="@+id/r_msg" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="Time for your azkar · tap to read" android:textColorHint="#757575"/>
+<TextView style="@style/TB" android:text="Time" android:textSize="14sp" android:textColor="@color/light" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:id="@+id/r_time" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:gravity="center" android:background="@drawable/bg_in24" android:textColor="@color/gold" android:textSize="20sp" android:clickable="true" android:focusable="true"/>
+</LinearLayout> 
+============================== 
+FILE: app\src\main\res\layout\view_nav.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_height="88dp" android:background="@color/nav_bg" android:id="@+id/nav_bar" android:layout_gravity="bottom" android:layout_width="match_parent">
+<View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/nav_border"/>
+<LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="87dp" android:paddingTop="8dp" android:paddingBottom="20dp" android:paddingHorizontal="12dp">
+<LinearLayout android:orientation="vertical" android:id="@+id/nav_home" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent" android:gravity="center" android:clickable="true" android:focusable="true" android:minHeight="44dp">
+<ImageView android:src="@drawable/ic_home_1p75" android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/muted" android:id="@+id/nav_home_ic"/>
+<TextView style="@style/TM" android:text="Home" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_home_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:id="@+id/nav_library" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent" android:gravity="center" android:clickable="true" android:focusable="true" android:minHeight="44dp">
+<ImageView android:src="@drawable/ic_book_1p75" android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/muted" android:id="@+id/nav_library_ic"/>
+<TextView style="@style/TM" android:text="Library" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_library_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:id="@+id/nav_my" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent" android:gravity="center" android:clickable="true" android:focusable="true" android:minHeight="44dp">
+<ImageView android:src="@drawable/ic_addbox_1p75" android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/muted" android:id="@+id/nav_my_ic"/>
+<TextView style="@style/TM" android:text="My azkar" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_my_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:id="@+id/nav_rem" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent" android:gravity="center" android:clickable="true" android:focusable="true" android:minHeight="44dp">
+<ImageView android:src="@drawable/ic_bell_1p75" android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/muted" android:id="@+id/nav_rem_ic"/>
+<TextView style="@style/TM" android:text="Reminders" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_rem_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+ 
+============================== 
+FILE: app\src\main\res\layout\item_reminder.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<View android:layout_width="match_parent" android:layout_height="1dp" android:id="@+id/divider"/>
+<LinearLayout android:id="@+id/row" android:clickable="true" android:focusable="true" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="72dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/time" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw" android:layout_width="56dp" android:layout_height="44dp"/>
+</LinearLayout>
+</LinearLayout>
+ 
+============================== 
+FILE: app\src\main\res\layout\activity_main.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/container" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"/>
+ 
+============================== 
+FILE: app\src\main\AndroidManifest.xml 
+============================== 
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <application
+        android:name=".AzkarApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Azkar"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Azkar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".reminders.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

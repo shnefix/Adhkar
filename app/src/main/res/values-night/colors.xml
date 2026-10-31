@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The in-app "OLED black" theme. Do not override gold: the notification layouts rely on it staying constant. -->
+<resources>
+    <color name="bg">#000000</color>
+    <color name="text">#EDEDED</color>
+    <color name="card">#0B0B0B</color>
+    <color name="border">#1F1F1F</color>
+    <color name="card2">#141414</color>
+    <color name="border2">#2B2B2B</color>
+    <color name="muted">#9A9A9A</color>
+    <color name="light">#C8C8C8</color>
+    <color name="nav_bg">#000000</color>
+    <color name="nav_border">#1A1A1A</color>
+    <color name="track">#2E2E2E</color>
+    <color name="icon_bg">#0B0B0B</color>
+    <color name="hint">#7A7A7A</color>
+    <color name="dialog_bg">#121212</color>
+</resources>

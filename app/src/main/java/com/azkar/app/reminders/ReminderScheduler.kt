@@ -18,6 +18,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.azkar.app.MainActivity
 import com.azkar.app.R
+import com.azkar.app.ThemeMode
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
@@ -95,7 +96,10 @@ object ReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val ar = s.open?.let { Builtins.byKey(it)?.homeArabic } ?: ""
-        val rv = RemoteViews(ctx.packageName, R.layout.notification_reminder).apply {
+        // The system UI inflates RemoteViews with the device's night setting, not ours,
+        // so each theme has its own layout built only from colours that never flip.
+        val layout = if (Store.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
+        val rv = RemoteViews(ctx.packageName, layout).apply {
             setTextViewText(R.id.n_title, s.title)
             setTextViewText(R.id.n_body, s.message)
             setTextViewText(R.id.n_ar, ar)

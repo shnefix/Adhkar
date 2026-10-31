@@ -13,7 +13,7 @@
 <TextView style="@style/TB" android:text="Folder name" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:layout_height="52dp" android:paddingHorizontal="18dp" android:gravity="center_vertical" android:background="@drawable/bg_in26" android:layout_marginTop="8dp" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/gold"/>
-<EditText style="@style/T" android:id="@+id/fname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="Folder name" android:textColorHint="#757575" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:padding="0dp"/>
+<EditText style="@style/T" android:id="@+id/fname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="Folder name" android:textColorHint="@color/hint" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:padding="0dp"/>
 </LinearLayout>
 </LinearLayout>
 </LinearLayout>
