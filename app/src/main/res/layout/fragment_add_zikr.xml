@@ -13,10 +13,6 @@
 <EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:hint="اكتب الذكر هنا" android:textColorHint="#757575"/>
 <TextView style="@style/T" android:text="Tip: add the diacritics so it reads correctly." android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Meaning or note (optional)" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<EditText style="@style/T" android:id="@+id/note" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:hint="e.g. Glory and praise be to Allah" android:textColorHint="#757575" android:gravity="center_vertical"/>
-</LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">

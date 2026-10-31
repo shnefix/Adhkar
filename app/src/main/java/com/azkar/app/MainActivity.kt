@@ -82,11 +82,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun pop() {
+        android.util.Log.d("AzkarNav", "pop() called from:", Throwable())
         supportFragmentManager.popBackStack()
     }
 
     /** Resets the back stack and shows Home. */
     fun goHome() {
+        android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
         currentTab = Tab.HOME
         showRoot(HomeFragment())
     }

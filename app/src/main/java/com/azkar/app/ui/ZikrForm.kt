@@ -18,7 +18,7 @@ class ZikrForm(private val view: View, private val allowNew: Boolean, private va
         set(v) { field = v; renderChips(); onSelChanged(v) }
 
     val arabic: EditText = view.findViewById(R.id.ar)
-    val note: EditText = view.findViewById(R.id.note)
+    val note: EditText? = view.findViewById(R.id.note)
 
     init {
         view.findViewById<View>(R.id.btn_dec).setOnClickListener { if (n > 1) n-- }

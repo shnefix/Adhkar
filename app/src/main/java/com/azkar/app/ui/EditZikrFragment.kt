@@ -14,7 +14,7 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
         if (z == null) { nav().pop(); return }
         val form = ZikrForm(view, allowNew = false)
         form.arabic.setText(z.arabic)
-        form.note.setText(z.note)
+        form.note?.setText(z.note)
         form.n = z.repeat
         form.sel = z.folderId
 
@@ -22,7 +22,7 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
-            Store.updateZikr(z.copy(arabic = text, note = form.note.text.toString().trim(), repeat = form.n, folderId = form.sel))
+            Store.updateZikr(z.copy(arabic = text, note = form.note?.text?.toString()?.trim() ?: z.note, repeat = form.n, folderId = form.sel))
             nav().pop()
         }
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {

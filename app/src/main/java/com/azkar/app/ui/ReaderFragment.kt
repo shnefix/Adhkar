@@ -2,7 +2,6 @@ package com.azkar.app.ui
 
 import android.os.Bundle
 import android.os.SystemClock
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -20,32 +19,36 @@ import com.azkar.app.data.Builtins
 import com.azkar.app.data.Store
 
 class ReaderFragment : Fragment(R.layout.fragment_reader) {
-    private var i = 0
-    private var count = 0
+    private lateinit var rn: ReaderNav
     private var lastBack = 0L
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("i", i); outState.putInt("count", count)
+        if (::rn.isInitialized) { outState.putInt("i", rn.index); outState.putInt("count", rn.count) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
         view.keepScreenOn = true
+        view.isHapticFeedbackEnabled = false
+        view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
+        view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
 
         val key = requireArguments().getString("key") ?: "morning"
         val col = Builtins.byKey(key)
         val items = Store.readerItems(key)
         if (items.isEmpty()) { nav().pop(); return }
-        i = (savedInstanceState?.getInt("i") ?: requireArguments().getInt("start", 0)).coerceIn(0, items.size - 1)
-        count = savedInstanceState?.getInt("count") ?: 0
+        rn = ReaderNav(
+            items.map { it.target },
+            savedInstanceState?.getInt("i") ?: requireArguments().getInt("start", 0),
+            savedInstanceState?.getInt("count") ?: 0
+        )
         val title = when {
             key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") -> (col?.title ?: "") + " azkar"
             col != null -> col.title
             else -> Store.folderName(key)
         }
         val sizeSp = intArrayOf(20, 26, 32)[Store.arabicSize().coerceIn(0, 2)]
-        val last = items.size - 1
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)
         val track = ctx.getColor(R.color.track)
@@ -84,8 +87,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
         val pos = view.findViewById<TextView>(R.id.pos)
 
         fun render() {
+            val i = rn.index
             val cur = items[i]
-            val done = count >= cur.target
+            val done = rn.isDone
             ar.text = cur.arabic
             pos.text = "${i + 1} of ${items.size}"
             segs.removeAllViews()
@@ -96,30 +100,23 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
                 if (k > 0) p.marginStart = Ui.pxi(ctx, 6f)
                 segs.addView(seg, p)
             }
-            countTv.text = count.toString()
+            countTv.text = rn.count.toString()
             sub.text = if (done) "Done" else "of ${cur.target}"
-            ring.setProgress(Math.round(count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
-            hint.text = if (i == last) (if (done) "You have finished this collection" else "Tap the circle to count") else ""
+            ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
+            hint.text = if (rn.isLast) (if (done) "You have finished this collection" else "Tap the circle to count") else ""
         }
 
         ring.setOnClickListener {
-            if (count < items[i].target) {
-                count++
-                render()
-                it.performHapticFeedback(
-                    if (count == items[i].target) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.VIRTUAL_KEY
-                )
-            }
+            if (rn.tapRing()) render()
         }
 
         (view as SwipeLayout).apply {
             card = view.findViewById(R.id.card)
-            canPage = { dir -> if (dir > 0) i < last else i > 0 }
-            // Only the LAST zikr, and only once its own count is complete, leaves the reader.
-            canFinish = { i == last && count >= items[i].target }
-            onFinish = { nav().goHome() }
+            canPage = { dir -> rn.canPage(dir) }
+            canFinish = { rn.canFinish() }          // last zikr AND its own count complete
+            onFinish = { android.util.Log.d("AzkarNav", "finish: i=${rn.index} count=${rn.count}"); nav().goHome() }
             onPage = { dir ->
-                i += dir; count = 0
+                if (dir > 0) rn.next() else rn.prev()
                 arScroll.scrollTo(0, 0)
                 render()
             }

@@ -26,7 +26,7 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
                 if (name.isEmpty()) null
                 else (Store.folders().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Store.addFolder(name)).id
             } else form.sel
-            Store.addZikr(text, form.note.text.toString().trim(), form.n, folderId)
+            Store.addZikr(text, "", form.n, folderId)
             nav().pop()
         }
     }

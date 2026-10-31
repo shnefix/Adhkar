@@ -48,6 +48,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var canFinish: (() -> Boolean)? = null
     var onFinish: (() -> Unit)? = null
     private var rawDx = 0f
+    private var finishing = false
 
     private val vc = android.view.ViewConfiguration.get(ctx)
     private val slop = vc.scaledTouchSlop
@@ -162,29 +163,34 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         val ok = canPage?.invoke(dir) ?: false
         val farEnough = kotlin.math.abs(t) > width * 0.28f
         val flung = kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(t) && kotlin.math.abs(t) > slop * 2
-        val rawFar = kotlin.math.abs(rawDx) > width * 0.2f ||
-            (kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(rawDx) && kotlin.math.abs(rawDx) > slop * 2)
+        val rawFar = kotlin.math.abs(rawDx) > 48 * dp ||
+            (kotlin.math.abs(vx) > minFling && kotlin.math.sign(vx) == kotlin.math.sign(rawDx))
         val finish = up && dir == 1 && !ok && rawFar && (canFinish?.invoke() == true)
         rawDx = 0f
         if (up && ok && (farEnough || flung)) commit(c, dir)
-        else if (finish) { c.translationX = 0f; c.alpha = 1f; onFinish?.invoke() }
+        else if (finish) { c.animate().cancel(); c.translationX = 0f; c.alpha = 1f; fireFinish() }
         else c.animate().translationX(0f).alpha(1f).setDuration(200)
             .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+    }
+
+    private fun fireFinish() {
+        if (finishing) return
+        finishing = true
+        post { onFinish?.invoke() }   // never change fragments in the middle of touch dispatch
     }
 
     /** Next zikr; on the last one, leaves only if its count is complete, otherwise a small bounce. */
     fun next() {
         val c = card ?: return
-        if (busy) return
+        if (busy || finishing) return
         if (canPage?.invoke(1) == true) commit(c, 1)
-        else if (canFinish?.invoke() == true) onFinish?.invoke()
+        else if (canFinish?.invoke() == true) fireFinish()
         else c.animate().translationX(-12 * dp).setDuration(90)
             .withEndAction { c.animate().translationX(0f).setDuration(160).start() }.start()
     }
 
     private fun commit(c: View, dir: Int) {
         busy = true
-        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
         val w = width.toFloat()
         c.animate().translationX(-dir * w).alpha(0f).setDuration(140)
             .setInterpolator(android.view.animation.AccelerateInterpolator())
