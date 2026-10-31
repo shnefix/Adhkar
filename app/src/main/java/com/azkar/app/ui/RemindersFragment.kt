@@ -89,6 +89,38 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
         renderSizes()
+        // Theme (same pill style as the Arabic text size selector)
+        val themes = view.findViewById<LinearLayout>(R.id.themes)
+        val themeNames = arrayOf("Teal (current)", "OLED black")
+        fun renderThemes() {
+            themes.removeAllViews()
+            val sel = Store.theme()
+            themeNames.forEachIndexed { idx, name ->
+                val on = idx == sel
+                val b = TextView(ctx, null, 0, R.style.TB).apply {
+                    text = name
+                    textSize = 15f
+                    gravity = Gravity.CENTER
+                    contentDescription = name + " theme"
+                    setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
+                    val line = if (on) ctx.getColor(R.color.gold) else ctx.getColor(R.color.border2)
+                    background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, line, 14f)
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        if (Store.theme() != idx) {
+                            Store.setTheme(idx)
+                            ThemeMode.apply(idx)   // recreates the activity; this screen is restored from the back stack
+                        }
+                        renderThemes()
+                    }
+                }
+                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
+                if (idx > 0) p.marginStart = Ui.pxi(ctx, 8f)
+                themes.addView(b, p)
+            }
+        }
+        renderThemes()
         renderList()
     }
 

@@ -98,7 +98,7 @@ object ReminderScheduler {
         val ar = s.open?.let { Builtins.byKey(it)?.homeArabic } ?: ""
         // The system UI inflates RemoteViews with the device's night setting, not ours,
         // so each theme has its own layout built only from colours that never flip.
-        val layout = R.layout.notification_reminder
+        val layout = if (Store.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
         val rv = RemoteViews(ctx.packageName, layout).apply {
             setTextViewText(R.id.n_title, s.title)
             setTextViewText(R.id.n_body, s.message)

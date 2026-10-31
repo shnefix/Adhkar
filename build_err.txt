@@ -1,0 +1,24 @@
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/reminders/ReminderScheduler.kt:101:32 Unresolved reference: theme
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:16:23 Unresolved reference: EditTextwwwww
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:93:59 Unresolved reference: themes
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:97:29 Unresolved reference: theme
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:111:35 Unresolved reference: theme
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:112:35 Unresolved reference: setTheme
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:179:36 Unresolved reference: EditText
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:180:34 Unresolved reference: EditText
+e: file:///C:/Users/foura/AzkarApp/app/src/main/java/com/azkar/app/ui/RemindersFragment.kt:219:42 Variable expected
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 36s
