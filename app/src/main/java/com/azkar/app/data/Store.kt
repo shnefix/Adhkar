@@ -6,7 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-/** Persistent local storage (SharedPreferences + JSON). Survives app restarts. */
+/** Persistent local storage (SharedPreferences + JSON), cached in memory. All writes go through the save* functions. */
 object Store {
     private lateinit var sp: SharedPreferences
 
@@ -15,17 +15,24 @@ object Store {
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
-    private const val K_TRANS = "show_translation"
     private const val K_SIZE = "arabic_size"
-    private const val K_THEME = "theme_mode"
     private const val K_REM = "reminder_"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
     private const val K_MIG = "builtins_v2"
 
+    // In-memory copies: the single source of truth for every screen.
+    private var zCache: List<Zikr> = emptyList()
+    private var fCache: List<Folder> = emptyList()
+    private var sCache: List<Schedule> = emptyList()
+
+    @Synchronized
     fun init(context: Context) {
         if (::sp.isInitialized) return
         sp = context.applicationContext.getSharedPreferences("azkar", Context.MODE_PRIVATE)
+        zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
+        fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
+        sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
         if (!sp.contains(K_ZIKRS)) seed()
         migrateBuiltins()
         migrateSchedules()
@@ -45,15 +52,14 @@ object Store {
     /** One time: the built-in collections become ordinary, fully editable folders with the same ids. */
     private fun migrateBuiltins() {
         if (sp.getBoolean(K_MIG, false)) return
-        val have = folders()
+        val have = fCache
         val missing = Builtins.library.filter { c -> have.none { it.id == c.key } }
         saveFolders(missing.map { Folder(it.key, it.title) } + have)
-        val old = zikrs()
         val seeded = missing.flatMap { c ->
             c.items.mapIndexed { n, r -> Zikr("b_${c.key}_$n", r.arabic, "", r.target, c.key) }
         }
-        saveZikrs(seeded + old)
-        setHidden(hidden() + setOf("morning", "worry", "forgiveness"))   // they were not on Home before
+        saveZikrs(seeded + zCache)
+        setHidden(hidden() + setOf("morning", "worry", "forgiveness"))
         sp.edit().putBoolean(K_MIG, true).apply()
     }
 
@@ -68,20 +74,37 @@ object Store {
             )
         )
     }
-
-    // ---------- Azkar ----------
-    fun zikrs(): List<Zikr> {
-        val arr = JSONArray(sp.getString(K_ZIKRS, "[]"))
+    // ---------- Parsing / saving (the only code that touches the caches) ----------
+    private fun parseZikrs(raw: String): List<Zikr> {
+        val arr = JSONArray(raw)
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Zikr(
-                o.getString("id"), o.getString("ar"), o.optString("note", ""), o.optInt("n", 1),
-                if (o.isNull("f")) null else o.getString("f")
+            Zikr(o.getString("id"), o.getString("ar"), o.optString("note", ""), o.optInt("n", 1), if (o.isNull("f")) null else o.getString("f"))
+        }
+    }
+
+    private fun parseFolders(raw: String): List<Folder> {
+        val arr = JSONArray(raw)
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Folder(o.getString("id"), o.getString("name"), if (o.isNull("ic")) null else o.optString("ic", "").ifEmpty { null })
+        }
+    }
+
+    private fun parseSchedules(raw: String): List<Schedule> {
+        val arr = JSONArray(raw)
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Schedule(
+                o.getString("id"), o.optString("t", ""), o.optString("m", ""), o.optInt("h", 8), o.optInt("mi", 0),
+                o.optBoolean("on", true), if (o.isNull("open")) null else o.getString("open")
             )
         }
     }
 
+    @Synchronized
     private fun saveZikrs(list: List<Zikr>) {
+        zCache = list.toList()
         val arr = JSONArray()
         list.forEach {
             arr.put(JSONObject().put("id", it.id).put("ar", it.arabic).put("note", it.note).put("n", it.repeat)
@@ -90,59 +113,77 @@ object Store {
         sp.edit().putString(K_ZIKRS, arr.toString()).apply()
     }
 
-    fun zikr(id: String): Zikr? = zikrs().firstOrNull { it.id == id }
-    fun zikrsIn(folderId: String): List<Zikr> = zikrs().filter { it.folderId == folderId }
+    @Synchronized
+    private fun saveFolders(list: List<Folder>) {
+        fCache = list.toList()
+        val arr = JSONArray()
+        list.forEach { f ->
+            val o = JSONObject().put("id", f.id).put("name", f.name)
+            f.icon?.let { o.put("ic", it) }
+            arr.put(o)
+        }
+        sp.edit().putString(K_FOLDERS, arr.toString()).apply()
+    }
+
+    @Synchronized
+    private fun saveSchedules(list: List<Schedule>) {
+        sCache = list.toList()
+        val arr = JSONArray()
+        list.forEach {
+            arr.put(JSONObject().put("id", it.id).put("t", it.title).put("m", it.message).put("h", it.hour)
+                .put("mi", it.minute).put("on", it.enabled).put("open", it.open ?: JSONObject.NULL))
+        }
+        sp.edit().putString(K_SCHED, arr.toString()).apply()
+    }
+
+    // ---------- Azkar ----------
+    fun zikrs(): List<Zikr> = zCache
+    fun zikr(id: String): Zikr? = zCache.firstOrNull { it.id == id }
+    fun zikrsIn(folderId: String): List<Zikr> = zCache.filter { it.folderId == folderId }
+
+    /** Number of azkar per folder id (null key = Anytime), computed in one pass. */
+    fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
     fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?): Zikr {
-        zikrs().firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
+        zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
             val merged = it.copy(note = note.ifBlank { it.note }, repeat = repeat)
             updateZikr(merged)
             return merged
         }
         val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId)
-        saveZikrs(zikrs() + z)
+        saveZikrs(zCache + z)
         return z
     }
 
-    fun updateZikr(z: Zikr) = saveZikrs(zikrs().map { if (it.id == z.id) z else it })
-    fun deleteZikr(id: String) = saveZikrs(zikrs().filter { it.id != id })
+    fun updateZikr(z: Zikr) = saveZikrs(zCache.map { if (it.id == z.id) z else it })
+    fun deleteZikr(id: String) = saveZikrs(zCache.filter { it.id != id })
 
     /** Takes a zikr out of its folder (it stays saved as "Anytime"). */
-    fun unfile(id: String) = saveZikrs(zikrs().map { if (it.id == id) it.copy(folderId = null) else it })
+    fun unfile(id: String) = saveZikrs(zCache.map { if (it.id == id) it.copy(folderId = null) else it })
 
     /** Reorders the zikrs of one folder; other azkar keep their relative position. */
     fun reorderFolder(folderId: String, orderedIds: List<String>) {
-        val all = zikrs()
+        val all = zCache
         val byId = all.associateBy { it.id }
         val queue = orderedIds.mapNotNull { byId[it] }.toMutableList()
         saveZikrs(all.map { if (it.folderId == folderId && queue.isNotEmpty()) queue.removeAt(0) else it })
     }
-
     // ---------- Folders ----------
-    fun folders(): List<Folder> {
-        val arr = JSONArray(sp.getString(K_FOLDERS, "[]"))
-        return (0 until arr.length()).map { Folder(arr.getJSONObject(it).getString("id"), arr.getJSONObject(it).getString("name")) }
-    }
+    fun folders(): List<Folder> = fCache
+    fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
 
-    private fun saveFolders(list: List<Folder>) {
-        val arr = JSONArray()
-        list.forEach { arr.put(JSONObject().put("id", it.id).put("name", it.name)) }
-        sp.edit().putString(K_FOLDERS, arr.toString()).apply()
-    }
-
-    fun folder(id: String): Folder? = folders().firstOrNull { it.id == id }
-
-    fun addFolder(name: String): Folder {
-        val f = Folder(UUID.randomUUID().toString(), name)
-        saveFolders(folders() + f)
+    fun addFolder(name: String, icon: String? = null): Folder {
+        val f = Folder(UUID.randomUUID().toString(), name, icon)
+        saveFolders(fCache + f)
         return f
     }
 
-    fun renameFolder(id: String, name: String) = saveFolders(folders().map { if (it.id == id) it.copy(name = name) else it })
+    fun renameFolder(id: String, name: String) = saveFolders(fCache.map { if (it.id == id) it.copy(name = name) else it })
+    fun setFolderIcon(id: String, icon: String?) = saveFolders(fCache.map { if (it.id == id) it.copy(icon = icon) else it })
 
     /** Moves a folder up (-1) or down (+1) in the Library order. */
     fun moveFolder(id: String, d: Int) {
-        val l = folders().toMutableList()
+        val l = fCache.toMutableList()
         val i = l.indexOfFirst { it.id == id }
         val j = i + d
         if (i < 0 || j !in l.indices) return
@@ -150,17 +191,17 @@ object Store {
         saveFolders(l)
     }
 
-    fun folderIndex(id: String) = folders().indexOfFirst { it.id == id }
+    fun folderIndex(id: String) = fCache.indexOfFirst { it.id == id }
 
-    /** Deletes the folder; its azkar stay saved as "Anytime". */
+    /** Deletes the folder; its azkar stay saved as "Anytime" and reminders pointing at it just open the app. */
     fun deleteFolder(id: String) {
-        saveFolders(folders().filter { it.id != id })
-        saveZikrs(zikrs().map { if (it.folderId == id) it.copy(folderId = null) else it })
+        saveFolders(fCache.filter { it.id != id })
+        saveZikrs(zCache.map { if (it.folderId == id) it.copy(folderId = null) else it })
+        if (sCache.any { it.open == id }) saveSchedules(sCache.map { if (it.open == id) it.copy(open = null) else it })
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
     }
 
-    /** Display name for a folder key. */
     fun folderName(key: String?): String {
         if (key == null) return "Anytime"
         return folder(key)?.name ?: Builtins.byKey(key)?.title ?: "Anytime"
@@ -168,32 +209,20 @@ object Store {
 
     fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
 
-    data class ImportSummary(val created: Int, val merged: Int, val added: Int, val skipped: Int)
-
-    /** Creates missing folders, merges same-named ones (case-insensitive), skips exact duplicates. Never overwrites. */
-    fun importFolders(plan: List<ImportJson.FolderIn>): ImportSummary {
-        var created = 0; var merged = 0; var added = 0; var skipped = 0
-        val allZ = zikrs().toMutableList()
-        val fl = folders().toMutableList()
-        plan.forEach { f ->
-            val name = f.name.trim()
-            val existing = fl.firstOrNull { it.name.trim().equals(name, ignoreCase = true) }
-            val folder = existing ?: Folder(UUID.randomUUID().toString(), name).also { fl.add(it); created++ }
-            if (existing != null) merged++
-            f.items.forEach { item ->
-                if (allZ.any { z -> z.folderId == folder.id && z.arabic == item.text }) skipped++
-                else { allZ.add(Zikr(UUID.randomUUID().toString(), item.text, "", item.count, folder.id)); added++ }
-            }
-        }
-        saveFolders(fl)
-        saveZikrs(allZ)
-        return ImportSummary(created, merged, added, skipped)
+    // ---------- Import / export ----------
+    fun importAll(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
+        val (ns, sum) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
+        saveFolders(ns.folders); saveZikrs(ns.zikrs); saveSchedules(ns.schedules)
+        p.settings?.arabicSize?.let { setArabicSize(it) }
+        p.settings?.notificationsOn?.let { setNotificationsOn(it) }
+        return sum
     }
 
-    // ---------- Home customisation ----------
-    val defaultOrder: List<String> get() = folders().map { it.id }
+    fun exportJson(): String = ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn())
 
-    /** Effective order: saved order (pruned) followed by anything new. */
+    // ---------- Home customisation ----------
+    val defaultOrder: List<String> get() = fCache.map { it.id }
+
     fun homeOrder(): List<String> {
         val valid = defaultOrder
         val raw: String? = sp.getString(K_ORDER, null)
@@ -225,17 +254,10 @@ object Store {
         setHidden(setOf("morning", "worry", "forgiveness").filter { folder(it) != null }.toSet())
     }
 
-    // ---------- Reader / reminder settings ----------
-    fun showTranslation() = sp.getBoolean(K_TRANS, true)
-    fun setShowTranslation(v: Boolean) = sp.edit().putBoolean(K_TRANS, v).apply()
-
+    // ---------- Settings ----------
     /** 0 = small, 1 = medium (default), 2 = large. */
     fun arabicSize() = sp.getInt(K_SIZE, 1)
     fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
-
-    /** 0 = current teal theme (default), 1 = OLED black. */
-    fun theme() = sp.getInt(K_THEME, 0)
-    fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
 
     fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
 
@@ -243,39 +265,19 @@ object Store {
     fun notificationsOn() = sp.getBoolean(K_NOTIF, true)
     fun setNotificationsOn(v: Boolean) = sp.edit().putBoolean(K_NOTIF, v).apply()
 
-    fun schedules(): List<Schedule> {
-        val arr = JSONArray(sp.getString(K_SCHED, "[]"))
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Schedule(
-                o.getString("id"), o.optString("t", ""), o.optString("m", ""), o.optInt("h", 8), o.optInt("mi", 0),
-                o.optBoolean("on", true), if (o.isNull("open")) null else o.getString("open")
-            )
-        }
-    }
-
-    private fun saveSchedules(list: List<Schedule>) {
-        val arr = JSONArray()
-        list.forEach {
-            arr.put(JSONObject().put("id", it.id).put("t", it.title).put("m", it.message).put("h", it.hour)
-                .put("mi", it.minute).put("on", it.enabled).put("open", it.open ?: JSONObject.NULL))
-        }
-        sp.edit().putString(K_SCHED, arr.toString()).apply()
-    }
-
-    fun schedule(id: String): Schedule? = schedules().firstOrNull { it.id == id }
+    fun schedules(): List<Schedule> = sCache
+    fun schedule(id: String): Schedule? = sCache.firstOrNull { it.id == id }
     fun newScheduleId(): String = UUID.randomUUID().toString()
 
     fun upsertSchedule(s: Schedule) {
-        val l = schedules()
-        saveSchedules(if (l.any { it.id == s.id }) l.map { if (it.id == s.id) s else it } else l + s)
+        saveSchedules(if (sCache.any { it.id == s.id }) sCache.map { if (it.id == s.id) s else it } else sCache + s)
     }
 
-    fun deleteSchedule(id: String) = saveSchedules(schedules().filter { it.id != id })
+    fun deleteSchedule(id: String) = saveSchedules(sCache.filter { it.id != id })
 
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
-        if (key == "anytime") return zikrs().filter { it.folderId == null }.map { ReaderItem(it.arabic, it.repeat) }
+        if (key == "anytime") return zCache.filter { it.folderId == null }.map { ReaderItem(it.arabic, it.repeat) }
         if (key.startsWith("zikr:")) {
             return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat)) } ?: emptyList()
         }
@@ -285,7 +287,8 @@ object Store {
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
 
     fun readerIndex(z: Zikr): Int {
-        val f = z.folderId ?: return zikrs().filter { it.folderId == null }.indexOfFirst { it.id == z.id }.coerceAtLeast(0)
+        val f = z.folderId ?: return zCache.filter { it.folderId == null }.indexOfFirst { it.id == z.id }.coerceAtLeast(0)
         return zikrsIn(f).indexOfFirst { it.id == z.id }.coerceAtLeast(0)
     }
 }
+

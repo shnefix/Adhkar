@@ -13,7 +13,7 @@ import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.View
-import android.widget.EditTextwwwww
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -44,7 +44,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
-        bindNav(view, Tab.REMINDERS)
+        view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
 
         view.findViewById<ToggleSwitch>(R.id.sw_all).apply {
             on = Store.notificationsOn()
@@ -60,12 +60,6 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             if (Build.VERSION.SDK_INT >= 31) {
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
             }
-        }
-
-        // Show translation
-        view.findViewById<ToggleSwitch>(R.id.sw_tr).apply {
-            on = Store.showTranslation()
-            onToggle = { Store.setShowTranslation(it) }
         }
 
         // Arabic text size
@@ -95,38 +89,6 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
         renderSizes()
-        // Theme (same pill style as the Arabic text size selector)
-        val themes = view.findViewById<LinearLayout>(R.id.themes)
-        val themeNames = arrayOf("Teal (current)", "OLED black")
-        fun renderThemes() {
-            themes.removeAllViews()
-            val sel = Store.theme()
-            themeNames.forEachIndexed { idx, name ->
-                val on = idx == sel
-                val b = TextView(ctx, null, 0, R.style.TB).apply {
-                    text = name
-                    textSize = 15f
-                    gravity = Gravity.CENTER
-                    contentDescription = name + " theme"
-                    setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
-                    val line = if (on) ctx.getColor(R.color.gold) else ctx.getColor(R.color.border2)
-                    background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, line, 14f)
-                    isClickable = true
-                    isFocusable = true
-                    setOnClickListener {
-                        if (Store.theme() != idx) {
-                            Store.setTheme(idx)
-                            ThemeMode.apply(idx)   // recreates the activity; the Reminders tab is restored
-                        }
-                        renderThemes()
-                    }
-                }
-                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
-                if (idx > 0) p.marginStart = Ui.pxi(ctx, 8f)
-                themes.addView(b, p)
-            }
-        }
-        renderThemes()
         renderList()
     }
 
@@ -195,6 +157,19 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
         }
 
+        var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
+        val folderTv = v.findViewById<TextView>(R.id.r_folder)
+        fun folderLabel(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + f.name
+        fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: "Just open the app" }
+        showFolder()
+        folderTv.setOnClickListener {
+            val fs = Store.folders()
+            val names = arrayOf("Just open the app") + fs.map { folderLabel(it) }
+            AlertDialog.Builder(ctx).setTitle("Open folder")
+                .setItems(names) { _, which -> folder = if (which == 0) null else fs[which - 1].id; showFolder() }
+                .show()
+        }
+
         val b = AlertDialog.Builder(ctx)
             .setTitle(if (existing == null) "New reminder" else "Edit reminder")
             .setView(v)
@@ -212,7 +187,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 if (t.isEmpty()) { title.error = "Enter a title"; return@setOnClickListener }
                 val text = msg.text.toString().trim().ifEmpty { "Time for your azkar · tap to read" }
                 val s = (existing ?: Schedule(Store.newScheduleId(), t, text, h, m, true, null))
-                    .copy(title = t, message = text, hour = h, minute = m)
+                    .copy(title = t, message = text, hour = h, minute = m, open = folder)
                 Store.upsertSchedule(s)
                 ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
                 ReminderScheduler.apply(ctx, s)

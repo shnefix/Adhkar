@@ -10,8 +10,7 @@ import com.azkar.app.R
 enum class Tab(val root: Int, val ic: Int, val tx: Int) {
     HOME(R.id.nav_home, R.id.nav_home_ic, R.id.nav_home_tx),
     LIBRARY(R.id.nav_library, R.id.nav_library_ic, R.id.nav_library_tx),
-    MY(R.id.nav_my, R.id.nav_my_ic, R.id.nav_my_tx),
-    REMINDERS(R.id.nav_rem, R.id.nav_rem_ic, R.id.nav_rem_tx)
+    MY(R.id.nav_my, R.id.nav_my_ic, R.id.nav_my_tx)
 }
 
 /** Colours the bottom bar for [active] (gold + bold) and wires tab switching. */

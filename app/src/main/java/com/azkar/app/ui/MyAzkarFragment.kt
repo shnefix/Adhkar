@@ -5,25 +5,34 @@ import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
+import com.azkar.app.reminders.ReminderScheduler
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
-    private val picker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    private val importPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) readAndConfirm(uri)
+    }
+    private val exportPicker = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) writeExport(uri)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         bindNav(view, Tab.MY)
         view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(null)) }
         view.findViewById<View>(R.id.btn_import).setOnClickListener {
-            picker.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+            importPicker.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+        }
+        view.findViewById<View>(R.id.btn_export).setOnClickListener {
+            exportPicker.launch("azkar-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json")
         }
         render()
     }
@@ -31,10 +40,12 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
     private fun render() {
         val v = view ?: return
         val ctx = requireContext()
+        val counts = Store.zikrCounts()
 
         val tiles = Store.folders().map { f ->
-            val n = Store.zikrsIn(f.id).size
+            val n = counts[f.id] ?: 0
             layoutInflater.inflate(R.layout.item_folder_tile, null, false).apply {
+                Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
                 findViewById<TextView>(R.id.name).text = f.name
                 findViewById<TextView>(R.id.count).text = if (n == 1) "1 zikr" else "$n azkar"
                 setOnClickListener { nav().push(EditFolderFragment.of(f.id)) }
@@ -60,9 +71,24 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             row.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
             saved.addView(row, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
         }
+}
+    // ---------- Export ----------
+    private fun writeExport(uri: Uri) {
+        val ctx = requireContext()
+        try {
+            val text = Store.exportJson()   // read-only: builds the file from memory
+            ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                ?: throw java.io.IOException("Could not open the file for writing.")
+            AlertDialog.Builder(ctx).setTitle("Export complete")
+                .setMessage("Saved ${Store.folders().size} folders, ${Store.zikrs().size} azkar and ${Store.schedules().size} reminders.")
+                .setPositiveButton("OK", null).show()
+        } catch (e: Exception) {
+            AlertDialog.Builder(ctx).setTitle("Export failed")
+                .setMessage("The file could not be saved. " + (e.message ?: "")).setPositiveButton("OK", null).show()
+        }
     }
 
-    // ---------- Import from JSON ----------
+    // ---------- Import ----------
     private fun readAndConfirm(uri: Uri) {
         val ctx = requireContext()
         val raw = try {
@@ -73,7 +99,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             raw.length > 5_000_000 -> showError("The file is too large (over 5 MB).")
             else -> when (val p = ImportJson.parse(raw)) {
                 is ImportJson.Parsed.Error -> showError(p.message)
-                is ImportJson.Parsed.Ok -> confirm(p.folders)
+                is ImportJson.Parsed.Ok -> confirm(p)
             }
         }
     }
@@ -83,19 +109,23 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             .setPositiveButton("OK", null).show()
     }
 
-    private fun confirm(plan: List<ImportJson.FolderIn>) {
-        val nF = plan.size
-        val nA = plan.sumOf { it.items.size }
-        val existing = plan.count { f -> Store.folders().any { it.name.trim().equals(f.name.trim(), ignoreCase = true) } }
-        val lines = plan.take(8).joinToString("\n") { "• ${it.name}: ${it.items.size}" } + if (plan.size > 8) "\n…" else ""
-        var msg = "$nF folders and $nA azkar will be imported.\n\n$lines"
+    private fun confirm(p: ImportJson.Parsed.Ok) {
+        val nF = p.folders.size
+        val nA = p.folders.sumOf { it.items.size } + p.unfiled.size
+        val existing = p.folders.count { f -> Store.folders().any { it.id == f.id || it.name.trim().equals(f.name.trim(), ignoreCase = true) } }
+        val lines = p.folders.take(8).joinToString("\n") { "• ${it.name}: ${it.items.size}" } + if (p.folders.size > 8) "\n…" else ""
+        var msg = "$nF folders and $nA azkar will be imported."
+        if (p.reminders.isNotEmpty()) msg += " The file also has ${p.reminders.size} reminders."
+        if (p.settings != null) msg += " Your reading and notification settings will be restored."
+        if (lines.isNotEmpty()) msg += "\n\n$lines"
         if (existing > 0) msg += "\n\n$existing folder(s) already exist. Their azkar will be added to them, and exact duplicates are skipped. Nothing is overwritten."
         AlertDialog.Builder(requireContext()).setTitle("Import from JSON").setMessage(msg)
             .setPositiveButton("Import") { _, _ ->
-                val r = Store.importFolders(plan)
+                val r = Store.importAll(p)
+                ReminderScheduler.rescheduleAll(requireContext())
                 render()
                 AlertDialog.Builder(requireContext()).setTitle("Import complete")
-                    .setMessage("${r.created} new folders, ${r.merged} merged, ${r.added} azkar added, ${r.skipped} duplicates skipped.")
+                    .setMessage("${r.created} new folders, ${r.merged} merged, ${r.added} azkar added, ${r.skipped} duplicates skipped, ${r.reminders} reminders added.")
                     .setPositiveButton("OK", null).show()
             }
             .setNegativeButton("Cancel", null).show()

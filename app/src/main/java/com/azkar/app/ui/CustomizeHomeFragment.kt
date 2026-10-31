@@ -34,7 +34,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
 
         // ----- Preview -----
         val grid = Block(62, c(R.color.card), c(R.color.border), false, c(R.color.muted), "Collections")
-        val mixed = Block(78, c(R.color.card), gold, true, gold, "Collections + my folders")
+        val mixed = Block(78, c(R.color.card), gold, true, gold, "Collections and my folders")
         val folders = Block(30, null, gold, true, gold, "My folders")
         val pos = Store.placement()
         val blocks = when (pos) {
@@ -89,6 +89,8 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
                 setImageResource(if (builtin != null) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
                 imageTintList = ColorStateList.valueOf(c(if (builtin != null) R.color.teal else R.color.gold))
             }
+            Ui.folderIcon(v.findViewById(R.id.ic), v.findViewById(R.id.emoji), Store.folder(id)?.icon,
+                if (builtin != null) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
             v.findViewById<TextView>(R.id.name).text = Store.folder(id)?.name ?: ""
             v.findViewById<View>(R.id.up).alpha = if (idx == 0) 0.35f else 1f
             v.findViewById<View>(R.id.down).alpha = if (idx == last) 0.35f else 1f

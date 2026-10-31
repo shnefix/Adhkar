@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorRes
@@ -74,6 +75,18 @@ object Ui {
             isClickable = true
             isFocusable = true
             setOnClickListener { onClick() }
+        }
+    }
+    /** Shows the folder's emoji if it has one, otherwise the vector icon. */
+    fun folderIcon(img: ImageView, emoji: TextView, icon: String?, vector: Int) {
+        if (icon.isNullOrEmpty()) {
+            emoji.visibility = View.GONE
+            img.visibility = View.VISIBLE
+            img.setImageResource(vector)
+        } else {
+            img.visibility = View.GONE
+            emoji.visibility = View.VISIBLE
+            emoji.text = icon
         }
     }
 }

@@ -16,7 +16,6 @@ import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
 import com.azkar.app.ui.ReaderFragment
-import com.azkar.app.ui.RemindersFragment
 import com.azkar.app.ui.Tab
 
 class MainActivity : AppCompatActivity() {
@@ -57,12 +56,11 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    /** A reminder notification opens its collection in the reader. */
     private fun handleIntent(i: Intent?) {
         val key = i?.getStringExtra("open") ?: return
         i.removeExtra("open")
         showRoot(HomeFragment())
-        push(ReaderFragment.of(key))
+        if (Store.readerItems(key).isNotEmpty()) push(ReaderFragment.of(key))   // deleted or empty folder: just stay on Home
     }
 
     private fun showRoot(f: Fragment) {
@@ -78,7 +76,6 @@ class MainActivity : AppCompatActivity() {
                 Tab.HOME -> HomeFragment()
                 Tab.LIBRARY -> LibraryFragment()
                 Tab.MY -> MyAzkarFragment()
-                Tab.REMINDERS -> RemindersFragment()
             }
         )
     }

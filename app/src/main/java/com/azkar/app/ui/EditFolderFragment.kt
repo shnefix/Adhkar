@@ -60,6 +60,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         libDown.setOnClickListener { Store.moveFolder(id, 1); renderPos() }
         renderPos()
 
+        val iconBtn = view.findViewById<TextView>(R.id.icon_btn)
+        fun renderIcon() {
+            val e = Store.folder(id)?.icon
+            iconBtn.text = e ?: "Default"
+            iconBtn.textSize = if (e == null) 14f else 24f
+        }
+        iconBtn.setOnClickListener { pickEmoji(Store.folder(id)?.icon) { Store.setFolderIcon(id, it); renderIcon() } }
+        renderIcon()
+
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
         val empty = view.findViewById<View>(R.id.empty)

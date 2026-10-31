@@ -8,7 +8,7 @@ class AzkarApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.init(this)
-        ThemeMode.apply(Store.theme())   // before any activity exists
+        ThemeMode.apply(0)   // before any activity exists
         ReminderScheduler.createChannel(this)
         ReminderScheduler.rescheduleAll(this)
     }

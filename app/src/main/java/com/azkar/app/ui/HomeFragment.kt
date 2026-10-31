@@ -17,6 +17,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
         bindNav(view, Tab.HOME)
+        view.findViewById<View>(R.id.btn_notifications).setOnClickListener { nav().push(RemindersFragment()) }
         view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }
         val sections = view.findViewById<LinearLayout>(R.id.sections)
 
@@ -29,13 +30,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val c = Builtins.byKey(f.id)
             return if (c != null) {
                 layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
-                    findViewById<ImageView>(R.id.ic).setImageResource(c.icon)
+                    Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, c.icon)
                     findViewById<TextView>(R.id.title).text = f.name
                     findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
                     setOnClickListener { open(f) }
                 }
             } else {
                 layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
+                    Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
                     findViewById<TextView>(R.id.title).text = f.name
                     setOnClickListener { open(f) }
                 }

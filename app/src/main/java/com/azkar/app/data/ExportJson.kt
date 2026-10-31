@@ -1,0 +1,34 @@
+package com.azkar.app.data
+
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** Builds a backup file that ImportJson reads back. Read-only: never touches stored data. */
+object ExportJson {
+    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also { if (z.note.isNotBlank()) it.put("note", z.note) }
+
+    fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean): String {
+        val folders = JSONArray()
+        s.folders.forEach { f ->
+            val az = JSONArray()
+            s.zikrs.filter { it.folderId == f.id }.forEach { az.put(item(it)) }
+            val o = JSONObject().put("id", f.id).put("name", f.name)
+            f.icon?.let { o.put("icon", it) }
+            folders.put(o.put("azkar", az))
+        }
+        val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
+        val unfiled = JSONArray()
+        s.zikrs.filter { it.folderId == null }.forEach { unfiled.put(item(it)) }
+        if (unfiled.length() > 0) root.put("unfiled", unfiled)
+        val rems = JSONArray()
+        s.schedules.forEach {
+            val o = JSONObject().put("id", it.id).put("title", it.title).put("message", it.message)
+                .put("time", "%02d:%02d".format(it.hour, it.minute)).put("enabled", it.enabled)
+            it.open?.let { f -> o.put("folder", f) }
+            rems.put(o)
+        }
+        root.put("reminders", rems)
+        root.put("settings", JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn))
+        return root.toString(2)
+    }
+}

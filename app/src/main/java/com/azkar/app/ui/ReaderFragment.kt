@@ -64,7 +64,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
             override fun handleOnBackPressed() {
                 val now = SystemClock.uptimeMillis()
                 if (now - lastBack < 2000) nav().pop()
-                else { lastBack = now; Toast.makeText(ctx, "Press back again to leave", Toast.LENGTH_SHORT).show() }
+                else { lastBack = now; Toast.makeText(ctx, "Press back again to exit", Toast.LENGTH_SHORT).show() }
             }
         })
 

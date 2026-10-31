@@ -12,7 +12,7 @@ data class Zikr(
 )
 
 /** A folder the user created. */
-data class Folder(val id: String, val name: String)
+data class Folder(val id: String, val name: String, val icon: String? = null)
 
 /** One recitation inside the reader. */
 data class ReaderItem(val arabic: String, val target: Int)
@@ -29,7 +29,7 @@ data class Collection(
 
 enum class Placement(val key: String, val label: String) {
     TOP("top", "Top of Home"),
-    MIXED("mixed", "Mixed in collections"),
+    MIXED("mixed", "Mixed with collections"),
     BOTTOM("bottom", "Bottom of Home");
 
     companion object {
