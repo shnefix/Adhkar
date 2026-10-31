@@ -1,0 +1,111 @@
+app\src\main\res\drawable\bg_card18.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_card18.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_card20.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_card20.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_card22.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_card22.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_card24.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_card24.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_card28.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_card28.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_chipfill12.xml:3:    <solid android:color="#1B3E43"/>
+app\src\main\res\drawable\bg_chipline12.xml:3:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\bg_danger24.xml:3:    <stroke android:width="1dp" android:color="#7A3F3A"/>
+app\src\main\res\drawable\bg_dashgold18.xml:3:    <stroke android:width="1dp" android:color="#E8B44A" android:dashWidth="3dp" android:dashGap="3dp"/>
+app\src\main\res\drawable\bg_dashline20.xml:3:    <stroke android:width="1dp" android:color="#2B5A58" android:dashWidth="3dp" android:dashGap="3dp"/>
+app\src\main\res\drawable\bg_gold22.xml:3:    <solid android:color="#E8B44A"/>
+app\src\main\res\drawable\bg_gold28.xml:3:    <solid android:color="#E8B44A"/>
+app\src\main\res\drawable\bg_hero24.xml:3:    <solid android:color="#1B3E43"/>
+app\src\main\res\drawable\bg_hero24.xml:4:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\bg_icon20.xml:3:    <solid android:color="#1B3E43"/>
+app\src\main\res\drawable\bg_in20.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_in20.xml:4:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\bg_in24.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_in24.xml:4:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\bg_in26.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_in26.xml:4:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\bg_in26g.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_in26g.xml:4:    <stroke android:width="1dp" android:color="#E8B44A"/>
+app\src\main\res\drawable\bg_in26s.xml:3:    <solid android:color="#153237"/>
+app\src\main\res\drawable\bg_in26s.xml:4:    <stroke android:width="1dp" android:color="#234A4B"/>
+app\src\main\res\drawable\bg_prev18.xml:3:    <solid android:color="#0A1A1D"/>
+app\src\main\res\drawable\bg_prev18.xml:4:    <stroke android:width="1dp" android:color="#2B5A58"/>
+app\src\main\res\drawable\ic_addbox_1p75.xml:4:    <path android:pathData="M8,4h8a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-8a4,4 0 0 1 -4,-4v-8a4,4 0 0 1 4,-4z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_addbox_1p75.xml:5:    <path android:pathData="M12 8v8M8 12h8" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_bell_1p75.xml:4:    <path android:pathData="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_bell_1p75.xml:5:    <path android:pathData="M10 21h4" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_book_1p75.xml:4:    <path android:pathData="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_book_1p75.xml:5:    <path android:pathData="M5 17a3 3 0 0 1 3-3h10" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_check_2p25.xml:4:    <path android:pathData="M5 12l5 5L20 7" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_chev_dn_2p25.xml:4:    <path android:pathData="M6 9l6 6 6-6" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_chev_l_2.xml:4:    <path android:pathData="M15 6l-6 6 6 6" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_chev_r_2.xml:4:    <path android:pathData="M9 6l6 6-6 6" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_chev_r_2p25.xml:4:    <path android:pathData="M9 6l6 6-6 6" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_chev_up_2p25.xml:4:    <path android:pathData="M6 15l6-6 6 6" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_close_2.xml:4:    <path android:pathData="M6 6l12 12" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_close_2.xml:5:    <path android:pathData="M18 6L6 18" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_drop_1p75.xml:4:    <path android:pathData="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_eyeoff_1p75.xml:4:    <path android:pathData="M3 3l18 18" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_eyeoff_1p75.xml:5:    <path android:pathData="M10.6 6.1A9.6 9.6 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_eyeoff_1p75.xml:6:    <path android:pathData="M6.6 6.6C3.7 8.5 2 12 2 12s4 7 10 7a9.7 9.7 0 0 0 4-.9" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_eye_1p75.xml:4:    <path android:pathData="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_eye_1p75.xml:5:    <path android:pathData="M9,12a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_folder_1p75.xml:4:    <path android:pathData="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_heart_1p75.xml:4:    <path android:pathData="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_home_1p75.xml:4:    <path android:pathData="M4 11l8-7 8 7v9h-5v-6H9v6H4z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_launcher_fg.xml:5:        <path android:pathData="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" android:strokeColor="#E8B44A" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_minus_2p25.xml:4:    <path android:pathData="M5 12h14" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_moon_1p75.xml:4:    <path android:pathData="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_mosque_1p75.xml:4:    <path android:pathData="M5 20v-6a7 7 0 0 1 14 0v6" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_mosque_1p75.xml:5:    <path android:pathData="M3 20h18" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_mosque_1p75.xml:6:    <path android:pathData="M12 7V3" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_pencil_1p75.xml:4:    <path android:pathData="M4 20l4-1 11-11-3-3L5 16z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_pencil_1p75.xml:5:    <path android:pathData="M14 7l3 3" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_plus_2.xml:4:    <path android:pathData="M12 5v14" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_plus_2.xml:5:    <path android:pathData="M5 12h14" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_plus_2p25.xml:4:    <path android:pathData="M12 5v14" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_plus_2p25.xml:5:    <path android:pathData="M5 12h14" android:strokeColor="#FFFFFF" android:strokeWidth="2.25" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_search_1p75.xml:4:    <path android:pathData="M4,11a7,7 0 1,0 14,0a7,7 0 1,0 -14,0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_search_1p75.xml:5:    <path android:pathData="M20 20l-4-4" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:4:    <path android:pathData="M4 7h10" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:5:    <path android:pathData="M18 7h2" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:6:    <path android:pathData="M14,7a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:7:    <path android:pathData="M4 17h2" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:8:    <path android:pathData="M10 17h10" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sliders_1p75.xml:9:    <path android:pathData="M6,17a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_spark_1p75.xml:4:    <path android:pathData="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sunrise_1p75.xml:4:    <path android:pathData="M3 18h18" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sunrise_1p75.xml:5:    <path android:pathData="M7 18a5 5 0 0 1 10 0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sunrise_1p75.xml:6:    <path android:pathData="M12 6v3" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sunrise_1p75.xml:7:    <path android:pathData="M5 10l1.5 1.5" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sunrise_1p75.xml:8:    <path android:pathData="M19 10l-1.5 1.5" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sun_1p75.xml:4:    <path android:pathData="M8,12a4,4 0 1,0 8,0a4,4 0 1,0 -8,0" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_sun_1p75.xml:5:    <path android:pathData="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_trash_1p75.xml:4:    <path android:pathData="M5 7h14" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_trash_1p75.xml:5:    <path android:pathData="M10 7V5h4v2" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\drawable\ic_trash_1p75.xml:6:    <path android:pathData="M7 7l1 12h8l1-12" android:strokeColor="#FFFFFF" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+app\src\main\res\layout\dialog_reminder.xml:4:<EditText style="@style/T" android:id="@+id/r_title" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="e.g. Afternoon azkar" android:textColorHint="#757575"/>
+app\src\main\res\layout\dialog_reminder.xml:6:<EditText style="@style/T" android:id="@+id/r_msg" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="Time for your azkar · tap to read" android:textColorHint="#757575"/>
+app\src\main\res\layout\fragment_add_zikr.xml:13:<EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:hint="اكتب الذكر هنا" android:textColorHint="#757575"/>
+app\src\main\res\layout\fragment_add_zikr.xml:41:<EditText style="@style/T" android:id="@+id/newname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="e.g. Travel, Ramadan, Exams" android:textColorHint="#757575" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:padding="0dp"/>
+app\src\main\res\layout\fragment_edit_folder.xml:16:<EditText style="@style/T" android:id="@+id/fname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="Folder name" android:textColorHint="#757575" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:padding="0dp"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:13:<EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:textColorHint="#757575"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:17:<EditText style="@style/T" android:id="@+id/note" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:hint="Meaning or note" android:textColorHint="#757575" android:gravity="center_vertical"/>
+app\src\main\res\layout\fragment_library.xml:8:<EditText style="@style/T" android:id="@+id/search" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="Search azkar or duas" android:textColorHint="#757575" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:imeOptions="actionSearch" android:singleLine="true" android:padding="0dp" android:contentDescription="Search azkar"/>
+app\src\main\res\values\colors.xml:3:    <color name="bg">#0D2124</color>
+app\src\main\res\values\colors.xml:4:    <color name="text">#EDF4F1</color>
+app\src\main\res\values\colors.xml:5:    <color name="card">#153237</color>
+app\src\main\res\values\colors.xml:6:    <color name="border">#234A4B</color>
+app\src\main\res\values\colors.xml:7:    <color name="card2">#1B3E43</color>
+app\src\main\res\values\colors.xml:8:    <color name="border2">#2B5A58</color>
+app\src\main\res\values\colors.xml:9:    <color name="gold">#E8B44A</color>
+app\src\main\res\values\colors.xml:10:    <color name="teal">#7FD1B9</color>
+app\src\main\res\values\colors.xml:11:    <color name="muted">#9DB8B3</color>
+app\src\main\res\values\colors.xml:12:    <color name="light">#C3D6D1</color>
+app\src\main\res\values\colors.xml:13:    <color name="arabic">#F6EFD9</color>
+app\src\main\res\values\colors.xml:14:    <color name="nav_bg">#0A1A1D</color>
+app\src\main\res\values\colors.xml:15:    <color name="nav_border">#1F4143</color>
+app\src\main\res\values\colors.xml:16:    <color name="track">#24504F</color>
+app\src\main\res\values\colors.xml:17:    <color name="danger">#F4A59B</color>
+app\src\main\res\values\colors.xml:18:    <color name="icon_bg">#153237</color>
+app\src\main\res\values\themes.xml:12:        <item name="android:textColorHighlight">#55E8B44A</item>

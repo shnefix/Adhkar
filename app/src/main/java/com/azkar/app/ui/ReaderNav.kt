@@ -10,7 +10,7 @@ class ReaderNav(private val targets: List<Int>, start: Int = 0, count: Int = 0) 
     val last get() = targets.size - 1
     val isLast get() = index == last
     /** The repetition count of the CURRENT zikr is complete. */
-    val isDone get() = count >= targets[index]
+    val isDone get() = targets[index] <= 1 || count >= targets[index]
 
     /** Counter tap. Returns true if the count changed. */
     fun tapRing(): Boolean { if (isDone) return false; count++; return true }

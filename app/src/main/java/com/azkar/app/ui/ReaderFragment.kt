@@ -100,7 +100,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
             countTv.text = rn.count.toString()
             sub.text = if (done) "Done" else "of ${cur.target}"
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
-            hint.text = if (rn.isLast) (if (done) "You have finished this collection" else "Tap the circle to count") else ""
+            ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
+            hint.text = if (rn.isLast && cur.target > 1)
+                (if (done) "You have finished this collection" else "Tap the circle to count") else ""
         }
 
         ring.setOnClickListener {
