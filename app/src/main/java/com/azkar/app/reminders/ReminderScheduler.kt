@@ -110,7 +110,7 @@ object ReminderScheduler {
             .setColor(ctx.getColor(R.color.gold))
             .setContentTitle(s.title)
             .setContentText(s.message)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .apply { if (Build.VERSION.SDK_INT >= 31) setStyle(NotificationCompat.DecoratedCustomViewStyle()) }
             .setCustomContentView(rv)
             .setCustomBigContentView(rv)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

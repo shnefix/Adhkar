@@ -12,6 +12,9 @@
 <TextView style="@style/Ar" android:text="" android:textSize="21sp" android:textColor="@color/arabic" android:lineHeight="31.5sp" android:textDirection="rtl" android:id="@+id/ar" android:singleLine="true" android:ellipsize="end" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:id="@+id/line" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<FrameLayout android:id="@+id/hide" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Hide or show while reading" android:clickable="true" android:focusable="true">
+<ImageView android:id="@+id/hide_ic" android:src="@drawable/ic_eye_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/gold" android:layout_gravity="center"/>
+</FrameLayout>
 <LinearLayout android:orientation="vertical" android:layout_width="44dp" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="Edit zikr" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_pencil_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/muted" android:layout_gravity="center"/>

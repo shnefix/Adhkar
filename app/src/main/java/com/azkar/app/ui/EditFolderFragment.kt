@@ -1,10 +1,12 @@
 package com.azkar.app.ui
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -84,6 +86,13 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
                 val v = layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
                 v.findViewById<TextView>(R.id.ar).text = z.arabic
                 v.findViewById<TextView>(R.id.line).text = "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (Store.hiddenZikrs().contains(z.id)) " · Hidden" else "")
+val hid = Store.hiddenZikrs().contains(z.id)
+v.findViewById<ImageView>(R.id.hide_ic).apply {
+    setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
+    imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
+}
+v.alpha = if (hid) 0.55f else 1f
+v.findViewById<View>(R.id.hide).setOnClickListener { Store.setZikrsHidden(listOf(z.id), !hid); renderRows() }
                 val up = v.findViewById<View>(R.id.up)
                 val down = v.findViewById<View>(R.id.down)
                 up.alpha = if (idx == 0) 0.35f else 1f
