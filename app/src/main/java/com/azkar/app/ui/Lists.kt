@@ -59,23 +59,31 @@ class LibraryAdapter : ListAdapter<LibRow, LibraryAdapter.VH>(object : DiffUtil.
 }
 
 // ---------- Folder view: azkar rows ----------
-data class ZRow(val id: String, val arabic: String, val repeat: Int, val note: String)
+data class ZRow(
+    val id: String, val arabic: String, val repeat: Int, val note: String,
+    val hidden: Boolean = false, val selecting: Boolean = false, val selected: Boolean = false
+)
 
-class ZikrAdapter(private val onOpen: (Int) -> Unit, private val onEdit: (String) -> Unit) :
-    ListAdapter<ZRow, ZikrAdapter.VH>(object : DiffUtil.ItemCallback<ZRow>() {
-        override fun areItemsTheSame(a: ZRow, b: ZRow) = a.id == b.id
-        override fun areContentsTheSame(a: ZRow, b: ZRow) = a == b
-    }) {
+class ZikrAdapter(
+    private val onTap: (ZRow) -> Unit,
+    private val onLong: (ZRow) -> Unit,
+    private val onEdit: (String) -> Unit
+) : ListAdapter<ZRow, ZikrAdapter.VH>(object : DiffUtil.ItemCallback<ZRow>() {
+    override fun areItemsTheSame(a: ZRow, b: ZRow) = a.id == b.id
+    override fun areContentsTheSame(a: ZRow, b: ZRow) = a == b
+}) {
     inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val chip: TextView = v.findViewById(R.id.chip)
         val rep: TextView = v.findViewById(R.id.rep)
         val ar: TextView = v.findViewById(R.id.ar)
         val note: TextView = v.findViewById(R.id.note)
+        val editIc: ImageView = v.findViewById(R.id.edit_ic)
         init {
-            v.findViewById<View>(R.id.chip).visibility = View.GONE
-            (rep.layoutParams as ViewGroup.MarginLayoutParams).marginStart = 0
-            v.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onOpen(p) }
+            v.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onTap(getItem(p)) }
+            v.setOnLongClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onLong(getItem(p)); true }
             v.findViewById<View>(R.id.edit).setOnClickListener {
-                val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onEdit(getItem(p).id)
+                val p = bindingAdapterPosition
+                if (p != RecyclerView.NO_POSITION) { val r = getItem(p); if (r.selecting) onTap(r) else onEdit(r.id) }
             }
         }
     }
@@ -85,9 +93,29 @@ class ZikrAdapter(private val onOpen: (Int) -> Unit, private val onEdit: (String
 
     override fun onBindViewHolder(h: VH, position: Int) {
         val r = getItem(position)
-        h.rep.text = "×${r.repeat}"
+        val ctx = h.itemView.context
+        val d = ctx.resources.displayMetrics.density
         h.ar.text = r.arabic
+        h.rep.text = "×${r.repeat}"
         h.note.text = r.note
         h.note.visibility = if (r.note.isBlank()) View.GONE else View.VISIBLE
+        // Hidden: dimmed, with a "Hidden" tag
+        h.chip.visibility = if (r.hidden) View.VISIBLE else View.GONE
+        h.chip.text = "Hidden"
+        h.chip.setTextColor(ctx.getColor(R.color.muted))
+        (h.rep.layoutParams as ViewGroup.MarginLayoutParams).marginStart = if (r.hidden) (8 * d).toInt() else 0
+        h.rep.requestLayout()
+        h.itemView.alpha = if (r.hidden) 0.5f else 1f
+        h.itemView.setBackgroundResource(if (r.selected) R.drawable.bg_card18_sel else R.drawable.bg_card18)
+        // Right-hand icon: pencil normally, a check while selecting
+        if (r.selecting) {
+            h.editIc.setImageResource(R.drawable.ic_check_2p25)
+            ImageViewCompat.setImageTintList(h.editIc, ColorStateList.valueOf(ctx.getColor(R.color.gold)))
+            h.editIc.alpha = if (r.selected) 1f else 0f
+        } else {
+            h.editIc.setImageResource(R.drawable.ic_pencil_1p75)
+            ImageViewCompat.setImageTintList(h.editIc, ColorStateList.valueOf(ctx.getColor(R.color.muted)))
+            h.editIc.alpha = 1f
+        }
     }
 }

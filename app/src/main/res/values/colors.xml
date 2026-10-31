@@ -21,12 +21,12 @@
     <color name="hint">#757575</color>
     <color name="dialog_bg">#424242</color>
     <!-- Notification palettes: NEVER override these in values-night. -->
-    <color name="notif_day_card">#153237</color>
-    <color name="notif_day_border">#234A4B</color>
+    <color name="notif_day_card">#000000</color>
+    <color name="notif_day_border">#000000</color>
     <color name="notif_day_text">#EDF4F1</color>
     <color name="notif_day_muted">#9DB8B3</color>
-    <color name="notif_oled_card">#0B0B0B</color>
-    <color name="notif_oled_border">#1F1F1F</color>
+    <color name="notif_oled_card">#000000</color>
+    <color name="notif_oled_border">#000000</color>
     <color name="notif_oled_text">#EDEDED</color>
     <color name="notif_oled_muted">#9A9A9A</color>
 </resources>

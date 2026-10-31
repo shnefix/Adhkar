@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
@@ -22,8 +23,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val sections = view.findViewById<LinearLayout>(R.id.sections)
 
         fun open(f: Folder) {
-            if (Store.zikrsIn(f.id).isEmpty()) nav().push(EditFolderFragment.of(f.id))
-            else nav().push(ReaderFragment.of(f.id))
+            when {
+                Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
+                Store.readerItems(f.id).isEmpty() -> {
+                    Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
+                    nav().push(FolderFragment.of(f.id))
+                }
+                else -> nav().push(ReaderFragment.of(f.id))
+            }
         }
 
         fun card(f: Folder): View {

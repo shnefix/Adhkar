@@ -2,12 +2,14 @@ package com.azkar.app.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.view.ViewTreeObserver
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
@@ -17,6 +19,8 @@ import java.util.Date
 import java.util.Locale
 
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
+    private var t0 = 0L
+    private lateinit var myAdapter: MyAdapter
 
     private val importPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) readAndConfirm(uri)
@@ -25,58 +29,60 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         if (uri != null) writeExport(uri)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        bindNav(view, Tab.MY)
-        view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(null)) }
-        view.findViewById<View>(R.id.btn_import).setOnClickListener {
-            importPicker.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
-        }
-        view.findViewById<View>(R.id.btn_export).setOnClickListener {
-            exportPicker.launch("azkar-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json")
-        }
-        render()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        t0 = SystemClock.elapsedRealtime()
     }
 
-    private fun render() {
-        val v = view ?: return
-        val ctx = requireContext()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        bindNav(view, Tab.MY)
+        myAdapter = MyAdapter(
+            onAdd = { nav().push(AddZikrFragment.of(null)) },
+            onImport = { importPicker.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+            onExport = { exportPicker.launch("azkar-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json") },
+            onFolder = { nav().push(EditFolderFragment.of(it)) },
+            onNewFolder = { promptNewFolder { refresh() } },
+            onEdit = { nav().push(EditZikrFragment.of(it)) }
+        )
+        view.findViewById<RecyclerView>(R.id.list).apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = myAdapter
+            itemAnimator = null
+        }
+        refresh()
+
+        view.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                view.viewTreeObserver.removeOnPreDrawListener(this)
+                android.util.Log.d("AzkarPerf", "My azkar first frame: ${SystemClock.elapsedRealtime() - t0} ms")
+                return true
+            }
+        })
+    }
+
+    private fun refresh() {
         val counts = Store.zikrCounts()
-
-        val tiles = Store.folders().map { f ->
-            val n = counts[f.id] ?: 0
-            layoutInflater.inflate(R.layout.item_folder_tile, null, false).apply {
-                Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
-                findViewById<TextView>(R.id.name).text = f.name
-                findViewById<TextView>(R.id.count).text = if (n == 1) "1 zikr" else "$n azkar"
-                setOnClickListener { nav().push(EditFolderFragment.of(f.id)) }
+        val names = Store.folders().associate { it.id to it.name }
+        val tiles = Store.folders().map { Tile(it.id, it.name, it.icon, counts[it.id] ?: 0) }
+        val saved = Store.zikrs()
+            .filter { !it.id.startsWith("b_") }
+            .map {
+                MyItem.Saved(
+                    it.id, it.arabic, it.repeat, it.note, names[it.folderId] ?: "Anytime",
+                    !(it.folderId == null || Store.isBuiltinFolder(it.folderId))
+                )
             }
-        } + layoutInflater.inflate(R.layout.item_folder_new, null, false).apply {
-            setOnClickListener { promptNewFolder { render() } }
-        }
-        v.findViewById<LinearLayout>(R.id.folders).apply { removeAllViews(); addView(Ui.grid(ctx, tiles, 3, 8)) }
+        val rows = ArrayList<MyItem>()
+        rows.add(MyItem.Header)
+        rows.add(MyItem.Folders(tiles))
+        if (saved.isNotEmpty()) { rows.add(MyItem.SavedLabel); rows.addAll(saved) }
+        myAdapter.submitList(rows)
+    }
 
-        val saved = v.findViewById<LinearLayout>(R.id.saved)
-        saved.removeAllViews()
-        Store.zikrs().forEachIndexed { i, z ->
-            val row = layoutInflater.inflate(R.layout.item_saved, saved, false)
-            val chip = row.findViewById<TextView>(R.id.chip)
-            chip.text = Store.folderName(z.folderId)
-            chip.setTextColor(ctx.getColor(if (z.folderId == null || Store.isBuiltinFolder(z.folderId)) R.color.teal else R.color.gold))
-            row.findViewById<TextView>(R.id.rep).text = "×${z.repeat}"
-            row.findViewById<TextView>(R.id.ar).text = z.arabic
-            row.findViewById<TextView>(R.id.note).apply {
-                text = z.note
-                visibility = if (z.note.isBlank()) View.GONE else View.VISIBLE
-            }
-            row.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
-            saved.addView(row, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
-        }
-}
-    // ---------- Export ----------
     private fun writeExport(uri: Uri) {
         val ctx = requireContext()
         try {
-            val text = Store.exportJson()   // read-only: builds the file from memory
+            val text = Store.exportJson()
             ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                 ?: throw java.io.IOException("Could not open the file for writing.")
             AlertDialog.Builder(ctx).setTitle("Export complete")
@@ -88,7 +94,6 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         }
     }
 
-    // ---------- Import ----------
     private fun readAndConfirm(uri: Uri) {
         val ctx = requireContext()
         val raw = try {
@@ -123,7 +128,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             .setPositiveButton("Import") { _, _ ->
                 val r = Store.importAll(p)
                 ReminderScheduler.rescheduleAll(requireContext())
-                render()
+                refresh()
                 AlertDialog.Builder(requireContext()).setTitle("Import complete")
                     .setMessage("${r.created} new folders, ${r.merged} merged, ${r.added} azkar added, ${r.skipped} duplicates skipped, ${r.reminders} reminders added.")
                     .setPositiveButton("OK", null).show()

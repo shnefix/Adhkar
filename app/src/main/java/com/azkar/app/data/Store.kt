@@ -17,6 +17,7 @@ object Store {
     private const val K_PLACE = "home_place"
     private const val K_SIZE = "arabic_size"
 private const val K_THEME = "theme_mode"
+private const val K_HZ = "hidden_zikrs"
     private const val K_REM = "reminder_"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
@@ -26,6 +27,7 @@ private const val K_THEME = "theme_mode"
     private var zCache: List<Zikr> = emptyList()
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
+private var hzCache: Set<String> = emptySet()
 
     @Synchronized
     fun init(context: Context) {
@@ -34,6 +36,7 @@ private const val K_THEME = "theme_mode"
         zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
         fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
         sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
+hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         if (!sp.contains(K_ZIKRS)) seed()
         migrateBuiltins()
         migrateSchedules()
@@ -157,7 +160,10 @@ private const val K_THEME = "theme_mode"
     }
 
     fun updateZikr(z: Zikr) = saveZikrs(zCache.map { if (it.id == z.id) z else it })
-    fun deleteZikr(id: String) = saveZikrs(zCache.filter { it.id != id })
+    fun deleteZikr(id: String) {
+        saveZikrs(zCache.filter { it.id != id })
+        if (id in hzCache) setZikrsHidden(listOf(id), false)
+    }
 
     /** Takes a zikr out of its folder (it stays saved as "Anytime"). */
     fun unfile(id: String) = saveZikrs(zCache.map { if (it.id == id) it.copy(folderId = null) else it })
@@ -264,6 +270,19 @@ private const val K_THEME = "theme_mode"
     fun theme() = sp.getInt(K_THEME, 0)
     fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
 
+    private fun parseIds(raw: String): Set<String> {
+        val a = JSONArray(raw)
+        return (0 until a.length()).map { a.getString(it) }.toSet()
+    }
+
+    fun hiddenZikrs(): Set<String> = hzCache
+
+    @Synchronized
+    fun setZikrsHidden(ids: kotlin.collections.Collection<String>, hide: Boolean) {
+        hzCache = Visibility.apply(hzCache, ids, hide)
+        sp.edit().putString(K_HZ, JSONArray(hzCache.toList()).toString()).apply()
+    }
+
     fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
 
     // ---------- Notification schedules ----------
@@ -282,18 +301,18 @@ private const val K_THEME = "theme_mode"
 
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
-        if (key == "anytime") return zCache.filter { it.folderId == null }.map { ReaderItem(it.arabic, it.repeat) }
         if (key.startsWith("zikr:")) {
             return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat)) } ?: emptyList()
         }
-        return zikrsIn(key).map { ReaderItem(it.arabic, it.repeat) }
+        val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
 
     fun readerIndex(z: Zikr): Int {
-        val f = z.folderId ?: return zCache.filter { it.folderId == null }.indexOfFirst { it.id == z.id }.coerceAtLeast(0)
-        return zikrsIn(f).indexOfFirst { it.id == z.id }.coerceAtLeast(0)
+        val src = if (z.folderId == null) zCache.filter { it.folderId == null } else zikrsIn(z.folderId)
+        return Visibility.readerIndex(src, hzCache, z.id).coerceAtLeast(0)
     }
 }
 

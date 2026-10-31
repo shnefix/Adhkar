@@ -83,7 +83,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
             list.forEachIndexed { idx, z ->
                 val v = layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
                 v.findViewById<TextView>(R.id.ar).text = z.arabic
-                v.findViewById<TextView>(R.id.line).text = "×${z.repeat}" + if (z.note.isBlank()) "" else " · ${z.note}"
+                v.findViewById<TextView>(R.id.line).text = "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (Store.hiddenZikrs().contains(z.id)) " · Hidden" else "")
                 val up = v.findViewById<View>(R.id.up)
                 val down = v.findViewById<View>(R.id.down)
                 up.alpha = if (idx == 0) 0.35f else 1f
