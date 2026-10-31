@@ -15,8 +15,14 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
         val id = requireArguments().getString("id") ?: "anytime"
+        if (id != "anytime" && Store.folder(id) == null) { nav().pop(); return }   // deleted from the editor
+
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
         view.findViewById<TextView>(R.id.title).text = Store.folderName(id)
+        view.findViewById<View>(R.id.btn_edit).apply {
+            if (id == "anytime") visibility = View.INVISIBLE
+            else setOnClickListener { nav().push(EditFolderFragment.of(id)) }
+        }
 
         val items = if (id == "anytime") Store.zikrs().filter { it.folderId == null } else Store.zikrsIn(id)
         val list = view.findViewById<LinearLayout>(R.id.list)

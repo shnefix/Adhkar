@@ -1,5 +1,6 @@
 package com.azkar.app.ui
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,7 +11,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
-import android.content.res.ColorStateList
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Store
@@ -25,43 +25,49 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
 
         fun count(n: Int) = if (n == 1) "1 zikr" else "$n azkar"
 
+        fun row(i: Int, icon: Int, tint: Int, title: String, sub: String, arabic: Boolean, onClick: () -> Unit) {
+            val v = layoutInflater.inflate(R.layout.item_library, list, false)
+            v.findViewById<ImageView>(R.id.ic).apply {
+                setImageResource(icon)
+                ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(tint))
+            }
+            v.findViewById<TextView>(R.id.title).text = title
+            v.findViewById<TextView>(R.id.sub_ar).apply {
+                text = sub
+                if (!arabic) {
+                    textSize = 14f
+                    typeface = Ui.font(ctx, R.font.dm_sans_regular)
+                    textDirection = View.TEXT_DIRECTION_LTR
+                }
+            }
+            v.setOnClickListener { onClick() }
+            list.addView(v, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
+        }
+
         fun render(q: String) {
             list.removeAllViews()
             val query = q.trim().lowercase()
-            val shown = Builtins.library.filter {
-                query.isEmpty() || it.title.lowercase().contains(query) || it.libraryArabic.contains(query)
+            var i = 0
+            Store.folders().forEach { f ->
+                val c = Builtins.byKey(f.id)
+                val unchanged = c != null && f.name == c.title
+                val match = query.isEmpty() || f.name.lowercase().contains(query) || (unchanged && c!!.libraryArabic.contains(query))
+                if (!match) return@forEach
+                row(
+                    i++, c?.icon ?: R.drawable.ic_folder_1p75,
+                    ctx.getColor(if (c != null) R.color.teal else R.color.gold), f.name,
+                    if (unchanged) c!!.libraryArabic else count(Store.zikrsIn(f.id).size), unchanged
+                ) { nav().push(FolderFragment.of(f.id)) }
             }
-            shown.forEachIndexed { i, c ->
-                val v = layoutInflater.inflate(R.layout.item_library, list, false)
-                v.findViewById<ImageView>(R.id.ic).setImageResource(c.icon)
-                v.findViewById<TextView>(R.id.title).text = c.title
-                v.findViewById<TextView>(R.id.sub_ar).text = c.libraryArabic
-                v.setOnClickListener { nav().push(ReaderFragment.of(c.key)) }
-                list.addView(v, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
-            }
-
-            // Folders: yours (Family, Friday, ...) plus "Anytime" for azkar with no folder.
             val anytimeN = Store.zikrs().count { it.folderId == null }
-            val folderRows = Store.folders().map { Triple(it.id, it.name, Store.zikrsIn(it.id).size) } +
-                (if (anytimeN > 0) listOf(Triple("anytime", "Anytime", anytimeN)) else emptyList())
-            val folders = folderRows.filter { query.isEmpty() || it.second.lowercase().contains(query) }
-            if (folders.isNotEmpty()) {
-                list.addView(Ui.caps(ctx, "My folders"), Ui.lp(top = if (shown.isNotEmpty()) 20 else 0, ctx = ctx))
-                folders.forEachIndexed { i, (id, name, n) ->
-                    val v = layoutInflater.inflate(R.layout.item_library, list, false)
-                    v.findViewById<ImageView>(R.id.ic).apply {
-                        setImageResource(R.drawable.ic_folder_1p75)
-                        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(ctx.getColor(R.color.gold)))
-                    }
-                    v.findViewById<TextView>(R.id.title).text = name
-                    v.findViewById<TextView>(R.id.sub_ar).apply {
-                        text = count(n)
-                        textSize = 14f
-                        typeface = Ui.font(ctx, R.font.dm_sans_regular)
-                        textDirection = View.TEXT_DIRECTION_LTR
-                    }
-                    v.setOnClickListener { nav().push(FolderFragment.of(id)) }
-                    list.addView(v, Ui.lp(top = if (i > 0) 8 else 10, ctx = ctx))
+            if (anytimeN > 0 && (query.isEmpty() || "anytime".contains(query))) {
+                row(i++, R.drawable.ic_folder_1p75, ctx.getColor(R.color.gold), "Anytime", count(anytimeN), false) {
+                    nav().push(FolderFragment.of("anytime"))
+                }
+            }
+            if (query.isEmpty()) {
+                row(i++, R.drawable.ic_plus_2, ctx.getColor(R.color.gold), "New folder", "Create a folder", false) {
+                    promptNewFolder { _ -> render("") }
                 }
             }
         }

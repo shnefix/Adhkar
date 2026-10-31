@@ -6,7 +6,9 @@
 <ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <TextView style="@style/TB" android:id="@+id/title" android:text="" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-<View android:layout_width="44dp" android:layout_height="44dp"/>
+<FrameLayout android:id="@+id/btn_edit" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Edit folder" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_pencil_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:id="@+id/list" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:id="@+id/empty" android:text="No azkar in this folder yet. Add one from My azkar." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"/>

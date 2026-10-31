@@ -9,7 +9,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -17,80 +19,93 @@ import androidx.core.content.ContextCompat
 import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
+import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
 import java.util.Calendar
 
-data class ReminderDef(
-    val key: String, val title: String, val collection: String,
-    val hour: Int, val minute: Int, val default: Boolean, val label: String
-)
-
 object ReminderScheduler {
     const val CHANNEL = "azkar_reminders_v2"
-
-    val defs = listOf(
-        ReminderDef("m", "Morning azkar", "morning", 6, 0, true, "Every day · 6:00 AM"),
-        ReminderDef("e", "Evening azkar", "evening", 17, 0, true, "Every day · 5:00 PM"),
-        ReminderDef("s", "Before sleep", "sleep", 22, 0, false, "Every day · 10:00 PM")
-    )
+    private const val ACTION = "com.azkar.app.REMINDER"
 
     fun createChannel(ctx: Context) {
         val ch = NotificationChannel(CHANNEL, "Daily reminders", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Morning, evening and sleep azkar reminders"
+            description = "Your azkar reminders"
             enableVibration(true)
             setShowBadge(true)
         }
         ctx.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 
-    private fun pending(ctx: Context, d: ReminderDef): PendingIntent =
-        PendingIntent.getBroadcast(
-            ctx, defs.indexOf(d),
-            Intent(ctx, ReminderReceiver::class.java).putExtra("key", d.key),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    private fun alarms(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun rescheduleAll(ctx: Context) {
-        defs.forEach { if (Store.reminderOn(it.key, it.default)) schedule(ctx, it) else cancel(ctx, it) }
+    /** Exact alarms need a user grant on Android 12+. */
+    fun canExact(ctx: Context) = Build.VERSION.SDK_INT < 31 || alarms(ctx).canScheduleExactAlarms()
+
+    // One alarm per schedule id (unique data URI), so editing replaces and deleting cancels exactly that alarm.
+    private fun intentFor(ctx: Context, id: String) =
+        Intent(ctx, ReminderReceiver::class.java).setAction(ACTION).setData(Uri.parse("azkar://reminder/$id")).putExtra("id", id)
+
+    private fun pending(ctx: Context, id: String): PendingIntent =
+        PendingIntent.getBroadcast(ctx, 0, intentFor(ctx, id), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    /** Alarms from the old fixed reminders (request codes 0..2, no action). */
+    private fun cancelLegacy(ctx: Context) {
+        for (i in 0..2) {
+            PendingIntent.getBroadcast(ctx, i, Intent(ctx, ReminderReceiver::class.java), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+                ?.let { alarms(ctx).cancel(it); it.cancel() }
+        }
     }
 
-    fun schedule(ctx: Context, d: ReminderDef) {
+    fun rescheduleAll(ctx: Context) {
+        cancelLegacy(ctx)
+        Store.schedules().forEach { apply(ctx, it) }
+    }
+
+    /** Schedules or cancels one reminder according to the global and individual switches. */
+    fun apply(ctx: Context, s: Schedule) {
+        if (Store.notificationsOn() && s.enabled) schedule(ctx, s) else cancel(ctx, s.id)
+    }
+
+    fun schedule(ctx: Context, s: Schedule) {
         val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, d.hour); set(Calendar.MINUTE, d.minute)
+            set(Calendar.HOUR_OF_DAY, s.hour); set(Calendar.MINUTE, s.minute)
             set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
         }
-        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val canExact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()
-        if (canExact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, d))
-        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, d))
+        val am = alarms(ctx)
+        if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, s.id))
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, s.id))
     }
 
-    fun cancel(ctx: Context, d: ReminderDef) {
-        (ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending(ctx, d))
+    fun cancel(ctx: Context, id: String) {
+        PendingIntent.getBroadcast(ctx, 0, intentFor(ctx, id), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+            ?.let { alarms(ctx).cancel(it); it.cancel() }
     }
 
     @SuppressLint("MissingPermission")
-    fun notify(ctx: Context, d: ReminderDef) {
+    fun notify(ctx: Context, s: Schedule) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
+        val nid = 100 + (s.id.hashCode() and 0xFFFF)
         val open = PendingIntent.getActivity(
-            ctx, defs.indexOf(d),
-            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("open", d.collection),
+            ctx, nid,
+            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .apply { s.open?.let { putExtra("open", it) } },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val body = "Time for your " + d.title.lowercase() + " · tap to read"
+        val ar = s.open?.let { Builtins.byKey(it)?.homeArabic } ?: ""
         val rv = RemoteViews(ctx.packageName, R.layout.notification_reminder).apply {
-            setTextViewText(R.id.n_title, d.title)
-            setTextViewText(R.id.n_body, body)
-            setTextViewText(R.id.n_ar, Builtins.byKey(d.collection)?.homeArabic ?: "")
+            setTextViewText(R.id.n_title, s.title)
+            setTextViewText(R.id.n_body, s.message)
+            setTextViewText(R.id.n_ar, ar)
+            setViewVisibility(R.id.n_ar, if (ar.isEmpty()) View.GONE else View.VISIBLE)
         }
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_bell_1p75)
             .setColor(ctx.getColor(R.color.gold))
-            .setContentTitle(d.title)
-            .setContentText(body)
+            .setContentTitle(s.title)
+            .setContentText(s.message)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(rv)
             .setCustomBigContentView(rv)
@@ -100,7 +115,7 @@ object ReminderScheduler {
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(ctx).notify(100 + defs.indexOf(d), n)
+        NotificationManagerCompat.from(ctx).notify(nid, n)
     }
 }
 
@@ -108,10 +123,11 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Store.init(ctx)
         ReminderScheduler.createChannel(ctx)
-        val d = ReminderScheduler.defs.firstOrNull { it.key == intent.getStringExtra("key") } ?: return
-        if (!Store.reminderOn(d.key, d.default)) return
-        ReminderScheduler.notify(ctx, d)
-        ReminderScheduler.schedule(ctx, d)
+        val id = intent.getStringExtra("id") ?: return          // ignores old-style alarms
+        val s = Store.schedule(id) ?: return                    // deleted schedule: nothing to show
+        if (!Store.notificationsOn() || !s.enabled) return
+        ReminderScheduler.notify(ctx, s)
+        ReminderScheduler.schedule(ctx, s)                      // next day
     }
 }
 
@@ -119,6 +135,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Store.init(ctx)
+            ReminderScheduler.createChannel(ctx)
             ReminderScheduler.rescheduleAll(ctx)
         }
     }

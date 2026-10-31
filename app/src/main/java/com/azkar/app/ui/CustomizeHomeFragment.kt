@@ -81,7 +81,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         val hidden = Store.hidden()
         val last = ids.size - 1
         ids.forEachIndexed { idx, id ->
-            val builtin = Builtins.homeCollections.firstOrNull { it.key == id }
+            val builtin = Builtins.byKey(id)
             val isHidden = id in hidden
             val v = layoutInflater.inflate(R.layout.item_customize_row, rows, false)
             v.alpha = if (isHidden) 0.55f else 1f
@@ -89,7 +89,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
                 setImageResource(if (builtin != null) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
                 imageTintList = ColorStateList.valueOf(c(if (builtin != null) R.color.teal else R.color.gold))
             }
-            v.findViewById<TextView>(R.id.name).text = builtin?.title ?: Store.folder(id)?.name ?: ""
+            v.findViewById<TextView>(R.id.name).text = Store.folder(id)?.name ?: ""
             v.findViewById<View>(R.id.up).alpha = if (idx == 0) 0.35f else 1f
             v.findViewById<View>(R.id.down).alpha = if (idx == last) 0.35f else 1f
             fun move(d: Int) {

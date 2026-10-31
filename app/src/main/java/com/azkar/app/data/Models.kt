@@ -92,3 +92,9 @@ object Builtins {
 
     fun byKey(key: String?): Collection? = library.firstOrNull { it.key == key }
 }
+
+/** A reminder the user configured. [open] is the folder key to read when tapped (or null = just open the app). */
+data class Schedule(
+    val id: String, val title: String, val message: String,
+    val hour: Int, val minute: Int, val enabled: Boolean, val open: String?
+)

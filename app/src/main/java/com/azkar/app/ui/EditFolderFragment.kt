@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
@@ -47,6 +48,18 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
             renderHome()
         }
 
+// Library position
+        val libUp = view.findViewById<View>(R.id.lib_up)
+        val libDown = view.findViewById<View>(R.id.lib_down)
+        fun renderPos() {
+            val i = Store.folderIndex(id)
+            libUp.alpha = if (i <= 0) 0.35f else 1f
+            libDown.alpha = if (i >= Store.folders().size - 1) 0.35f else 1f
+        }
+        libUp.setOnClickListener { Store.moveFolder(id, -1); renderPos() }
+        libDown.setOnClickListener { Store.moveFolder(id, 1); renderPos() }
+        renderPos()
+
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
         val empty = view.findViewById<View>(R.id.empty)
@@ -83,8 +96,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
 
         view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(id)) }
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {
-            Store.deleteFolder(id)
-            nav().pop()
+            val n = Store.zikrsIn(id).size
+            val doDelete = { Store.deleteFolder(id); nav().pop() }
+            if (n == 0) doDelete()
+            else AlertDialog.Builder(ctx)
+                .setTitle("Delete \"${Store.folderName(id)}\"?")
+                .setMessage("This folder has $n azkar. They are not lost: they stay saved under Anytime.")
+                .setPositiveButton("Delete") { _, _ -> doDelete() }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 

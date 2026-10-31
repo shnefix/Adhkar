@@ -10,6 +10,10 @@
 <ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
 <TextView style="@style/TB" android:text="Add new zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_import" android:layout_height="52dp" android:gravity="center" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_marginTop="10dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/gold"/>
+<TextView style="@style/TB" android:text="Import from JSON" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="0dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/folders" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

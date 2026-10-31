@@ -18,11 +18,16 @@ object Store {
     private const val K_TRANS = "show_translation"
     private const val K_SIZE = "arabic_size"
     private const val K_REM = "reminder_"
+    private const val K_NOTIF = "notif_on"
+    private const val K_SCHED = "schedules"
+    private const val K_MIG = "builtins_v2"
 
     fun init(context: Context) {
         if (::sp.isInitialized) return
         sp = context.applicationContext.getSharedPreferences("azkar", Context.MODE_PRIVATE)
         if (!sp.contains(K_ZIKRS)) seed()
+        migrateBuiltins()
+        migrateSchedules()
     }
 
     private fun seed() {
@@ -32,6 +37,33 @@ object Store {
                 Zikr("seed1", "أَسْتَغْفِرُ اللَّهَ", "I seek forgiveness from Allah.", 100, null),
                 Zikr("seed2", "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", "There is no power and no strength except with Allah.", 10, "family"),
                 Zikr("seed3", "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ", "O Allah, send prayers and peace upon our Prophet Muhammad.", 10, "friday")
+            )
+        )
+    }
+
+    /** One time: the built-in collections become ordinary, fully editable folders with the same ids. */
+    private fun migrateBuiltins() {
+        if (sp.getBoolean(K_MIG, false)) return
+        val have = folders()
+        val missing = Builtins.library.filter { c -> have.none { it.id == c.key } }
+        saveFolders(missing.map { Folder(it.key, it.title) } + have)
+        val old = zikrs()
+        val seeded = missing.flatMap { c ->
+            c.items.mapIndexed { n, r -> Zikr("b_${c.key}_$n", r.arabic, "", r.target, c.key) }
+        }
+        saveZikrs(seeded + old)
+        setHidden(hidden() + setOf("morning", "worry", "forgiveness"))   // they were not on Home before
+        sp.edit().putBoolean(K_MIG, true).apply()
+    }
+
+    /** One time: the three fixed reminders become editable schedules (same on/off state). */
+    private fun migrateSchedules() {
+        if (sp.contains(K_SCHED)) return
+        saveSchedules(
+            listOf(
+                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, reminderOn("m", true), "morning"),
+                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, reminderOn("e", true), "evening"),
+                Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, reminderOn("s", false), "sleep")
             )
         )
     }
@@ -107,6 +139,18 @@ object Store {
 
     fun renameFolder(id: String, name: String) = saveFolders(folders().map { if (it.id == id) it.copy(name = name) else it })
 
+    /** Moves a folder up (-1) or down (+1) in the Library order. */
+    fun moveFolder(id: String, d: Int) {
+        val l = folders().toMutableList()
+        val i = l.indexOfFirst { it.id == id }
+        val j = i + d
+        if (i < 0 || j !in l.indices) return
+        val t = l[i]; l[i] = l[j]; l[j] = t
+        saveFolders(l)
+    }
+
+    fun folderIndex(id: String) = folders().indexOfFirst { it.id == id }
+
     /** Deletes the folder; its azkar stay saved as "Anytime". */
     fun deleteFolder(id: String) {
         saveFolders(folders().filter { it.id != id })
@@ -115,17 +159,38 @@ object Store {
         setHidden(hidden() - id)
     }
 
-    /** Display name for a folder key (built-in or custom). */
+    /** Display name for a folder key. */
     fun folderName(key: String?): String {
         if (key == null) return "Anytime"
-        Builtins.byKey(key)?.let { return it.title }
-        return folder(key)?.name ?: "Anytime"
+        return folder(key)?.name ?: Builtins.byKey(key)?.title ?: "Anytime"
     }
 
     fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
 
+    data class ImportSummary(val created: Int, val merged: Int, val added: Int, val skipped: Int)
+
+    /** Creates missing folders, merges same-named ones (case-insensitive), skips exact duplicates. Never overwrites. */
+    fun importFolders(plan: List<ImportJson.FolderIn>): ImportSummary {
+        var created = 0; var merged = 0; var added = 0; var skipped = 0
+        val allZ = zikrs().toMutableList()
+        val fl = folders().toMutableList()
+        plan.forEach { f ->
+            val name = f.name.trim()
+            val existing = fl.firstOrNull { it.name.trim().equals(name, ignoreCase = true) }
+            val folder = existing ?: Folder(UUID.randomUUID().toString(), name).also { fl.add(it); created++ }
+            if (existing != null) merged++
+            f.items.forEach { item ->
+                if (allZ.any { z -> z.folderId == folder.id && z.arabic == item.text }) skipped++
+                else { allZ.add(Zikr(UUID.randomUUID().toString(), item.text, "", item.count, folder.id)); added++ }
+            }
+        }
+        saveFolders(fl)
+        saveZikrs(allZ)
+        return ImportSummary(created, merged, added, skipped)
+    }
+
     // ---------- Home customisation ----------
-    val defaultOrder: List<String> get() = Builtins.homeCollections.map { it.key } + folders().map { it.id }
+    val defaultOrder: List<String> get() = folders().map { it.id }
 
     /** Effective order: saved order (pruned) followed by anything new. */
     fun homeOrder(): List<String> {
@@ -156,6 +221,7 @@ object Store {
 
     fun resetHome() {
         sp.edit().remove(K_ORDER).remove(K_HIDDEN).remove(K_PLACE).apply()
+        setHidden(setOf("morning", "worry", "forgiveness").filter { folder(it) != null }.toSet())
     }
 
     // ---------- Reader / reminder settings ----------
@@ -167,33 +233,54 @@ object Store {
     fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
 
     fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
-    fun setReminderOn(key: String, v: Boolean) = sp.edit().putBoolean(K_REM + key, v).apply()
+
+    // ---------- Notification schedules ----------
+    fun notificationsOn() = sp.getBoolean(K_NOTIF, true)
+    fun setNotificationsOn(v: Boolean) = sp.edit().putBoolean(K_NOTIF, v).apply()
+
+    fun schedules(): List<Schedule> {
+        val arr = JSONArray(sp.getString(K_SCHED, "[]"))
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Schedule(
+                o.getString("id"), o.optString("t", ""), o.optString("m", ""), o.optInt("h", 8), o.optInt("mi", 0),
+                o.optBoolean("on", true), if (o.isNull("open")) null else o.getString("open")
+            )
+        }
+    }
+
+    private fun saveSchedules(list: List<Schedule>) {
+        val arr = JSONArray()
+        list.forEach {
+            arr.put(JSONObject().put("id", it.id).put("t", it.title).put("m", it.message).put("h", it.hour)
+                .put("mi", it.minute).put("on", it.enabled).put("open", it.open ?: JSONObject.NULL))
+        }
+        sp.edit().putString(K_SCHED, arr.toString()).apply()
+    }
+
+    fun schedule(id: String): Schedule? = schedules().firstOrNull { it.id == id }
+    fun newScheduleId(): String = UUID.randomUUID().toString()
+
+    fun upsertSchedule(s: Schedule) {
+        val l = schedules()
+        saveSchedules(if (l.any { it.id == s.id }) l.map { if (it.id == s.id) s else it } else l + s)
+    }
+
+    fun deleteSchedule(id: String) = saveSchedules(schedules().filter { it.id != id })
 
     // ---------- Reader content ----------
-    /** Built-in azkar for a collection followed by azkar the user filed in it. */
     fun readerItems(key: String): List<ReaderItem> {
         if (key == "anytime") return zikrs().filter { it.folderId == null }.map { ReaderItem(it.arabic, it.repeat) }
         if (key.startsWith("zikr:")) {
             return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat)) } ?: emptyList()
         }
-        val base = Builtins.byKey(key)?.items ?: emptyList()
-        return base + zikrsIn(key).map { ReaderItem(it.arabic, it.repeat) }
+        return zikrsIn(key).map { ReaderItem(it.arabic, it.repeat) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
 
     fun readerIndex(z: Zikr): Int {
         val f = z.folderId ?: return zikrs().filter { it.folderId == null }.indexOfFirst { it.id == z.id }.coerceAtLeast(0)
-        val base = Builtins.byKey(f)?.items?.size ?: 0
-        return base + zikrsIn(f).indexOfFirst { it.id == z.id }.coerceAtLeast(0)
-    }
-
-    /** All saved azkar for the Library, grouped by category: built-ins, then your folders, then Anytime. */
-    fun libraryZikrs(): List<Zikr> {
-        val all = zikrs()
-        val keys = ArrayList<String?>().apply {
-            addAll(Builtins.library.map { it.key }); addAll(folders().map { it.id }); add(null)
-        }
-        return keys.flatMap { k -> all.filter { it.folderId == k } } + all.filter { it.folderId !in keys }
+        return zikrsIn(f).indexOfFirst { it.id == z.id }.coerceAtLeast(0)
     }
 }

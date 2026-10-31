@@ -8,7 +8,6 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
-import com.azkar.app.data.Collection
 import com.azkar.app.data.Folder
 import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
@@ -19,32 +18,34 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val ctx = requireContext()
         bindNav(view, Tab.HOME)
         view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }
-
         val sections = view.findViewById<LinearLayout>(R.id.sections)
 
-        fun collectionCard(c: Collection): View {
-            val v = layoutInflater.inflate(R.layout.item_home_collection, null, false)
-            v.findViewById<ImageView>(R.id.ic).setImageResource(c.icon)
-            v.findViewById<TextView>(R.id.title).text = c.title
-            v.findViewById<TextView>(R.id.sub_ar).text = c.homeArabic
-            v.setOnClickListener { nav().push(ReaderFragment.of(c.key)) }
-            return v
+        fun open(f: Folder) {
+            if (Store.zikrsIn(f.id).isEmpty()) nav().push(EditFolderFragment.of(f.id))
+            else nav().push(ReaderFragment.of(f.id))
         }
 
-        fun folderCard(f: Folder): View {
-            val v = layoutInflater.inflate(R.layout.item_home_folder, null, false)
-            v.findViewById<TextView>(R.id.title).text = f.name
-            v.setOnClickListener {
-                if (Store.zikrsIn(f.id).isEmpty()) nav().push(EditFolderFragment.of(f.id))
-                else nav().push(ReaderFragment.of(f.id))
+        fun card(f: Folder): View {
+            val c = Builtins.byKey(f.id)
+            return if (c != null) {
+                layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
+                    findViewById<ImageView>(R.id.ic).setImageResource(c.icon)
+                    findViewById<TextView>(R.id.title).text = f.name
+                    findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
+                    setOnClickListener { open(f) }
+                }
+            } else {
+                layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
+                    findViewById<TextView>(R.id.title).text = f.name
+                    setOnClickListener { open(f) }
+                }
             }
-            return v
         }
 
         val hidden = Store.hidden()
-        val order = Store.homeOrder().filter { it !in hidden }
-        val collections = order.mapNotNull { k -> Builtins.homeCollections.firstOrNull { it.key == k } }
-        val folders = order.mapNotNull { k -> Store.folder(k) }
+        val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { Store.folder(it) }
+        val collections = shown.filter { Builtins.byKey(it.id) != null }
+        val mine = shown.filter { Builtins.byKey(it.id) == null }
 
         fun section(label: String?, cards: List<View>): View? {
             if (cards.isEmpty()) return null
@@ -54,18 +55,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             return box
         }
 
-        val daily = section("Daily collections", collections.map { collectionCard(it) })
-        val mine = section(null, folders.map { folderCard(it) })
-
+        val daily = section("Daily collections", collections.map { card(it) })
+        val own = section(null, mine.map { card(it) })
         val parts: List<View?> = when (Store.placement()) {
-            Placement.TOP -> listOf(mine, daily)
-            Placement.BOTTOM -> listOf(daily, mine)
-            Placement.MIXED -> listOf(
-                section("Daily collections", order.mapNotNull { k ->
-                    Builtins.homeCollections.firstOrNull { it.key == k }?.let { collectionCard(it) }
-                        ?: Store.folder(k)?.let { folderCard(it) }
-                })
-            )
+            Placement.TOP -> listOf(own, daily)
+            Placement.BOTTOM -> listOf(daily, own)
+            Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
         }
         parts.filterNotNull().forEachIndexed { i, v -> sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx)) }
     }

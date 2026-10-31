@@ -26,6 +26,15 @@
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_home" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Show on Home"/>
 </LinearLayout>
 </LinearLayout>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="12dp" android:paddingStart="18dp" android:paddingEnd="6dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Position in Library" android:textSize="16sp" android:textColor="@color/text" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<FrameLayout android:id="@+id/lib_up" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Move up" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_chev_up_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+<FrameLayout android:id="@+id/lib_down" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Move down" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_chev_dn_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+</LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="Order" android:textSize="13sp" android:textColor="@color/muted" android:id="@+id/order_label" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/rows" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

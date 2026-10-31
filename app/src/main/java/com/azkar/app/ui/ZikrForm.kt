@@ -35,7 +35,7 @@ class ZikrForm(private val view: View, private val allowNew: Boolean, private va
         val ctx = view.context
         val box = view.findViewById<FlowLayout>(R.id.chips)
         box.removeAllViews()
-        val choices = Builtins.folderChoices.map { it.key to it.title } + Store.folders().map { it.id to it.name }
+        val choices = Store.folders().map { it.id to it.name }
         choices.forEach { (k, label) ->
             box.addView(Ui.chip(ctx, label, sel == k, false) { sel = k })
         }

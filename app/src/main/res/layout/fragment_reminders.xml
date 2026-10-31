@@ -6,9 +6,25 @@
 <TextView style="@style/TB" android:text="Reminders" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="Gentle nudges at the times you choose." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="24dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Notifications" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/notif_sub" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_all" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="All notifications"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:id="@+id/exact_row" android:visibility="gone" android:gravity="center_vertical" android:padding="14dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/T" android:text="Exact timing is off, so reminders may arrive a few minutes late. Tap to allow it." android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="Allow" android:textSize="15sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="Daily reminders" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/reminders" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/rem_empty" android:text="No reminders yet. Add your first one below." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:layout_marginTop="10dp" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_add_rem" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="12dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
+<TextView style="@style/TB" android:text="Add reminder" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="Reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>

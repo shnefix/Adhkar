@@ -35,7 +35,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
         view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
 
         val key = requireArguments().getString("key") ?: "morning"
-        val col = Builtins.byKey(key)
         val items = Store.readerItems(key)
         if (items.isEmpty()) { nav().pop(); return }
         rn = ReaderNav(
@@ -43,11 +42,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
             savedInstanceState?.getInt("i") ?: requireArguments().getInt("start", 0),
             savedInstanceState?.getInt("count") ?: 0
         )
-        val title = when {
-            key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") -> (col?.title ?: "") + " azkar"
-            col != null -> col.title
-            else -> Store.folderName(key)
-        }
+        val folderTitle = Store.folderName(key)
+        val title = if (key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") &&
+            Builtins.byKey(key)?.title == folderTitle) "$folderTitle azkar" else folderTitle
         val sizeSp = intArrayOf(20, 26, 32)[Store.arabicSize().coerceIn(0, 2)]
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)

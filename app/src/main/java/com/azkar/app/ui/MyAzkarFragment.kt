@@ -1,21 +1,37 @@
 package com.azkar.app.ui
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
+import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
 
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
+    private val picker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) readAndConfirm(uri)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val ctx = requireContext()
         bindNav(view, Tab.MY)
         view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(null)) }
+        view.findViewById<View>(R.id.btn_import).setOnClickListener {
+            picker.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+        }
+        render()
+    }
 
-        // Folders
+    private fun render() {
+        val v = view ?: return
+        val ctx = requireContext()
+
         val tiles = Store.folders().map { f ->
             val n = Store.zikrsIn(f.id).size
             layoutInflater.inflate(R.layout.item_folder_tile, null, false).apply {
@@ -24,25 +40,64 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                 setOnClickListener { nav().push(EditFolderFragment.of(f.id)) }
             }
         } + layoutInflater.inflate(R.layout.item_folder_new, null, false).apply {
-            setOnClickListener { nav().push(AddZikrFragment.of(null)) }
+            setOnClickListener { promptNewFolder { render() } }
         }
-        view.findViewById<LinearLayout>(R.id.folders).addView(Ui.grid(ctx, tiles, 3, 8))
+        v.findViewById<LinearLayout>(R.id.folders).apply { removeAllViews(); addView(Ui.grid(ctx, tiles, 3, 8)) }
 
-        // Saved azkar
-        val saved = view.findViewById<LinearLayout>(R.id.saved)
+        val saved = v.findViewById<LinearLayout>(R.id.saved)
+        saved.removeAllViews()
         Store.zikrs().forEachIndexed { i, z ->
-            val v = layoutInflater.inflate(R.layout.item_saved, saved, false)
-            val chip = v.findViewById<TextView>(R.id.chip)
+            val row = layoutInflater.inflate(R.layout.item_saved, saved, false)
+            val chip = row.findViewById<TextView>(R.id.chip)
             chip.text = Store.folderName(z.folderId)
             chip.setTextColor(ctx.getColor(if (z.folderId == null || Store.isBuiltinFolder(z.folderId)) R.color.teal else R.color.gold))
-            v.findViewById<TextView>(R.id.rep).text = "×${z.repeat}"
-            v.findViewById<TextView>(R.id.ar).text = z.arabic
-            v.findViewById<TextView>(R.id.note).apply {
+            row.findViewById<TextView>(R.id.rep).text = "×${z.repeat}"
+            row.findViewById<TextView>(R.id.ar).text = z.arabic
+            row.findViewById<TextView>(R.id.note).apply {
                 text = z.note
                 visibility = if (z.note.isBlank()) View.GONE else View.VISIBLE
             }
-            v.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
-            saved.addView(v, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
+            row.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
+            saved.addView(row, Ui.lp(top = if (i > 0) 8 else 0, ctx = ctx))
         }
+    }
+
+    // ---------- Import from JSON ----------
+    private fun readAndConfirm(uri: Uri) {
+        val ctx = requireContext()
+        val raw = try {
+            ctx.contentResolver.openInputStream(uri)?.use { it.bufferedReader(Charsets.UTF_8).readText() }
+        } catch (e: Exception) { null }
+        when {
+            raw == null -> showError("The file could not be read.")
+            raw.length > 5_000_000 -> showError("The file is too large (over 5 MB).")
+            else -> when (val p = ImportJson.parse(raw)) {
+                is ImportJson.Parsed.Error -> showError(p.message)
+                is ImportJson.Parsed.Ok -> confirm(p.folders)
+            }
+        }
+    }
+
+    private fun showError(msg: String) {
+        AlertDialog.Builder(requireContext()).setTitle("Can't import this file").setMessage(msg)
+            .setPositiveButton("OK", null).show()
+    }
+
+    private fun confirm(plan: List<ImportJson.FolderIn>) {
+        val nF = plan.size
+        val nA = plan.sumOf { it.items.size }
+        val existing = plan.count { f -> Store.folders().any { it.name.trim().equals(f.name.trim(), ignoreCase = true) } }
+        val lines = plan.take(8).joinToString("\n") { "• ${it.name}: ${it.items.size}" } + if (plan.size > 8) "\n…" else ""
+        var msg = "$nF folders and $nA azkar will be imported.\n\n$lines"
+        if (existing > 0) msg += "\n\n$existing folder(s) already exist. Their azkar will be added to them, and exact duplicates are skipped. Nothing is overwritten."
+        AlertDialog.Builder(requireContext()).setTitle("Import from JSON").setMessage(msg)
+            .setPositiveButton("Import") { _, _ ->
+                val r = Store.importFolders(plan)
+                render()
+                AlertDialog.Builder(requireContext()).setTitle("Import complete")
+                    .setMessage("${r.created} new folders, ${r.merged} merged, ${r.added} azkar added, ${r.skipped} duplicates skipped.")
+                    .setPositiveButton("OK", null).show()
+            }
+            .setNegativeButton("Cancel", null).show()
     }
 }
