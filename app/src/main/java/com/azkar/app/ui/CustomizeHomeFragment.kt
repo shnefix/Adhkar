@@ -109,6 +109,24 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
             }
             rows.addView(v, Ui.lp(top = if (idx > 0) 6 else 0, ctx = ctx))
         }
+        // ----- Library order -----
+        val libRows = view.findViewById<LinearLayout>(R.id.lib_rows)
+        libRows.removeAllViews()
+        val fs = Store.folders()
+        fs.forEachIndexed { idx, f ->
+            val v = layoutInflater.inflate(R.layout.item_customize_row, libRows, false)
+            val builtin = Builtins.byKey(f.id) != null
+            Ui.folderIcon(v.findViewById(R.id.ic), v.findViewById(R.id.emoji), f.icon,
+                if (builtin) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
+            v.findViewById<ImageView>(R.id.ic).imageTintList = ColorStateList.valueOf(c(if (builtin) R.color.teal else R.color.gold))
+            v.findViewById<TextView>(R.id.name).text = f.name
+            v.findViewById<View>(R.id.toggle).visibility = View.GONE        // no show/hide for the Library
+            v.findViewById<View>(R.id.up).alpha = if (idx == 0) 0.35f else 1f
+            v.findViewById<View>(R.id.down).alpha = if (idx == fs.lastIndex) 0.35f else 1f
+            v.findViewById<View>(R.id.up).setOnClickListener { if (idx > 0) { Store.moveFolder(f.id, -1); renderAll(view) } }
+            v.findViewById<View>(R.id.down).setOnClickListener { if (idx < fs.lastIndex) { Store.moveFolder(f.id, 1); renderAll(view) } }
+            libRows.addView(v, Ui.lp(top = if (idx > 0) 6 else 0, ctx = ctx))
+        }
     }
 
     /** 22dp circle with a 2dp ring. */

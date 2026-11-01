@@ -5,12 +5,14 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewTreeObserver
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
+import com.azkar.app.data.Builtins
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
@@ -19,15 +21,19 @@ import java.util.Date
 import java.util.Locale
 
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
-    private var t0 = 0L
-    private lateinit var myAdapter: MyAdapter
 
-    private val importPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) readAndConfirm(uri)
-    }
-    private val exportPicker = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) writeExport(uri)
-    }
+    private var t0 = 0L
+    private val cards = CardAdapter()
+
+    private val importPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) readAndConfirm(uri)
+        }
+
+    private val exportPicker =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) writeExport(uri)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,103 +42,276 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         bindNav(view, Tab.MY)
-        myAdapter = MyAdapter(
-            onAdd = { nav().push(AddZikrFragment.of(null)) },
-            onImport = { importPicker.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-            onExport = { exportPicker.launch("azkar-backup-" + SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) + ".json") },
-            onFolder = { nav().push(EditFolderFragment.of(it)) },
-            onNewFolder = { promptNewFolder { refresh() } },
-            onEdit = { nav().push(EditZikrFragment.of(it)) }
-        )
+
+        view.findViewById<View>(R.id.btn_add).setOnClickListener {
+            nav().push(AddZikrFragment.of(null))
+        }
+
+        view.findViewById<View>(R.id.btn_import).setOnClickListener {
+            showImportHelp()
+        }
+
+        view.findViewById<View>(R.id.btn_export).setOnClickListener {
+            exportPicker.launch(
+                "azkar-backup-" +
+                    SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) +
+                    ".json"
+            )
+        }
+
         view.findViewById<RecyclerView>(R.id.list).apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = myAdapter
+            layoutManager = GridLayoutManager(requireContext(), 2)
+            adapter = cards
+            addItemDecoration(GridGap(12))
+            setHasFixedSize(true)
             itemAnimator = null
         }
+
         refresh()
 
-        view.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
-            override fun onPreDraw(): Boolean {
-                view.viewTreeObserver.removeOnPreDrawListener(this)
-                android.util.Log.d("AzkarPerf", "My azkar first frame: ${SystemClock.elapsedRealtime() - t0} ms")
-                return true
+        view.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    view.viewTreeObserver.removeOnPreDrawListener(this)
+                    android.util.Log.d(
+                        "AzkarPerf",
+                        "My azkar first frame: ${SystemClock.elapsedRealtime() - t0} ms"
+                    )
+                    return true
+                }
             }
-        })
+        )
     }
 
     private fun refresh() {
+        val ctx = requireContext()
         val counts = Store.zikrCounts()
-        val names = Store.folders().associate { it.id to it.name }
-        val tiles = Store.folders().map { Tile(it.id, it.name, it.icon, counts[it.id] ?: 0) }
-        val saved = Store.zikrs()
-            .filter { !it.id.startsWith("b_") }
-            .map {
-                MyItem.Saved(
-                    it.id, it.arabic, it.repeat, it.note, names[it.folderId] ?: "Anytime",
-                    !(it.folderId == null || Store.isBuiltinFolder(it.folderId))
-                )
+        val teal = ctx.getColor(R.color.teal)
+        val gold = ctx.getColor(R.color.gold)
+        val list = ArrayList<Card>()
+
+        Store.folders().forEach { f ->
+            val b = Builtins.byKey(f.id)
+
+            list.add(
+                Card(
+                    f.id,
+                    f.name,
+                    azkarCount(counts[f.id] ?: 0),
+                    f.icon,
+                    b?.icon ?: R.drawable.ic_folder_1p75,
+                    if (b != null) teal else gold,
+                    false
+                ) {
+                    nav().push(EditFolderFragment.of(f.id))
+                }
+            )
+        }
+
+        val anytime = counts[null] ?: 0
+
+        if (anytime > 0) {
+            list.add(
+                Card(
+                    "anytime",
+                    "Anytime",
+                    azkarCount(anytime),
+                    null,
+                    R.drawable.ic_folder_1p75,
+                    gold,
+                    false
+                ) {
+                    nav().push(FolderFragment.of("anytime"))
+                }
+            )
+        }
+
+        list.add(
+            Card(
+                "new",
+                "New folder",
+                "",
+                null,
+                R.drawable.ic_plus_2,
+                gold,
+                true
+            ) {
+                promptNewFolder { refresh() }
             }
-        val rows = ArrayList<MyItem>()
-        rows.add(MyItem.Header)
-        rows.add(MyItem.Folders(tiles))
-        if (saved.isNotEmpty()) { rows.add(MyItem.SavedLabel); rows.addAll(saved) }
-        myAdapter.submitList(rows)
+        )
+
+        cards.submitList(list)
+
+        val n = Store.folders().size
+        view?.findViewById<TextView>(R.id.folder_count)?.text =
+            if (n == 1) "1 folder" else "$n folders"
     }
 
     private fun writeExport(uri: Uri) {
         val ctx = requireContext()
+
         try {
             val text = Store.exportJson()
-            ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
-                ?: throw java.io.IOException("Could not open the file for writing.")
-            AlertDialog.Builder(ctx).setTitle("Export complete")
-                .setMessage("Saved ${Store.folders().size} folders, ${Store.zikrs().size} azkar and ${Store.schedules().size} reminders.")
-                .setPositiveButton("OK", null).show()
+
+            ctx.contentResolver.openOutputStream(uri, "wt")?.use {
+                it.write(text.toByteArray(Charsets.UTF_8))
+            } ?: throw java.io.IOException("Could not open the file for writing.")
+
+            AlertDialog.Builder(ctx)
+                .setTitle("Export complete")
+                .setMessage(
+                    "Saved ${Store.folders().size} folders, " +
+                        "${Store.zikrs().size} azkar and " +
+                        "${Store.schedules().size} reminders."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+
         } catch (e: Exception) {
-            AlertDialog.Builder(ctx).setTitle("Export failed")
-                .setMessage("The file could not be saved. " + (e.message ?: "")).setPositiveButton("OK", null).show()
+            AlertDialog.Builder(ctx)
+                .setTitle("Export failed")
+                .setMessage("The file could not be saved. " + (e.message ?: ""))
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
 
     private fun readAndConfirm(uri: Uri) {
         val ctx = requireContext()
+
         val raw = try {
-            ctx.contentResolver.openInputStream(uri)?.use { it.bufferedReader(Charsets.UTF_8).readText() }
-        } catch (e: Exception) { null }
+            ctx.contentResolver.openInputStream(uri)?.use {
+                it.bufferedReader(Charsets.UTF_8).readText()
+            }
+        } catch (e: Exception) {
+            null
+        }
+
         when {
             raw == null -> showError("The file could not be read.")
-            raw.length > 5_000_000 -> showError("The file is too large (over 5 MB).")
-            else -> when (val p = ImportJson.parse(raw)) {
-                is ImportJson.Parsed.Error -> showError(p.message)
-                is ImportJson.Parsed.Ok -> confirm(p)
+
+            raw.length > 5_000_000 ->
+                showError("The file is too large (over 5 MB).")
+
+            else -> {
+                when (val p = ImportJson.parse(raw)) {
+                    is ImportJson.Parsed.Error -> showError(p.message)
+                    is ImportJson.Parsed.Ok -> confirm(p)
+                }
             }
         }
     }
 
+    private fun showImportHelp() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Import Format")
+            .setMessage(
+                "The JSON file should contain a \"folders\" array. " +
+                    "Each folder needs a \"name\" and an \"azkar\" list.\n\n" +
+                    "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
+                    "• count: how many times, 1 to 999. Leave it out for 1.\n" +
+                    "• A folder with the same name gets the new azkar added to it. " +
+                    "Exact duplicates are skipped and nothing is overwritten."
+            )
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
     private fun showError(msg: String) {
-        AlertDialog.Builder(requireContext()).setTitle("Can't import this file").setMessage(msg)
-            .setPositiveButton("OK", null).show()
+        AlertDialog.Builder(requireContext())
+            .setTitle("Can't import this file")
+            .setMessage(msg)
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Show format") { _, _ ->
+                showImportHelp()
+            }
+            .show()
     }
 
     private fun confirm(p: ImportJson.Parsed.Ok) {
         val nF = p.folders.size
         val nA = p.folders.sumOf { it.items.size } + p.unfiled.size
-        val existing = p.folders.count { f -> Store.folders().any { it.id == f.id || it.name.trim().equals(f.name.trim(), ignoreCase = true) } }
-        val lines = p.folders.take(8).joinToString("\n") { "• ${it.name}: ${it.items.size}" } + if (p.folders.size > 8) "\n…" else ""
-        var msg = "$nF folders and $nA azkar will be imported."
-        if (p.reminders.isNotEmpty()) msg += " The file also has ${p.reminders.size} reminders."
-        if (p.settings != null) msg += " Your reading and notification settings will be restored."
-        if (lines.isNotEmpty()) msg += "\n\n$lines"
-        if (existing > 0) msg += "\n\n$existing folder(s) already exist. Their azkar will be added to them, and exact duplicates are skipped. Nothing is overwritten."
-        AlertDialog.Builder(requireContext()).setTitle("Import from JSON").setMessage(msg)
-            .setPositiveButton("Import") { _, _ ->
-                val r = Store.importAll(p)
-                ReminderScheduler.rescheduleAll(requireContext())
-                refresh()
-                AlertDialog.Builder(requireContext()).setTitle("Import complete")
-                    .setMessage("${r.created} new folders, ${r.merged} merged, ${r.added} azkar added, ${r.skipped} duplicates skipped, ${r.reminders} reminders added.")
-                    .setPositiveButton("OK", null).show()
+
+        val existing = p.folders.count { f ->
+            Store.folders().any {
+                it.id == f.id ||
+                    it.name.trim().equals(f.name.trim(), ignoreCase = true)
             }
-            .setNegativeButton("Cancel", null).show()
+        }
+
+        val lines = p.folders.take(8).joinToString("\n") {
+            "• ${it.name}: ${it.items.size}"
+        } + if (p.folders.size > 8) "\n…" else ""
+
+        var msg = "$nF folders and $nA azkar will be imported."
+
+        if (p.reminders.isNotEmpty()) {
+            msg += " The file also has ${p.reminders.size} reminders."
+        }
+
+        if (p.settings != null) {
+            msg += " Your reading and notification settings will be restored."
+        }
+
+        if (lines.isNotEmpty()) {
+            msg += "\n\n$lines"
+        }
+
+        if (existing > 0) {
+            msg += "\n\n$existing folder(s) already exist. Their azkar will be " +
+                "added to them, and exact duplicates are skipped. Nothing is overwritten."
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Import from JSON")
+            .setMessage(msg)
+            .setPositiveButton("Import") { _, _ ->
+
+                val r = Store.importAll(p)
+
+                ReminderScheduler.rescheduleAll(requireContext())
+
+                refresh()
+
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Import complete")
+                    .setMessage(
+                        "${r.created} new folders, ${r.merged} merged, " +
+                            "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
+                            "${r.reminders} reminders added."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private companion object {
+        const val EXAMPLE = """{
+  "folders": [
+    {
+      "name": "Morning",
+      "azkar": [
+        { "text": "سبحان الله", "count": 33 },
+        { "text": "الحمد لله", "count": 33 },
+        { "text": "الله أكبر", "count": 34 }
+      ]
+    },
+    {
+      "name": "Duas",
+      "azkar": [
+        { "text": "رَبِّ زِدْنِي عِلْمًا", "count": 1 }
+      ]
+    }
+  ]
+}"""
+
+        const val NOTES =
+            "• folders: a list. Each folder needs a name and a list of azkar.\n" +
+                "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
+                "• count: how many times, 1 to 999. Leave it out for 1.\n" +
+                "• A folder with the same name gets the new azkar added to it. " +
+                "Exact duplicates are skipped and nothing is overwritten."
     }
 }

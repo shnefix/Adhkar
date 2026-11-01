@@ -12,6 +12,7 @@ object Store {
 
     private const val K_ZIKRS = "zikrs"
     private const val K_FOLDERS = "folders"
+    private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
@@ -43,13 +44,19 @@ private var hzCache: Set<String> = emptySet()
         fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
         sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
 hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
-        if (!sp.contains(K_ZIKRS)) seed()
+        // Import default folders if not yet imported (independent of first launch)
+        if (!sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)) {
+            seedDefaultFolders(context)
+            sp.edit().putBoolean(K_DEFAULT_FOLDERS_IMPORTED, true).apply()
+            android.util.Log.i("Azkar", "Default folders imported successfully")
+        }
+        if (!sp.contains(K_ZIKRS)) seed(context)
         migrateBuiltins()
         migrateSchedules()
         sanitizeIcons()
     }
 
-    private fun seed() {
+    private fun seed(context: Context) {
         saveFolders(listOf(Folder("family", "Family"), Folder("friday", "Friday")))
         saveZikrs(
             listOf(
@@ -58,6 +65,21 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
                 Zikr("seed3", "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ", "O Allah, send prayers and peace upon our Prophet Muhammad.", 10, "friday")
             )
         )
+        seedDefaultFolders(context)
+    }
+
+    /** Fresh install only: the bundled default folders (assets/default_folders.json, the same format as Import). */
+    private fun seedDefaultFolders(context: Context) {
+        try {
+            val raw = context.assets.open("default_folders.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val p = ImportJson.parse(raw) as? ImportJson.Parsed.Ok ?: return
+            val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
+            saveFolders(ns.folders)
+            saveZikrs(ns.zikrs)
+            setHidden(hidden() + p.folders.mapNotNull { it.id })   // in the Library, not on Home
+        } catch (e: Exception) {
+            android.util.Log.w("Azkar", "default folders were not loaded", e)
+        }
     }
 
     /** One time: the built-in collections become ordinary, fully editable folders with the same ids. */

@@ -23,7 +23,7 @@
 <FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="Fewer repeats" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
-<TextView style="@style/TB" android:text="3" android:textSize="20sp" android:textColor="@color/text" android:id="@+id/n" android:gravity="center" android:minWidth="44dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<EditText style="@style/TB" android:id="@+id/n" android:text="1" android:textSize="20sp" android:textColor="@color/text" android:gravity="center" android:inputType="number" android:maxLength="3" android:selectAllOnFocus="true" android:singleLine="true" android:imeOptions="actionDone" android:background="@null" android:padding="0dp" android:minWidth="56dp" android:layout_width="wrap_content" android:layout_height="match_parent"/>
 <FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="More repeats" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
