@@ -39,28 +39,12 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
 
         // Show on Home
         val sw = view.findViewById<ToggleSwitch>(R.id.sw_home)
-        val homeSub = view.findViewById<TextView>(R.id.home_sub)
-        fun renderHome() {
-            sw.on = id !in Store.hidden()
-            homeSub.text = if (sw.on) "Appears on your Home screen" else "Hidden from Home"
-        }
-        renderHome()
-        sw.onToggle = { on ->
-            Store.setHidden(if (on) Store.hidden() - id else Store.hidden() + id)
-            renderHome()
-        }
+        sw.on = id !in Store.hidden()
+        sw.onToggle = { on -> Store.setHidden(if (on) Store.hidden() - id else Store.hidden() + id) }
 
 // Library position
-        val libUp = view.findViewById<View>(R.id.lib_up)
-        val libDown = view.findViewById<View>(R.id.lib_down)
-        fun renderPos() {
-            val i = Store.folderIndex(id)
-            libUp.alpha = if (i <= 0) 0.35f else 1f
-            libDown.alpha = if (i >= Store.folders().size - 1) 0.35f else 1f
-        }
-        libUp.setOnClickListener { Store.moveFolder(id, -1); renderPos() }
-        libDown.setOnClickListener { Store.moveFolder(id, 1); renderPos() }
-        renderPos()
+        // Note: libUp and lib_down were removed from the UI, but Store.moveFolder stays
+        // because Customize Home still uses it.
 
         val iconBtn = view.findViewById<TextView>(R.id.icon_btn)
         fun renderIcon() {

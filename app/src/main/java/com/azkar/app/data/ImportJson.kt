@@ -9,7 +9,7 @@ import org.json.JSONObject
  */
 object ImportJson {
     data class Item(val text: String, val count: Int, val note: String = "")
-    data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false)
+    data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
     data class SettingsIn(val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null)
     sealed class Parsed {
@@ -49,10 +49,14 @@ object ImportJson {
     fun parse(raw: String): Parsed {
         val s = raw.removePrefix("\uFEFF").trim()
         if (s.isEmpty()) return Parsed.Error("The file is empty.")
+        if (s.startsWith("[")) return Parsed.Error("The file is a bare list. It must be an object like { \"folders\": [ ... ] }.")
         val root = try { JSONObject(s) } catch (e: JSONException) {
             return Parsed.Error("This is not valid JSON. " + (e.message ?: "").take(90))
         }
-        val arr = root.optJSONArray("folders") ?: return Parsed.Error("The file needs a top-level \"folders\" list.")
+        val arr = root.optJSONArray("folders") ?: return Parsed.Error(
+            if (root.has("folders")) "\"folders\" must be a list, like [ { \"name\": ..., \"azkar\": [...] } ]."
+            else "The file needs a top-level \"folders\" list."
+        )
         val folders = ArrayList<FolderIn>()
         for (i in 0 until arr.length()) {
             val f = arr.optJSONObject(i) ?: return Parsed.Error("Folder ${i + 1}: expected an object.")
@@ -64,7 +68,7 @@ object ImportJson {
             val id = if (f.isNull("id")) null else (f.opt("id") as? String)?.trim()?.ifEmpty { null }
             val icon = (if (f.isNull("icon")) null else (f.opt("icon") as? String)?.trim()?.ifEmpty { null })
     ?.takeUnless { EmojiRules.isRestricted(it) }   // people/animal emojis are dropped
-            folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false)))
+            folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false), if (f.opt("home") is Boolean) f.getBoolean("home") else null))
         }
         var unfiled: List<Item> = emptyList()
         root.optJSONArray("unfiled")?.let {

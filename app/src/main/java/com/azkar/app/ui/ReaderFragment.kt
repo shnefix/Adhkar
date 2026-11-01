@@ -125,7 +125,7 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             canFinish = { rn.canFinish() }
             onFinish = {
                 Store.clearPosition(key)
-                nav().finishReading(title)
+                nav().finishReading()
             }
             onPage = { dir ->
                 if (dir > 0) rn.next() else rn.prev()

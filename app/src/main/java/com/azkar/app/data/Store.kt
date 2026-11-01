@@ -9,91 +9,80 @@ import java.util.UUID
 /** Persistent local storage (SharedPreferences + JSON), cached in memory. All writes go through the save* functions. */
 object Store {
     private lateinit var sp: SharedPreferences
+    private lateinit var appCtx: Context
 
     private const val K_ZIKRS = "zikrs"
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
+    private const val K_DEFAULTS_VER = "defaults_version"
+    private const val DEFAULTS_VERSION = 1
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
     private const val K_SIZE = "arabic_size"
-private const val K_THEME = "theme_mode"
-private const val K_HZ = "hidden_zikrs"
+    private const val K_THEME = "theme_mode"
+    private const val K_HZ = "hidden_zikrs"
     private const val K_REM = "reminder_"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
-    private const val K_MIG = "builtins_v2"
-private const val K_SP = "arabic_sp"
-private const val K_COMPLETE = "show_complete"
-private const val K_TAP = "tap_advance"
-private const val K_AWAKE = "keep_awake"
-private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
-private const val K_POSC = "posc_"    // posc_<folderId> = its count
+    private const val K_SP = "arabic_sp"
+    private const val K_TAP = "tap_advance"
+    private const val K_AWAKE = "keep_awake"
+    private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
+    private const val K_POSC = "posc_"    // posc_<folderId> = its count
 
     // In-memory copies: the single source of truth for every screen.
     private var zCache: List<Zikr> = emptyList()
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
-private var hzCache: Set<String> = emptySet()
+    private var hzCache: Set<String> = emptySet()
 
     @Synchronized
     fun init(context: Context) {
         if (::sp.isInitialized) return
-        sp = context.applicationContext.getSharedPreferences("azkar", Context.MODE_PRIVATE)
+        appCtx = context.applicationContext
+        sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
         zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
         fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
         sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
-hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
-        // Import default folders if not yet imported (independent of first launch)
-        if (!sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)) {
-            seedDefaultFolders(context)
-            sp.edit().putBoolean(K_DEFAULT_FOLDERS_IMPORTED, true).apply()
-            android.util.Log.i("Azkar", "Default folders imported successfully")
-        }
-        if (!sp.contains(K_ZIKRS)) seed(context)
-        migrateBuiltins()
+        hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
+        syncDefaults()
         migrateSchedules()
         sanitizeIcons()
     }
 
-    private fun seed(context: Context) {
-        saveFolders(listOf(Folder("family", "Family"), Folder("friday", "Friday")))
-        saveZikrs(
-            listOf(
-                Zikr("seed1", "أَسْتَغْفِرُ اللَّهَ", "I seek forgiveness from Allah.", 100, null),
-                Zikr("seed2", "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", "There is no power and no strength except with Allah.", 10, "family"),
-                Zikr("seed3", "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ", "O Allah, send prayers and peace upon our Prophet Muhammad.", 10, "friday")
-            )
-        )
-        seedDefaultFolders(context)
+    // ---------- Default azkar (assets/default_folders.json) ----------
+    private fun defaults(): ImportJson.Parsed.Ok? = try {
+        val raw = appCtx.assets.open("default_folders.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        ImportJson.parse(raw) as? ImportJson.Parsed.Ok
+    } catch (e: Exception) {
+        android.util.Log.w("Azkar", "default folders were not loaded", e)
+        null
     }
 
-    /** Fresh install only: the bundled default folders (assets/default_folders.json, the same format as Import). */
-    private fun seedDefaultFolders(context: Context) {
-        try {
-            val raw = context.assets.open("default_folders.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
-            val p = ImportJson.parse(raw) as? ImportJson.Parsed.Ok ?: return
-            val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
-            saveFolders(ns.folders)
-            saveZikrs(ns.zikrs)
-            setHidden(hidden() + p.folders.mapNotNull { it.id })   // in the Library, not on Home
-        } catch (e: Exception) {
-            android.util.Log.w("Azkar", "default folders were not loaded", e)
-        }
+    /**
+     * Gives every user the defaults from the JSON, additively: folders match by id then name,
+     * azkar are skipped if the same text already exists in that folder, nothing is overwritten or deleted.
+     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). Users of the previous build already
+     * received everything, so for them it only records the version.
+     */
+    private fun syncDefaults() {
+        if (sp.getInt(K_DEFAULTS_VER, 0) >= DEFAULTS_VERSION) return
+        val alreadyHave = sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
+        if (!alreadyHave && !mergeDefaults()) return          // asset unreadable: try again next start
+        sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
-    /** One time: the built-in collections become ordinary, fully editable folders with the same ids. */
-    private fun migrateBuiltins() {
-        if (sp.getBoolean(K_MIG, false)) return
-        val have = fCache
-        val missing = Builtins.library.filter { c -> have.none { it.id == c.key } }
-        saveFolders(missing.map { Folder(it.key, it.title) } + have)
-        val seeded = missing.flatMap { c ->
-            c.items.mapIndexed { n, r -> Zikr("b_${c.key}_$n", r.arabic, "", r.target, c.key) }
-        }
-        saveZikrs(seeded + zCache)
-        setHidden(hidden() + setOf("morning", "worry", "forgiveness"))
-        sp.edit().putBoolean(K_MIG, true).apply()
+    private fun mergeDefaults(): Boolean {
+        val p = defaults() ?: return false
+        val before = fCache.map { it.id }.toSet()
+        val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
+        saveFolders(ns.folders)
+        saveZikrs(ns.zikrs)
+        val created = ns.folders.map { it.id }.filter { it !in before }.toSet()
+        val hide = p.folders.filter { it.home != true }.mapNotNull { it.id }.filter { it in created }
+        if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
+        return true
     }
 
     /** One time: the three fixed reminders become editable schedules (same on/off state). */
@@ -107,6 +96,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
             )
         )
     }
+
     // ---------- Parsing / saving (the only code that touches the caches) ----------
     private fun parseZikrs(raw: String): List<Zikr> {
         val arr = JSONArray(raw)
@@ -209,6 +199,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         val queue = orderedIds.mapNotNull { byId[it] }.toMutableList()
         saveZikrs(all.map { if (it.folderId == folderId && queue.isNotEmpty()) queue.removeAt(0) else it })
     }
+
     // ---------- Folders ----------
     fun folders(): List<Folder> = fCache
     fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
@@ -230,6 +221,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
             saveFolders(fCache.map { if (it.icon != null && EmojiRules.isRestricted(it.icon)) it.copy(icon = null) else it })
         }
     }
+
     fun moveFolder(id: String, d: Int) {
         val l = fCache.toMutableList()
         val i = l.indexOfFirst { it.id == id }
@@ -262,8 +254,8 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     fun importAll(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
         val (ns, sum) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
         saveFolders(ns.folders); saveZikrs(ns.zikrs); saveSchedules(ns.schedules)
-        p.settings?.arabicSp?.let { setArabicSp(it) }
-    ?: p.settings?.arabicSize?.let { setArabicSp(ReaderPrefs.spFromOldIndex(it)) }
+        val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
+        sp2?.let { setArabicSp(it) }
         p.settings?.notificationsOn?.let { setNotificationsOn(it) }
         return sum
     }
@@ -299,9 +291,11 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     fun placement(): Placement = Placement.from(sp.getString(K_PLACE, null))
     fun setPlacement(p: Placement) = sp.edit().putString(K_PLACE, p.key).apply()
 
+    /** Resets order/placement; default folders that are not meant for Home (no "home": true) are hidden again. */
     fun resetHome() {
         sp.edit().remove(K_ORDER).remove(K_HIDDEN).remove(K_PLACE).apply()
-        setHidden(setOf("morning", "worry", "forgiveness").filter { folder(it) != null }.toSet())
+        val hide = defaults()?.folders?.filter { it.home != true }?.mapNotNull { it.id }.orEmpty()
+        setHidden(hide.filter { folder(it) != null }.toSet())
     }
 
     // ---------- Settings ----------
@@ -334,8 +328,6 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     /** Arabic size in sp. Existing Small/Medium/Large choices carry over as 20/26/32. */
     fun arabicSp(): Int = ReaderPrefs.clampSp(sp.getInt(K_SP, ReaderPrefs.spFromOldIndex(arabicSize())))
     fun setArabicSp(v: Int) = sp.edit().putInt(K_SP, ReaderPrefs.clampSp(v)).apply()
-    fun showCompletion() = sp.getBoolean(K_COMPLETE, true)
-    fun setShowCompletion(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()
     fun tapAdvance() = sp.getBoolean(K_TAP, true)
     fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
@@ -390,4 +382,3 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         return Visibility.readerIndex(src, hzCache, z.id).coerceAtLeast(0)
     }
 }
-

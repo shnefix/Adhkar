@@ -63,7 +63,6 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         }
 
 // Reading switches
-        view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = Store.showCompletion(); onToggle = { Store.setShowCompletion(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = Store.tapAdvance(); onToggle = { Store.setTapAdvance(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = Store.keepScreenOn(); onToggle = { Store.setKeepScreenOn(it) } }
 

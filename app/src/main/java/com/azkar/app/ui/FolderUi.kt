@@ -62,16 +62,35 @@ fun Fragment.promptNewFolder(onCreated: (Folder) -> Unit) {
     fun showIcon() { iconBtn.text = icon ?: "Default icon" }
     showIcon()
     iconBtn.setOnClickListener { pickEmoji(icon) { icon = it; showIcon() } }
-    val box = LinearLayout(ctx).apply {
-        orientation = LinearLayout.VERTICAL
-        val p = Ui.pxi(ctx, 20f)
-        setPadding(p, Ui.pxi(ctx, 8f), p, 0)
-        addView(input)
-        addView(iconBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            .also { it.topMargin = Ui.pxi(ctx, 12f) })
-    }
-    val dlg = AlertDialog.Builder(ctx).setTitle("New folder").setView(box)
-        .setPositiveButton("Create", null).setNegativeButton("Cancel", null).create()
+    val intro = TextView(ctx, null, 0, R.style.T).apply {
+    text = "Folders keep the azkar you read together in one place. Name your folder, then add azkar to it."
+    textSize = 14f
+    setTextColor(ctx.getColor(R.color.light))
+    setLineSpacing(0f, 1.2f)
+}
+val example = TextView(ctx, null, 0, R.style.T).apply {
+    text = "Example: a folder called “Friday” with\n• Salawat on the Prophet ×10\n• Istighfar ×100\n" +
+        "Open it from Home and read them one after another."
+    textSize = 13f
+    setTextColor(ctx.getColor(R.color.muted))
+    setLineSpacing(0f, 1.25f)
+    val q = Ui.pxi(ctx, 14f)
+    setPadding(q, q, q, q)
+    background = Ui.shape(ctx, ctx.getColor(R.color.card2), null, 14f)
+}
+input.hint = "Folder name, e.g. Friday"
+val box = LinearLayout(ctx).apply {
+    orientation = LinearLayout.VERTICAL
+    val p = Ui.pxi(ctx, 20f)
+    setPadding(p, Ui.pxi(ctx, 8f), p, 0)
+    addView(intro)
+    addView(example, Ui.lp(top = 12, ctx = ctx))
+    addView(input, Ui.lp(top = 16, ctx = ctx))
+    addView(iconBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        .also { it.topMargin = Ui.pxi(ctx, 12f) })
+}
+val dlg = AlertDialog.Builder(ctx).setTitle("New folder").setView(ScrollView(ctx).apply { addView(box) })
+    .setPositiveButton("Create", null).setNegativeButton("Cancel", null).create()
     dlg.setOnShowListener {
         dlg.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
             val name = input.text.toString().trim()

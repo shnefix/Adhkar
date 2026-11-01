@@ -48,7 +48,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         }
 
         view.findViewById<View>(R.id.btn_import).setOnClickListener {
-            showImportHelp()
+            launchImportPicker()
         }
 
         view.findViewById<View>(R.id.btn_export).setOnClickListener {
@@ -223,9 +223,32 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             .setMessage(msg)
             .setPositiveButton("OK", null)
             .setNeutralButton("Show format") { _, _ ->
-                showImportHelp()
+                showFormatHelp()
             }
             .show()
+    }
+
+    private fun showFormatHelp() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Import from JSON")
+            .setMessage(
+                "The JSON file should contain a \"folders\" list. " +
+                    "Each folder needs a \"name\" and an \"azkar\" list.\n\n" +
+                "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
+                "• count: how many times, 1 to 999. Leave it out for 1.\n" +
+                "• A folder with the same name gets the new azkar added to it. " +
+                "Exact duplicates are skipped and nothing is overwritten."
+            )
+            .setPositiveButton("OK", null)
+            .show()
+    }
+
+    private fun launchImportPicker() {
+        try {
+            importPicker.launch(arrayOf("*/*"))   // some file managers label .json as octet-stream
+        } catch (e: Exception) {
+            showError("No file picker is available on this device.")
+        }
     }
 
     private fun confirm(p: ImportJson.Parsed.Ok) {
