@@ -5,7 +5,7 @@
 <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
-<TextView style="@style/TB" android:text="Notifications" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="Settings" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <View android:layout_width="44dp" android:layout_height="44dp"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="20dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -30,9 +30,39 @@
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="Reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Arabic text size" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="horizontal" android:id="@+id/sizes" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Completion screen" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="Show a summary when a collection is finished" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_complete" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Completion screen"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Tap to advance" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="Tapping the card moves to the next dhikr" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_tap" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Tap to advance"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Keep screen on" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="While you are reading" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_awake" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Keep screen on"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="vertical" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="Arabic text size" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<SeekBar android:id="@+id/size_slider" android:layout_weight="1" android:layout_width="0dp" android:layout_height="44dp" android:paddingStart="0dp" android:paddingEnd="12dp"/>
+<TextView style="@style/TB" android:id="@+id/size_value" android:text="" android:textSize="15sp" android:textColor="@color/gold" android:gravity="end" android:minWidth="52dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<TextView style="@style/Ar" android:id="@+id/size_preview" android:text="سُبْحَانَ اللَّهِ وَبِحَمْدِهِ" android:textColor="@color/arabic" android:textDirection="rtl" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
 </LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">

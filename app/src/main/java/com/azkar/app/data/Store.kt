@@ -22,6 +22,12 @@ private const val K_HZ = "hidden_zikrs"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
     private const val K_MIG = "builtins_v2"
+private const val K_SP = "arabic_sp"
+private const val K_COMPLETE = "show_complete"
+private const val K_TAP = "tap_advance"
+private const val K_AWAKE = "keep_awake"
+private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
+private const val K_POSC = "posc_"    // posc_<folderId> = its count
 
     // In-memory copies: the single source of truth for every screen.
     private var zCache: List<Zikr> = emptyList()
@@ -40,6 +46,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         if (!sp.contains(K_ZIKRS)) seed()
         migrateBuiltins()
         migrateSchedules()
+        sanitizeIcons()
     }
 
     private fun seed() {
@@ -91,7 +98,11 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         val arr = JSONArray(raw)
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Folder(o.getString("id"), o.getString("name"), if (o.isNull("ic")) null else o.optString("ic", "").ifEmpty { null })
+            Folder(
+                o.getString("id"), o.getString("name"),
+                if (o.isNull("ic")) null else o.optString("ic", "").ifEmpty { null },
+                o.optBoolean("rm", false)
+            )
         }
     }
 
@@ -124,6 +135,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         list.forEach { f ->
             val o = JSONObject().put("id", f.id).put("name", f.name)
             f.icon?.let { o.put("ic", it) }
+            if (f.remember) o.put("rm", true)
             arr.put(o)
         }
         sp.edit().putString(K_FOLDERS, arr.toString()).apply()
@@ -180,15 +192,22 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
 
     fun addFolder(name: String, icon: String? = null): Folder {
-        val f = Folder(UUID.randomUUID().toString(), name, icon)
+        val f = Folder(UUID.randomUUID().toString(), name, icon?.takeUnless { EmojiRules.isRestricted(it) })
         saveFolders(fCache + f)
         return f
     }
 
     fun renameFolder(id: String, name: String) = saveFolders(fCache.map { if (it.id == id) it.copy(name = name) else it })
-    fun setFolderIcon(id: String, icon: String?) = saveFolders(fCache.map { if (it.id == id) it.copy(icon = icon) else it })
+    fun setFolderIcon(id: String, icon: String?) = saveFolders(
+        fCache.map { if (it.id == id) it.copy(icon = icon?.takeUnless { e -> EmojiRules.isRestricted(e) }) else it }
+    )
 
-    /** Moves a folder up (-1) or down (+1) in the Library order. */
+    /** One time per start: folders that already use a people/animal emoji fall back to the default icon. */
+    private fun sanitizeIcons() {
+        if (fCache.any { it.icon != null && EmojiRules.isRestricted(it.icon) }) {
+            saveFolders(fCache.map { if (it.icon != null && EmojiRules.isRestricted(it.icon)) it.copy(icon = null) else it })
+        }
+    }
     fun moveFolder(id: String, d: Int) {
         val l = fCache.toMutableList()
         val i = l.indexOfFirst { it.id == id }
@@ -207,6 +226,7 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
         if (sCache.any { it.open == id }) saveSchedules(sCache.map { if (it.open == id) it.copy(open = null) else it })
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
+        clearPosition(id)
     }
 
     fun folderName(key: String?): String {
@@ -220,12 +240,13 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     fun importAll(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
         val (ns, sum) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
         saveFolders(ns.folders); saveZikrs(ns.zikrs); saveSchedules(ns.schedules)
-        p.settings?.arabicSize?.let { setArabicSize(it) }
+        p.settings?.arabicSp?.let { setArabicSp(it) }
+    ?: p.settings?.arabicSize?.let { setArabicSp(ReaderPrefs.spFromOldIndex(it)) }
         p.settings?.notificationsOn?.let { setNotificationsOn(it) }
         return sum
     }
 
-    fun exportJson(): String = ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn())
+    fun exportJson(): String = ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn(), arabicSp())
 
     // ---------- Home customisation ----------
     val defaultOrder: List<String> get() = fCache.map { it.id }
@@ -266,6 +287,38 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     fun arabicSize() = sp.getInt(K_SIZE, 1)
     fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
 
+    // ---------- Per-folder reading position ----------
+    fun rememberPosition(folderId: String) = folder(folderId)?.remember == true
+
+    fun setFolderRemember(id: String, on: Boolean) {
+        saveFolders(fCache.map { if (it.id == id) it.copy(remember = on) else it })
+        if (!on) clearPosition(id)          // old progress must never leak back in
+    }
+
+    fun savePosition(folderId: String, zikrId: String, count: Int) {
+        sp.edit().putString(K_POS + folderId, zikrId).putInt(K_POSC + folderId, count).apply()
+    }
+
+    fun savedPosition(folderId: String): Pair<String, Int>? {
+        val id = sp.getString(K_POS + folderId, null) ?: return null
+        return id to sp.getInt(K_POSC + folderId, 0)
+    }
+
+    fun clearPosition(folderId: String) {
+        sp.edit().remove(K_POS + folderId).remove(K_POSC + folderId).apply()
+    }
+
+    // ---------- Reader settings ----------
+    /** Arabic size in sp. Existing Small/Medium/Large choices carry over as 20/26/32. */
+    fun arabicSp(): Int = ReaderPrefs.clampSp(sp.getInt(K_SP, ReaderPrefs.spFromOldIndex(arabicSize())))
+    fun setArabicSp(v: Int) = sp.edit().putInt(K_SP, ReaderPrefs.clampSp(v)).apply()
+    fun showCompletion() = sp.getBoolean(K_COMPLETE, true)
+    fun setShowCompletion(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()
+    fun tapAdvance() = sp.getBoolean(K_TAP, true)
+    fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
+    fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
+    fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
+
     /** 0 = current teal theme (default), 1 = OLED black. */
     fun theme() = sp.getInt(K_THEME, 0)
     fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
@@ -302,10 +355,10 @@ hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
         if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat)) } ?: emptyList()
+            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id)) } ?: emptyList()
         }
         val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat) }
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"

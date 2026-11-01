@@ -62,33 +62,33 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
 
-        // Arabic text size
-        val sizes = view.findViewById<LinearLayout>(R.id.sizes)
-        val px = intArrayOf(20, 26, 32)
-        val aria = arrayOf("Small Arabic text", "Medium Arabic text", "Large Arabic text")
-        fun renderSizes() {
-            sizes.removeAllViews()
-            val z = Store.arabicSize()
-            px.forEachIndexed { idx, size ->
-                val on = idx == z
-                val b = TextView(ctx, null, 0, R.style.ArB).apply {
-                    text = "أب"
-                    textSize = size.toFloat()
-                    gravity = Gravity.CENTER
-                    contentDescription = aria[idx]
-                    setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
-                    val line = if (on) ctx.getColor(R.color.gold) else ctx.getColor(R.color.border2)
-                    background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, line, 14f)
-                    isClickable = true
-                    isFocusable = true
-                    setOnClickListener { Store.setArabicSize(idx); renderSizes() }
-                }
-                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
-                if (idx > 0) p.marginStart = Ui.pxi(ctx, 8f)
-                sizes.addView(b, p)
-            }
+// Reading switches
+        view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = Store.showCompletion(); onToggle = { Store.setShowCompletion(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = Store.tapAdvance(); onToggle = { Store.setTapAdvance(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = Store.keepScreenOn(); onToggle = { Store.setKeepScreenOn(it) } }
+
+        // Arabic text size slider (the preview updates while you drag; the reader uses it on its next open)
+        val slider = view.findViewById<android.widget.SeekBar>(R.id.size_slider)
+        val sizeValue = view.findViewById<TextView>(R.id.size_value)
+        val preview = view.findViewById<TextView>(R.id.size_preview)
+        fun showSize(sp: Int) {
+            sizeValue.text = "$sp sp"
+            preview.textSize = sp.toFloat()
+            val lh = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp * 1.85f, resources.displayMetrics)
+            androidx.core.widget.TextViewCompat.setLineHeight(preview, lh.toInt())   // same 1.85 line height as the reader
         }
-        renderSizes()
+        slider.max = com.azkar.app.data.ReaderPrefs.FONT_MAX - com.azkar.app.data.ReaderPrefs.FONT_MIN
+        slider.progress = Store.arabicSp() - com.azkar.app.data.ReaderPrefs.FONT_MIN
+        showSize(Store.arabicSp())
+        slider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                val sp = com.azkar.app.data.ReaderPrefs.FONT_MIN + p
+                showSize(sp)
+                if (fromUser) Store.setArabicSp(sp)
+            }
+            override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+        })
         // Theme (same pill style as the Arabic text size selector)
         val themes = view.findViewById<LinearLayout>(R.id.themes)
         val themeNames = arrayOf("Teal (current)", "OLED black")

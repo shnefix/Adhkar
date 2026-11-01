@@ -12,6 +12,7 @@ import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.azkar.app.data.Store
+import com.azkar.app.ui.CompleteFragment
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
@@ -89,6 +90,18 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.popBackStack()
     }
 
+    /** The last zikr of a collection was finished: Home, then (optionally) the completion screen on top. */
+    fun finishReading(name: String) {
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+        if (Store.showCompletion()) {
+            supportFragmentManager.beginTransaction()
+                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out, android.R.anim.fade_in, android.R.anim.fade_out)
+                .replace(R.id.container, CompleteFragment.of(name))
+                .addToBackStack(null)
+                .commit()
+        }
+    }
     /** Resets the back stack and shows Home. */
     fun goHome() {
         android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())

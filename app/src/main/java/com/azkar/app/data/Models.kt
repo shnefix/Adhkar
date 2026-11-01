@@ -12,10 +12,10 @@ data class Zikr(
 )
 
 /** A folder the user created. */
-data class Folder(val id: String, val name: String, val icon: String? = null)
+data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false)
 
 /** One recitation inside the reader. */
-data class ReaderItem(val arabic: String, val target: Int)
+data class ReaderItem(val arabic: String, val target: Int, val id: String = "")
 
 /** Built-in collection (Home grid / Library). */
 data class Collection(

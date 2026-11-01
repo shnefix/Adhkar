@@ -7,13 +7,14 @@ import org.json.JSONObject
 object ExportJson {
     private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also { if (z.note.isNotBlank()) it.put("note", z.note) }
 
-    fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean): String {
+    fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT): String {
         val folders = JSONArray()
         s.folders.forEach { f ->
             val az = JSONArray()
             s.zikrs.filter { it.folderId == f.id }.forEach { az.put(item(it)) }
             val o = JSONObject().put("id", f.id).put("name", f.name)
             f.icon?.let { o.put("icon", it) }
+if (f.remember) o.put("remember", true)
             folders.put(o.put("azkar", az))
         }
         val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
@@ -28,7 +29,7 @@ object ExportJson {
             rems.put(o)
         }
         root.put("reminders", rems)
-        root.put("settings", JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn))
+        root.put("settings", JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn).put("arabicSp", arabicSp))
         return root.toString(2)
     }
 }

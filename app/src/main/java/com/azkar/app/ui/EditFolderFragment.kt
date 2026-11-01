@@ -71,6 +71,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         iconBtn.setOnClickListener { pickEmoji(Store.folder(id)?.icon) { Store.setFolderIcon(id, it); renderIcon() } }
         renderIcon()
 
+        val swRem = view.findViewById<ToggleSwitch>(R.id.sw_remember)
+        val remSub = view.findViewById<TextView>(R.id.remember_sub)
+        fun renderRem() {
+            remSub.text = if (swRem.on) "Resumes where you stopped in this folder" else "This folder always starts from the beginning"
+        }
+        swRem.on = Store.rememberPosition(id)
+        renderRem()
+        swRem.onToggle = { on -> Store.setFolderRemember(id, on); renderRem() }
+
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
         val empty = view.findViewById<View>(R.id.empty)

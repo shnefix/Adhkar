@@ -24,7 +24,7 @@ object ImportMerge {
             val existing = byId ?: fl.firstOrNull { it.name.trim().equals(f.name.trim(), ignoreCase = true) }
             val folder = existing ?: run {
                 val id = f.id?.takeIf { c -> c != "anytime" && !c.startsWith("zikr:") && fl.none { it.id == c } } ?: newId()
-                Folder(id, f.name.trim(), f.icon).also { fl.add(it); created++ }
+                Folder(id, f.name.trim(), f.icon, f.remember).also { fl.add(it); created++ }
             }
             if (existing != null) merged++
             f.id?.let { idMap[it] = folder.id }

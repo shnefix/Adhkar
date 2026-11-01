@@ -45,6 +45,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var card: View? = null
     var canPage: ((Int) -> Boolean)? = null
     var onPage: ((Int) -> Unit)? = null
+    var tapEnabled = true
     var canFinish: (() -> Boolean)? = null
     var onFinish: (() -> Unit)? = null
     private var rawDx = 0f
@@ -97,7 +98,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     }
 
     private fun finishTap(e: MotionEvent) {
-        if (tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) next()
+        if (tapEnabled && tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) next()
         tapOk = false
     }
 

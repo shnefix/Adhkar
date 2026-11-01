@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
+import com.azkar.app.data.ReaderResume
 import com.azkar.app.data.Store
 
 class ReaderFragment : Fragment(R.layout.fragment_reader) {
@@ -29,7 +30,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
-        view.keepScreenOn = true
+        view.keepScreenOn = Store.keepScreenOn()   // a view flag: released automatically when the reader goes away
         view.isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
@@ -37,15 +38,22 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
         val key = requireArguments().getString("key") ?: "morning"
         val items = Store.readerItems(key)
         if (items.isEmpty()) { nav().pop(); return }
-        rn = ReaderNav(
-            items.map { it.target },
-            savedInstanceState?.getInt("i") ?: requireArguments().getInt("start", 0),
-            savedInstanceState?.getInt("count") ?: 0
-        )
+        val explicit = requireArguments().getInt("start", -1)
+val remember = Store.rememberPosition(key)
+val (startIdx, startCount) = when {
+    savedInstanceState != null -> savedInstanceState.getInt("i") to savedInstanceState.getInt("count")
+    explicit >= 0 -> explicit to 0
+    remember -> {
+        val sv = Store.savedPosition(key)
+        ReaderResume.start(items.map { it.id }, items.map { it.target }, sv?.first, sv?.second ?: 0)
+    }
+    else -> 0 to 0
+}
+rn = ReaderNav(items.map { it.target }, startIdx, startCount)
         val folderTitle = Store.folderName(key)
         val title = if (key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") &&
             Builtins.byKey(key)?.title == folderTitle) "$folderTitle azkar" else folderTitle
-        val sizeSp = intArrayOf(20, 26, 32)[Store.arabicSize().coerceIn(0, 2)]
+        val sizeSp = Store.arabicSp()
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)
         val track = ctx.getColor(R.color.track)
@@ -103,6 +111,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             hint.text = if (rn.isLast && cur.target > 1)
                 (if (done) "You have finished this collection" else "Tap the circle to count") else ""
+            if (remember && items[rn.index].id.isNotEmpty()) Store.savePosition(key, items[rn.index].id, rn.count)
         }
 
         ring.setOnClickListener {
@@ -111,9 +120,13 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
 
         (view as SwipeLayout).apply {
             card = view.findViewById(R.id.card)
+            tapEnabled = Store.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
-            canFinish = { rn.canFinish() }          // last zikr AND its own count complete
-            onFinish = { android.util.Log.d("AzkarNav", "finish: i=${rn.index} count=${rn.count}"); nav().goHome() }
+            canFinish = { rn.canFinish() }
+            onFinish = {
+                Store.clearPosition(key)
+                nav().finishReading(title)
+            }
             onPage = { dir ->
                 if (dir > 0) rn.next() else rn.prev()
                 arScroll.scrollTo(0, 0)
@@ -136,6 +149,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
     override fun onDestroyView() { immersive(false); super.onDestroyView() }
 
     companion object {
-        fun of(key: String, start: Int = 0) = ReaderFragment().apply { arguments = bundleOf("key" to key, "start" to start) }
+        fun of(key: String, start: Int = -1) = ReaderFragment().apply { arguments = bundleOf("key" to key, "start" to start) }
     }
 }

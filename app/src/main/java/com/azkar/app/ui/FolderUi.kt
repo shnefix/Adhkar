@@ -10,14 +10,9 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
+import com.azkar.app.data.EmojiRules
 import com.azkar.app.data.Folder
 import com.azkar.app.data.Store
-
-val FOLDER_EMOJIS = listOf(
-    "🌅", "🌙", "☀️", "🕌", "🤲", "📿", "✨", "❤️", "📖", "🌿", "🌸", "⭐",
-    "🕋", "💧", "🌧️", "🛏️", "🍽️", "🚗", "🏠", "👪", "💼", "🎓", "🌹", "🕊️",
-    "🔥", "🌍", "☁️", "💚", "🛡️", "🕯️", "🌄", "🌆", "🌟", "💫", "📚", "🧭"
-)
 
 /** Emoji chooser. [onPicked] gets the emoji, or null for "Default" (the vector icon). */
 fun Fragment.pickEmoji(current: String?, onPicked: (String?) -> Unit) {
@@ -25,7 +20,7 @@ fun Fragment.pickEmoji(current: String?, onPicked: (String?) -> Unit) {
     var dlg: AlertDialog? = null
     val flow = FlowLayout(ctx)
     flow.addView(Ui.chip(ctx, "Default", current == null, false) { dlg?.dismiss(); onPicked(null) })
-    FOLDER_EMOJIS.forEach { e ->
+    EmojiRules.FOLDER_EMOJIS.forEach { e ->
         val cell = TextView(ctx).apply {
             text = e
             textSize = 24f

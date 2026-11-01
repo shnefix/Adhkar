@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:gravity="center" android:padding="24dp" android:background="@color/bg" android:layout_width="match_parent" android:layout_height="match_parent">
+<LinearLayout android:gravity="center" android:background="@drawable/bg_icon20" android:layout_width="88dp" android:layout_height="88dp">
+<ImageView android:src="@drawable/ic_check_2p25" android:layout_width="40dp" android:layout_height="40dp" android:tint="@color/gold"/>
+</LinearLayout>
+<TextView style="@style/TB" android:text="Collection complete" android:textSize="28sp" android:textColor="@color/text" android:gravity="center" android:layout_marginTop="24dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="You have finished this collection." android:textSize="15sp" android:textColor="@color/muted" android:gravity="center" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:id="@+id/folder" android:text="" android:textSize="16sp" android:textColor="@color/light" android:gravity="center" android:layout_marginTop="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:id="@+id/btn_home" android:text="Back to Home" android:textSize="17sp" android:textColor="@color/bg" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="40dp" android:layout_width="match_parent" android:layout_height="56dp"/>
+</LinearLayout>
