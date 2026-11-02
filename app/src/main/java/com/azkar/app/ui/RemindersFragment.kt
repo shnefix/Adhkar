@@ -98,7 +98,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         })
         // Theme (same pill style as the Arabic text size selector)
         val themes = view.findViewById<LinearLayout>(R.id.themes)
-        val themeNames = arrayOf("Teal (current)", "OLED black")
+        val themeNames = arrayOf("Teal", "OLED black")
         fun renderThemes() {
             themes.removeAllViews()
             val sel = Store.theme()

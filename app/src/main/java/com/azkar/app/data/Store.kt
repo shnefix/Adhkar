@@ -359,8 +359,8 @@ object Store {
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
     fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
 
-    /** 0 = current teal theme (default), 1 = OLED black. */
-    fun theme() = sp.getInt(K_THEME, 0)
+    /** 0 = teal theme, 1 = OLED black (default). */
+    fun theme() = sp.getInt(K_THEME, 1)
     fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
 
     private fun parseIds(raw: String): Set<String> {
