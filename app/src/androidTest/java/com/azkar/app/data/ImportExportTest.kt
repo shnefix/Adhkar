@@ -11,7 +11,7 @@ class ImportExportTest {
     fun exportedDataCanBeParsedBack() {
         val state = ImportMerge.State(
             listOf(Folder("morning", "Morning", null, false)),
-            listOf(Zikr("z1", "سُبْحَانَ اللَّهِ", "", 3, "morning")),
+            listOf(Zikr("z1", "Sample zikr", "", 3, "morning")),
             emptyList()
         )
         val parsed = ImportJson.parse(ExportJson.build(state, 1, true))

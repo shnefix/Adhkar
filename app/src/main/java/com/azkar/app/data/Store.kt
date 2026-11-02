@@ -23,7 +23,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 1
+    private const val DEFAULTS_VERSION = 2
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
@@ -49,6 +49,7 @@ object Store {
     private var zCache: List<Zikr> = emptyList()
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
+    private var defaultFolderIds: Set<String> = emptySet()
     private var hzCache: Set<String> = emptySet()
     private var cacheGeneration = 0L
     private lateinit var repository: AzkarRepository
@@ -130,6 +131,7 @@ object Store {
         if (recovered) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
         else migrateSchema()
         syncDefaults()
+        defaultFolderIds = defaults()?.folders?.mapNotNull { it.id }?.toSet().orEmpty()
         migrateSchedules()
         sanitizeIcons()
         repository.awaitPendingWrites()
@@ -410,10 +412,10 @@ object Store {
 
     fun folderName(key: String?): String {
         if (key == null) return "Anytime"
-        return folder(key)?.name ?: Builtins.byKey(key)?.title ?: "Anytime"
+        return folder(key)?.name ?: "Anytime"
     }
 
-    fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
+    fun isDefaultFolder(key: String?) = key != null && key in defaultFolderIds
 
     // ---------- Import / export ----------
     suspend fun importAllAsync(p: ImportJson.Parsed.Ok): ImportMerge.Summary {

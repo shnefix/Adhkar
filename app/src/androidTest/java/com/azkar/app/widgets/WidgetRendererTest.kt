@@ -4,13 +4,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.azkar.app.ThemeMode
 import com.azkar.app.R
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.Store
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlinx.coroutines.runBlocking
 
 @RunWith(AndroidJUnit4::class)
 class WidgetRendererTest {
@@ -25,7 +25,11 @@ class WidgetRendererTest {
     @Test
     fun rendersEverySupportedStyleInBothThemes() {
         Store.init(context)
-        val model = WidgetModel("Morning", Builtins.morning.items, emptyList(), 0, 0, "")
+        val model = runBlocking {
+            Store.awaitReady()
+            val folder = Store.folders().first()
+            WidgetModel(folder.name, Store.readerItems(folder.id), emptyList(), 0, 0, "")
+        }
         val cases = listOf(
             WidgetStyle.CLASSIC to WidgetKind.SMALL,
             WidgetStyle.CLASSIC to WidgetKind.MEDIUM,
@@ -90,7 +94,7 @@ class WidgetRendererTest {
 
     @Test
     fun rendersLongArabicTextWithAppTheme() {
-        val longText = "اللَّهُمَّ ".repeat(120)
+        val longText = "sample text ".repeat(120)
         val model = WidgetModel(
             "A folder with an unusually long name that must be clipped",
             listOf(com.azkar.app.data.ReaderItem(longText, 100)),

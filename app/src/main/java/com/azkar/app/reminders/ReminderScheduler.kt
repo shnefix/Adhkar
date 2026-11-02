@@ -20,7 +20,6 @@ import com.azkar.app.AzkarNotifier
 import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.ThemeMode
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
 import kotlinx.coroutines.CoroutineScope
@@ -87,7 +86,7 @@ object ReminderScheduler {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
-        if (s.open == "sleep") {
+        if (s.id == "s") {
             AzkarNotifier.showBeforeSleep(ctx)
             return
         }
@@ -98,7 +97,7 @@ object ReminderScheduler {
                 .apply { s.open?.let { putExtra("open", it) } },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val ar = s.open?.let { Builtins.byKey(it)?.homeArabic } ?: ""
+        val ar = s.open?.let { Store.folderName(it).takeUnless { name -> name == "Anytime" } } ?: ""
         // The system UI inflates RemoteViews with the device's night setting, not ours,
         // so each theme has its own layout built only from colours that never flip.
         val layout = if (Store.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
