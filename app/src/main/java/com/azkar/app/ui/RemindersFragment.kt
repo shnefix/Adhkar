@@ -265,6 +265,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 Store.upsertSchedule(s)
                 ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
                 ReminderScheduler.apply(ctx, s)
+                dlg.dismiss()
                 if (s.enabled) requestNotifications { ok ->
                     if (ok) ReminderScheduler.apply(ctx, s) else Store.upsertSchedule(s.copy(enabled = false))
                     renderList()
