@@ -16,6 +16,7 @@ import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.azkar.app.AzkarNotifier
 import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.ThemeMode
@@ -86,6 +87,10 @@ object ReminderScheduler {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
+        if (s.open == "sleep") {
+            AzkarNotifier.showBeforeSleep(ctx)
+            return
+        }
         val nid = 100 + (s.id.hashCode() and 0xFFFF)
         val open = PendingIntent.getActivity(
             ctx, nid,

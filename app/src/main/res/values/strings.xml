@@ -51,4 +51,6 @@
     <string name="reminders_on_count">%1$d of %2$d reminders on</string>
     <string name="channel_name">Daily reminders</string>
     <string name="channel_description">Your azkar reminders</string>
+    <string name="before_sleep_en">Before sleep</string>
+    <string name="before_sleep_ar">أذكار النوم</string>
 </resources>

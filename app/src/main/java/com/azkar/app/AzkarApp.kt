@@ -16,7 +16,7 @@ class AzkarApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.init(this)
-        ReminderScheduler.createChannel(this)
+        AzkarNotifier.createChannel(this)
         appScope.launch {
             runCatching {
                 Store.awaitReady()
