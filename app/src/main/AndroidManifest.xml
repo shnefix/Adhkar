@@ -31,5 +31,40 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Azkar - Small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+        <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Azkar - Wide">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+        <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Azkar - Large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
+        </receiver>
+
+        <!-- Widget config activity -->
+        <activity
+            android:name=".widgets.WidgetConfigActivity"
+            android:exported="true"
+            android:label="Configure Azkar Widget"
+            android:theme="@style/Theme.Azkar.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

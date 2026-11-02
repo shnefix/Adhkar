@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_small_desc">Azkar · small</string>
+    <string name="widget_medium_desc">Azkar · wide</string>
+    <string name="widget_large_desc">Azkar · large</string>
+</resources>

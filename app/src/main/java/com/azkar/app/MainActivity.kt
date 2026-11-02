@@ -17,6 +17,7 @@ import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
 import com.azkar.app.ui.ReaderFragment
 import com.azkar.app.ui.Tab
+import com.azkar.app.widgets.WidgetUpdater
 
 class MainActivity : AppCompatActivity() {
     private var currentTab: Tab = Tab.HOME
@@ -99,5 +100,10 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
         currentTab = Tab.HOME
         showRoot(HomeFragment())
+    }
+
+    override fun onStop() {
+        super.onStop()
+        WidgetUpdater.updateAll(this)
     }
 }

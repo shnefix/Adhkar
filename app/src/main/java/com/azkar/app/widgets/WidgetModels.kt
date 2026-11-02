@@ -1,0 +1,68 @@
+package com.azkar.app.widgets
+
+import android.content.Context
+import com.azkar.app.data.ReaderItem
+import com.azkar.app.data.Store
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.ceil
+import kotlin.math.min
+
+enum class WidgetKind { SMALL, MEDIUM, LARGE }
+
+private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE)
+
+/** The five designs. [kinds] = which sizes exist for that design (as in the design board). */
+enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
+    CLASSIC("Classic", ALL_KINDS),
+    CHECKLIST("Checklist", ALL_KINDS),
+    TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
+    CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM)),
+    GEOMETRIC("Geometric", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
+}
+
+/** Everything a renderer needs for one widget, already read from [Store]. */
+class WidgetModel(
+    val folderName: String,
+    val items: List<ReaderItem>,
+    val labels: List<String>,   // short left-hand label per zikr (its note, or "×N")
+    val idx: Int,               // index of the zikr being recited; == n when the whole folder is finished
+    val count: Int,             // recitations done on the current zikr
+    val date: String,
+) {
+    val n = items.size
+    val finished = n > 0 && idx >= n
+    val curIdx = if (n == 0) 0 else min(idx, n - 1)
+    val cur: ReaderItem? = items.getOrNull(curIdx)
+    val target = cur?.target ?: 1
+    val shown = if (finished) target else count.coerceIn(0, target)
+    val done = if (finished) n else idx
+    val position = if (n == 0) 0 else min(idx + 1, n)
+
+    // Tasbih beads: one ring = up to 33 beads
+    val beadTotal = min(33, target).coerceAtLeast(1)
+    val beadFilled = when {
+        shown == 0 -> 0
+        shown % beadTotal == 0 -> beadTotal
+        else -> shown % beadTotal
+    }
+    val round = if (shown == 0) 1 else (shown - 1) / beadTotal + 1
+    val rounds = ceil(target / beadTotal.toDouble()).toInt().coerceAtLeast(1)
+
+    companion object {
+        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel {
+            val items = Store.readerItems(folder)
+            val (i, c) = WidgetStore.progress(ctx, widgetId)
+            val idx = i.coerceIn(0, items.size)
+            val cnt = if (idx < items.size) c.coerceIn(0, (items[idx].target - 1).coerceAtLeast(0)) else 0
+            val labels = items.map { it0 ->
+                Store.zikr(it0.id)?.note?.trim()?.takeIf { s -> s.isNotEmpty() } ?: "×${it0.target}"
+            }
+            return WidgetModel(
+                Store.folderName(folder), items, labels, idx, cnt,
+                SimpleDateFormat("EEE, d MMM", Locale.ENGLISH).format(Date())
+            )
+        }
+    }
+}

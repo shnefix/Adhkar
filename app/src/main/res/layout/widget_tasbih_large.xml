@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/img" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="fitXY" android:contentDescription="@null"/>
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+        <FrameLayout android:id="@+id/hit_open" android:layout_width="match_parent" android:layout_height="56dp"/>
+        <FrameLayout android:id="@+id/hit_count" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <!-- bottom row: Reset (72dp) + 10dp gap + main button, 44dp tall, 19dp margins -->
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="63dp"
+            android:paddingBottom="19dp" android:paddingStart="19dp" android:paddingEnd="19dp">
+            <FrameLayout android:id="@+id/btn_reset" android:layout_width="72dp" android:layout_height="match_parent"/>
+            <FrameLayout android:id="@+id/btn_main" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginStart="10dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
