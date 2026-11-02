@@ -14,7 +14,9 @@ import android.text.TextPaint
 import android.text.TextUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.PathParser
+import com.azkar.app.ThemeMode
 import com.azkar.app.R
+import com.azkar.app.data.Store
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
@@ -24,30 +26,33 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Draws the 14 OLED widget designs. All coordinates are in dp (the canvas is scaled), so the numbers
- * below are the same numbers as in the design file.
+ * Draws the 14 widget designs using the app's selected theme. All coordinates are in dp
+ * (the canvas is scaled), so the numbers below are the same numbers as in the design file.
  */
 class WidgetRenderer(ctx: Context) {
+    init {
+        Store.init(ctx)
+    }
+
+    private val oled = Store.theme() == ThemeMode.OLED
     private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
     private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
     private val dmBold = ResourcesCompat.getFont(ctx, R.font.dm_sans_bold) ?: Typeface.DEFAULT_BOLD
     private val dmReg = ResourcesCompat.getFont(ctx, R.font.dm_sans_regular) ?: Typeface.DEFAULT
 
-    private val BLACK = 0xFF000000.toInt()
-    private val CARD_BORDER = 0xFF232323.toInt()
-    private val GOLD = 0xFFE3C06E.toInt()
-    private val GOLD_SOFT = 0xFFEBCB82.toInt()
-    private val TEXT = 0xFFF7F3E8.toInt()
-    private val MUTED = 0xFFA9A699.toInt()
-    private val SOFT = 0xFFC9C5B6.toInt()
-    private val TRACK = 0xFF262626.toInt()
-    private val BEAD_TRACK = 0xFF2E2E2E.toInt()
-    private val CHIP = 0xFF1A1A1A.toInt()
-    private val PANEL = 0xFF111111.toInt()
-    private val PANEL_BORDER = 0xFF1F1F1F.toInt()
-    private val OUTLINE = 0xFF3A3A3A.toInt()
-    private val GEO_BORDER = 0xFF4A3F22.toInt()
-    private val GEO_FRAME = 0xFF8A743A.toInt()
+    private val BLACK = if (oled) 0xFF000000.toInt() else 0xFF0D2124.toInt()
+    private val CARD_BORDER = if (oled) 0xFF232323.toInt() else 0xFF234A4B.toInt()
+    private val GOLD = if (oled) 0xFFE3C06E.toInt() else 0xFFE8B44A.toInt()
+    private val GOLD_SOFT = if (oled) 0xFFEBCB82.toInt() else 0xFFF6EFD9.toInt()
+    private val TEXT = if (oled) 0xFFF7F3E8.toInt() else 0xFFEDF4F1.toInt()
+    private val MUTED = if (oled) 0xFFA9A699.toInt() else 0xFF9DB8B3.toInt()
+    private val SOFT = if (oled) 0xFFC9C5B6.toInt() else 0xFFC3D6D1.toInt()
+    private val TRACK = if (oled) 0xFF262626.toInt() else 0xFF24504F.toInt()
+    private val BEAD_TRACK = if (oled) 0xFF2E2E2E.toInt() else 0xFF2B5A58.toInt()
+    private val CHIP = if (oled) 0xFF1A1A1A.toInt() else 0xFF1B3E43.toInt()
+    private val PANEL = if (oled) 0xFF111111.toInt() else 0xFF153237.toInt()
+    private val PANEL_BORDER = if (oled) 0xFF1F1F1F.toInt() else 0xFF2B5A58.toInt()
+    private val OUTLINE = if (oled) 0xFF3A3A3A.toInt() else 0xFF2B5A58.toInt()
 
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
@@ -77,7 +82,6 @@ class WidgetRenderer(ctx: Context) {
             }
             WidgetStyle.TASBIH -> if (kind == WidgetKind.LARGE) tasbihLarge(c, wDp, hDp, m) else tasbihSmall(c, wDp, hDp, m)
             WidgetStyle.CALLIGRAPHY -> if (kind == WidgetKind.SMALL) calligraphySmall(c, wDp, hDp, m) else calligraphyMedium(c, wDp, hDp, m)
-            WidgetStyle.GEOMETRIC -> if (kind == WidgetKind.SMALL) geometricSmall(c, wDp, hDp, m) else geometricMedium(c, wDp, hDp, m)
         }
         return bmp
     }
@@ -166,7 +170,7 @@ class WidgetRenderer(ctx: Context) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
         text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 60)
-        text(c, "${m.date} · ${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
+        text(c, "${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
         text(c, "${m.done} / ${m.n}", r, t + 8, 11f, GOLD, dmBold, Paint.Align.RIGHT)
         bar(c, l, t + 43f, r, 4f, m.done / m.n.toFloat())
         val listTop = t + 57f
@@ -257,29 +261,6 @@ class WidgetRenderer(ctx: Context) {
         arabic(c, m.cur!!.arabic, l, t + 20, r, b - 13f, 31f, 1.4f, TEXT)
     }
 
-    // ───────────────────────── 5 · GEOMETRIC ─────────────────────────
-
-    private fun geometricSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        card(c, w, h, GEO_BORDER)
-        pattern(c, w, h)
-        val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
-        text(c, m.folderName.uppercase(), w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f, r - l)
-        text(c, "${m.shown} / ${m.target}", w / 2, b - 6.5f, 11f, SOFT, dmReg, Paint.Align.CENTER)
-        arabic(c, m.cur!!.arabic, l, t + 18, r, b - 20, 28f, 1.4f, TEXT)
-    }
-
-    private fun geometricMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        card(c, w, h, GEO_BORDER)
-        pattern(c, w, h)
-        val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
-        text(c, "${m.folderName.uppercase()} AZKAR", l, t + 6.5f, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 60)
-        text(c, "${m.position} of ${m.n}", r, t + 6.5f, 11f, SOFT, dmReg, Paint.Align.RIGHT)
-        val rect = RectF(l, t + 21f, r, b)
-        c.drawRoundRect(rect, 14f, 14f, fillP(0xE6000000.toInt()))
-        c.drawRoundRect(RectF(rect.left + .5f, rect.top + .5f, rect.right - .5f, rect.bottom - .5f), 14f, 14f, strokeP(GEO_FRAME, 1f))
-        arabic(c, m.cur!!.arabic, rect.left + 12, rect.top + 6, rect.right - 12, rect.bottom - 6, 26f, 1.5f, TEXT)
-    }
-
     private fun empty(c: Canvas, w: Float, h: Float) {
         card(c, w, h, CARD_BORDER)
         text(c, "No azkar in this folder", w / 2, h / 2 - 8, 13f, TEXT, dmBold, Paint.Align.CENTER, 0f, w - 30)
@@ -291,7 +272,7 @@ class WidgetRenderer(ctx: Context) {
     /** Title + subtitle on the left, count chip on the right (Classic large). */
     private fun header(c: Canvas, m: WidgetModel, l: Float, r: Float, t: Float, chipText: String) {
         text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 70)
-        text(c, "${m.date} · ${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        text(c, "${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
         chip(c, chipText, r, t)
     }
 
@@ -341,27 +322,6 @@ class WidgetRenderer(ctx: Context) {
             val a = Math.toRadians(-90.0 + 360.0 * i / total)
             c.drawCircle(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat(), d / 2, fillP(if (i < filled) GOLD else BEAD_TRACK))
         }
-    }
-
-    private fun pattern(c: Canvas, w: Float, h: Float) {
-        c.save()
-        val clip = Path().apply { addRoundRect(RectF(1f, 1f, w - 1, h - 1), 25f, 25f, Path.Direction.CW) }
-        c.clipPath(clip)
-        val paint = strokeP(GOLD, 1f)
-        paint.alpha = 36                                   // 0.14 opacity, as in the design
-        var y = 0f
-        while (y < h) {
-            var x = 0f
-            while (x < w) {
-                c.drawRect(x + 9, y + 9, x + 27, y + 27, paint)
-                c.save(); c.rotate(45f, x + 18, y + 18)
-                c.drawRect(x + 9, y + 9, x + 27, y + 27, paint)
-                c.restore()
-                x += 36f
-            }
-            y += 36f
-        }
-        c.restore()
     }
 
     private val moonPath: Path by lazy { PathParser.createPathFromPathData("M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z") }

@@ -13,13 +13,12 @@ enum class WidgetKind { SMALL, MEDIUM, LARGE }
 
 private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE)
 
-/** The five designs. [kinds] = which sizes exist for that design (as in the design board). */
+/** The four available designs. [kinds] = which sizes exist for that design. */
 enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
     CLASSIC("Classic", ALL_KINDS),
     CHECKLIST("Checklist", ALL_KINDS),
     TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
-    CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM)),
-    GEOMETRIC("Geometric", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
+    CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
 }
 
 /** Everything a renderer needs for one widget, already read from [Store]. */
