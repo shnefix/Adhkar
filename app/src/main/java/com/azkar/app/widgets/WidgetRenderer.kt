@@ -14,7 +14,6 @@ import android.text.TextPaint
 import android.text.TextUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.PathParser
-import com.azkar.app.ThemeMode
 import com.azkar.app.R
 import com.azkar.app.data.Store
 import kotlin.math.cos
@@ -29,59 +28,63 @@ import kotlin.math.sqrt
  * Draws the 14 widget designs using the app's selected theme. All coordinates are in dp
  * (the canvas is scaled), so the numbers below are the same numbers as in the design file.
  */
-class WidgetRenderer(ctx: Context) {
+class WidgetRenderer(ctx: Context, theme: Int? = null) {
     init {
         Store.init(ctx)
     }
 
-    private val oled = Store.theme() == ThemeMode.OLED
+    private val palette = WidgetPalette.from(ctx, (theme ?: Store.theme()) == com.azkar.app.ThemeMode.OLED)
+    private val strings = WidgetStrings(ctx)
     private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
     private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
     private val dmBold = ResourcesCompat.getFont(ctx, R.font.dm_sans_bold) ?: Typeface.DEFAULT_BOLD
     private val dmReg = ResourcesCompat.getFont(ctx, R.font.dm_sans_regular) ?: Typeface.DEFAULT
 
-    private val BLACK = if (oled) 0xFF000000.toInt() else 0xFF0D2124.toInt()
-    private val CARD_BORDER = if (oled) 0xFF232323.toInt() else 0xFF234A4B.toInt()
-    private val GOLD = if (oled) 0xFFE3C06E.toInt() else 0xFFE8B44A.toInt()
-    private val GOLD_SOFT = if (oled) 0xFFEBCB82.toInt() else 0xFFF6EFD9.toInt()
-    private val TEXT = if (oled) 0xFFF7F3E8.toInt() else 0xFFEDF4F1.toInt()
-    private val MUTED = if (oled) 0xFFA9A699.toInt() else 0xFF9DB8B3.toInt()
-    private val SOFT = if (oled) 0xFFC9C5B6.toInt() else 0xFFC3D6D1.toInt()
-    private val TRACK = if (oled) 0xFF262626.toInt() else 0xFF24504F.toInt()
-    private val BEAD_TRACK = if (oled) 0xFF2E2E2E.toInt() else 0xFF2B5A58.toInt()
-    private val CHIP = if (oled) 0xFF1A1A1A.toInt() else 0xFF1B3E43.toInt()
-    private val PANEL = if (oled) 0xFF111111.toInt() else 0xFF153237.toInt()
-    private val PANEL_BORDER = if (oled) 0xFF1F1F1F.toInt() else 0xFF2B5A58.toInt()
-    private val OUTLINE = if (oled) 0xFF3A3A3A.toInt() else 0xFF2B5A58.toInt()
+    private val BLACK get() = palette.background
+    private val CARD_BORDER get() = palette.border
+    private val GOLD get() = palette.accent
+    private val GOLD_SOFT get() = palette.accentSoft
+    private val TEXT get() = palette.text
+    private val MUTED get() = palette.muted
+    private val SOFT get() = palette.soft
+    private val TRACK get() = palette.track
+    private val BEAD_TRACK get() = palette.beadTrack
+    private val CHIP get() = palette.chip
+    private val PANEL get() = palette.panel
+    private val PANEL_BORDER get() = palette.panelBorder
+    private val OUTLINE get() = palette.outline
 
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val arabicPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
 
     private enum class V { TOP, CENTER, BOTTOM }
 
     // ───────────────────────── entry point ─────────────────────────
 
     fun render(style: WidgetStyle, kind: WidgetKind, m: WidgetModel, wDp: Float, hDp: Float, density: Float): Bitmap {
+        val widthDp = wDp.coerceAtLeast(1f)
+        val heightDp = hDp.coerceAtLeast(1f)
         var s = density
-        val px = wDp * hDp * s * s
+        val px = widthDp * heightDp * s * s
         if (px > MAX_PIXELS) s *= sqrt(MAX_PIXELS / px)       // RemoteViews bitmaps must stay small
-        val bmp = Bitmap.createBitmap(max(1, (wDp * s).roundToInt()), max(1, (hDp * s).roundToInt()), Bitmap.Config.ARGB_8888)
+        val bmp = Bitmap.createBitmap(max(1, (widthDp * s).roundToInt()), max(1, (heightDp * s).roundToInt()), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.scale(s, s)
-        if (m.n == 0) { empty(c, wDp, hDp); return bmp }
+        if (m.n == 0) { empty(c, widthDp, heightDp); return bmp }
         when (style) {
             WidgetStyle.CLASSIC -> when (kind) {
-                WidgetKind.SMALL -> classicSmall(c, wDp, hDp, m)
-                WidgetKind.MEDIUM -> classicMedium(c, wDp, hDp, m)
-                WidgetKind.LARGE -> classicLarge(c, wDp, hDp, m)
+                WidgetKind.SMALL -> classicSmall(c, widthDp, heightDp, m)
+                WidgetKind.MEDIUM -> classicMedium(c, widthDp, heightDp, m)
+                WidgetKind.LARGE -> classicLarge(c, widthDp, heightDp, m)
             }
             WidgetStyle.CHECKLIST -> when (kind) {
-                WidgetKind.SMALL -> checklistSmall(c, wDp, hDp, m)
-                WidgetKind.MEDIUM -> checklistMedium(c, wDp, hDp, m)
-                WidgetKind.LARGE -> checklistLarge(c, wDp, hDp, m)
+                WidgetKind.MEDIUM -> checklistMedium(c, widthDp, heightDp, m)
+                WidgetKind.LARGE -> checklistLarge(c, widthDp, heightDp, m)
+                WidgetKind.SMALL -> error("Checklist does not support small widgets")
             }
-            WidgetStyle.TASBIH -> if (kind == WidgetKind.LARGE) tasbihLarge(c, wDp, hDp, m) else tasbihSmall(c, wDp, hDp, m)
-            WidgetStyle.CALLIGRAPHY -> if (kind == WidgetKind.SMALL) calligraphySmall(c, wDp, hDp, m) else calligraphyMedium(c, wDp, hDp, m)
+            WidgetStyle.TASBIH -> if (kind == WidgetKind.LARGE) tasbihLarge(c, widthDp, heightDp, m) else tasbihSmall(c, widthDp, heightDp, m)
+            WidgetStyle.CALLIGRAPHY -> if (kind == WidgetKind.SMALL) calligraphySmall(c, widthDp, heightDp, m) else calligraphyMedium(c, widthDp, heightDp, m)
         }
         return bmp
     }
@@ -95,7 +98,6 @@ class WidgetRenderer(ctx: Context) {
         moon(c, r - 16, t, 16f)
         val barTop = b - 23
         bar(c, l, barTop, r, 4f, m.shown / m.target.toFloat())
-        text(c, "Tap to count", l, b - 6.5f, 11f, MUTED, dmReg)
         text(c, "${m.shown} / ${m.target}", r, b - 6.5f, 11f, TEXT, dmBold, Paint.Align.RIGHT)
         arabic(c, m.cur!!.arabic, l, t + 22, r, barTop - 8, 27f, 1.5f, TEXT)
     }
@@ -111,8 +113,7 @@ class WidgetRenderer(ctx: Context) {
         val cy = top + 38f
         ring(c, cx, cy, 31f, 6f, m.shown / m.target.toFloat())
         text(c, "${m.shown}", cx, cy - 6f, 20f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, if (m.finished) "Done" else "of ${m.target}", cx, cy + 11f, 10f, MUTED, dmReg, Paint.Align.CENTER)
-        text(c, "Tap +1", cx, top + 76f + 8f + 6f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+        text(c, if (m.finished) strings.done else strings.of(m.target), cx, cy + 11f, 10f, MUTED, dmReg, Paint.Align.CENTER)
     }
 
     private fun classicLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
@@ -128,8 +129,7 @@ class WidgetRenderer(ctx: Context) {
         val cy = b - 26f
         ring(c, l + 26f, cy, 21f, 5f, m.shown / m.target.toFloat())
         text(c, "${m.shown}", l + 26f, cy, 13f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, "${m.shown} of ${m.target} recited", l + 52f + 12f, cy, 12f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - 56f - (l + 64f) - 8f)
-        button(c, RectF(r - 56f, cy - 22f, r, cy + 22f), if (m.finished) "↺" else "+1", true, 13f)
+        button(c, RectF(r - 56f, cy - 22f, r, cy + 22f), if (m.finished) "↺" else "", true, 13f)
     }
 
     // ───────────────────────── 2 · CHECKLIST ─────────────────────────
@@ -138,16 +138,6 @@ class WidgetRenderer(ctx: Context) {
         m.finished || i < m.idx -> 0     // done
         i == m.idx -> 1                  // current
         else -> 2                        // pending
-    }
-
-    private fun checklistSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        card(c, w, h, CARD_BORDER)
-        val t = 15f; val b = h - 15f
-        text(c, "${m.folderName.uppercase()} AZKAR", w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f, w - 30f)
-        val cy = b - 46f
-        ring(c, w / 2, cy, 38f, 8f, m.done / m.n.toFloat())
-        text(c, "${m.done}", w / 2, cy - 6.5f, 28f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, "of ${m.n}", w / 2, cy + 15.5f, 10f, MUTED, dmReg, Paint.Align.CENTER)
     }
 
     private fun checklistMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
@@ -170,7 +160,7 @@ class WidgetRenderer(ctx: Context) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
         text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 60)
-        text(c, "${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
+        text(c, strings.azkar(m.n), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
         text(c, "${m.done} / ${m.n}", r, t + 8, 11f, GOLD, dmBold, Paint.Align.RIGHT)
         bar(c, l, t + 43f, r, 4f, m.done / m.n.toFloat())
         val listTop = t + 57f
@@ -221,14 +211,14 @@ class WidgetRenderer(ctx: Context) {
         val cx = w / 2; val cy = h / 2
         beads(c, cx, cy, 50f * s, 6f * s, m.beadTotal, m.beadFilled)
         text(c, "${m.beadFilled}", cx, cy - 5f, 30f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, "of ${m.beadTotal}", cx, cy + 19f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+        text(c, strings.of(m.beadTotal), cx, cy + 19f, 10f, MUTED, dmReg, Paint.Align.CENTER)
     }
 
     private fun tasbihLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         card(c, w, h, CARD_BORDER)
         val l = 19f; val r = w - 19f; val t = 19f; val b = h - 19f
-        text(c, "Tasbih", l, t + 9, 15f, TEXT, dmBold)
-        text(c, "Round ${m.round} of ${m.rounds} · ${m.target} total", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        text(c, strings.tasbih, l, t + 9, 15f, TEXT, dmBold)
+        text(c, strings.round(m.round, m.rounds, m.target), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
         chip(c, "${m.shown} / ${m.target}", r, t)
         val btnTop = b - 44f
         val top = t + 43f
@@ -238,9 +228,9 @@ class WidgetRenderer(ctx: Context) {
         val cx = w / 2; val cy = (top + bot) / 2
         beads(c, cx, cy, 80f * s, 9f * s, m.beadTotal, m.beadFilled)
         arabic(c, m.cur!!.arabic, cx - 58f * s, cy - 28f * s, cx + 58f * s, cy + 11f * s, 28f * s, 1.4f, TEXT)
-        text(c, "${m.beadFilled} of ${m.beadTotal}", cx, cy + 20.5f * s, 12f, MUTED, dmReg, Paint.Align.CENTER)
-        button(c, RectF(l, btnTop, l + 72f, b), "Reset", false, 13f)
-        button(c, RectF(l + 82f, btnTop, r, b), if (m.finished) "Start again" else "Tap to count +1", true, 14f)
+        text(c, strings.countOf(m.beadFilled, m.beadTotal), cx, cy + 20.5f * s, 12f, MUTED, dmReg, Paint.Align.CENTER)
+        button(c, RectF(l, btnTop, l + 72f, b), strings.reset, false, 13f)
+        button(c, RectF(l + 82f, btnTop, r, b), "", true, 14f)
     }
 
     // ───────────────────────── 4 · CALLIGRAPHY ─────────────────────────
@@ -248,8 +238,8 @@ class WidgetRenderer(ctx: Context) {
     private fun calligraphySmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         card(c, w, h, CARD_BORDER)
         val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
-        text(c, "DHIKR", w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f)
-        text(c, "${m.shown} · tap to count", w / 2, b - 7.5f, 12f, MUTED, dmReg, Paint.Align.CENTER, 0f, r - l)
+        text(c, strings.dhikr, w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f)
+        text(c, "${m.shown}", w / 2, b - 7.5f, 12f, MUTED, dmReg, Paint.Align.CENTER, 0f, r - l)
         arabic(c, m.cur!!.arabic, l, t + 18, r, b - 24, 34f, 1.4f, TEXT)
     }
 
@@ -263,8 +253,8 @@ class WidgetRenderer(ctx: Context) {
 
     private fun empty(c: Canvas, w: Float, h: Float) {
         card(c, w, h, CARD_BORDER)
-        text(c, "No azkar in this folder", w / 2, h / 2 - 8, 13f, TEXT, dmBold, Paint.Align.CENTER, 0f, w - 30)
-        text(c, "Tap to open Azkar", w / 2, h / 2 + 10, 11f, MUTED, dmReg, Paint.Align.CENTER, 0f, w - 30)
+        text(c, strings.noAzkar, w / 2, h / 2 - 8, 13f, TEXT, dmBold, Paint.Align.CENTER, 0f, w - 30)
+        text(c, strings.tapToOpen, w / 2, h / 2 + 10, 11f, MUTED, dmReg, Paint.Align.CENTER, 0f, w - 30)
     }
 
     // ───────────────────────── shared pieces ─────────────────────────
@@ -272,7 +262,7 @@ class WidgetRenderer(ctx: Context) {
     /** Title + subtitle on the left, count chip on the right (Classic large). */
     private fun header(c: Canvas, m: WidgetModel, l: Float, r: Float, t: Float, chipText: String) {
         text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 70)
-        text(c, "${m.n} azkar", l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        text(c, strings.azkar(m.n), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
         chip(c, chipText, r, t)
     }
 
@@ -363,7 +353,8 @@ class WidgetRenderer(ctx: Context) {
     }
 
     private fun layout(s: String, w: Int, size: Float, lh: Float, color: Int, bold: Boolean, align: Layout.Alignment, maxLines: Int): StaticLayout {
-        val t = TextPaint(Paint.ANTI_ALIAS_FLAG)
+        val t = arabicPaint
+        t.reset()
         t.typeface = if (bold) amiriBold else amiriReg
         t.textSize = size; t.color = color
         val fm = t.fontMetrics

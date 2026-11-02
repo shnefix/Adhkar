@@ -25,6 +25,7 @@ import com.azkar.app.R
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
+import com.azkar.app.widgets.WidgetUpdater
 
 fun timeLabel(ctx: Context, h: Int, m: Int): String =
     if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
@@ -109,6 +110,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                     setOnClickListener {
                         if (Store.theme() != idx) {
                             Store.setTheme(idx)
+                            WidgetUpdater.updateAll(ctx)
                             ThemeMode.apply(idx)   // recreates the activity; this screen is restored from the back stack
                         }
                         renderThemes()

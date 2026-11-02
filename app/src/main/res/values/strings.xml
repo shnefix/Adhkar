@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Azkar</string>
+    <string name="widget_done">Done</string>
+    <string name="widget_tasbih">Tasbih</string>
+    <string name="widget_reset">Reset</string>
+    <string name="widget_dhikr">DHIKR</string>
+    <string name="widget_no_azkar">No azkar in this folder</string>
+    <string name="widget_tap_to_open">Tap to open Azkar</string>
+    <string name="widget_of">of %1$d</string>
+    <string name="widget_round">Round %1$d of %2$d · %3$d total</string>
+    <string name="widget_azkar">%1$d azkar</string>
+    <string name="widget_count_of">%1$d of %2$d</string>
+    <string name="widget_action_open">Open Azkar</string>
+    <string name="widget_action_count">Count one recitation</string>
+    <string name="widget_action_reset">Reset count</string>
+    <string name="widget_no_azkar_description">Azkar widget, no azkar available</string>
 </resources>

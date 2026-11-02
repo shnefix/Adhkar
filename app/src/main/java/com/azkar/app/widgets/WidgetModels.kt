@@ -3,9 +3,8 @@ package com.azkar.app.widgets
 import android.content.Context
 import com.azkar.app.data.ReaderItem
 import com.azkar.app.data.Store
-import java.text.SimpleDateFormat
+import android.text.format.DateFormat
 import java.util.Date
-import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -16,7 +15,7 @@ private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LA
 /** The four available designs. [kinds] = which sizes exist for that design. */
 enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
     CLASSIC("Classic", ALL_KINDS),
-    CHECKLIST("Checklist", ALL_KINDS),
+    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE)),
     TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
     CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
 }
@@ -60,7 +59,7 @@ class WidgetModel(
             }
             return WidgetModel(
                 Store.folderName(folder), items, labels, idx, cnt,
-                SimpleDateFormat("EEE, d MMM", Locale.ENGLISH).format(Date())
+                DateFormat.format("EEE, d MMM", Date()).toString()
             )
         }
     }

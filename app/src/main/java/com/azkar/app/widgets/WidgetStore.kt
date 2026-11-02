@@ -2,6 +2,7 @@ package com.azkar.app.widgets
 
 import android.content.Context
 import com.azkar.app.data.Store
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -11,18 +12,27 @@ object WidgetStore {
     private fun sp(ctx: Context) = ctx.getSharedPreferences("azkar_widgets", Context.MODE_PRIVATE)
     private fun today() = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
 
-    data class Config(val style: WidgetStyle, val folder: String)
+    data class Config(val style: WidgetStyle, val folder: String, val theme: Int?)
 
     fun config(ctx: Context, id: Int, kind: WidgetKind): Config {
         val s = sp(ctx)
-        val style = runCatching { WidgetStyle.valueOf(s.getString("style_$id", "") ?: "") }.getOrNull()
+        val savedStyle = s.getString("style_$id", null)
+        val style = try {
+            savedStyle?.let(WidgetStyle::valueOf)
+        } catch (e: IllegalArgumentException) {
+            Log.w("WidgetStore", "Invalid widget style '$savedStyle' for $id", e)
+            null
+        }
             ?.takeIf { kind in it.kinds } ?: WidgetStyle.CLASSIC
         val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: "anytime"
-        return Config(style, folder)
+        val theme = if (s.contains("theme_$id")) s.getInt("theme_$id", com.azkar.app.ThemeMode.CURRENT) else null
+        return Config(style, folder, theme)
     }
 
-    fun setConfig(ctx: Context, id: Int, style: WidgetStyle, folder: String) {
-        sp(ctx).edit().putString("style_$id", style.name).putString("folder_$id", folder).apply()
+    fun setConfig(ctx: Context, id: Int, style: WidgetStyle, folder: String, theme: Int?) {
+        val edit = sp(ctx).edit().putString("style_$id", style.name).putString("folder_$id", folder)
+        if (theme == null) edit.remove("theme_$id") else edit.putInt("theme_$id", theme)
+        edit.apply()
         saveProgress(ctx, id, 0, 0)
     }
 
@@ -38,7 +48,7 @@ object WidgetStore {
     }
 
     fun clear(ctx: Context, id: Int) {
-        sp(ctx).edit().remove("style_$id").remove("folder_$id").remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
+        sp(ctx).edit().remove("style_$id").remove("folder_$id").remove("theme_$id").remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
     }
 }
 

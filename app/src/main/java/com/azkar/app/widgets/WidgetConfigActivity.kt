@@ -6,9 +6,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.azkar.app.R
+import com.azkar.app.ThemeMode
 import com.azkar.app.data.Store
 
-/** Shown when a widget is added: pick the design, then the folder. Two plain dialogs, no layout needed. */
+/** Shown when a widget is added: pick the design, folder, and theme. */
 class WidgetConfigActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,7 +26,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun chooseStyle(id: Int, kind: WidgetKind) {
         val styles = WidgetStyle.values().filter { kind in it.kinds }
         AlertDialog.Builder(this)
-            .setTitle("Widget style")
+            .setTitle(R.string.widget_style_title)
             .setItems(styles.map { it.label }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }
             .setOnCancelListener { finish() }
             .show()
@@ -37,14 +39,38 @@ class WidgetConfigActivity : AppCompatActivity() {
         if (Store.zikrs().any { it.folderId == null }) { ids.add("anytime"); names.add("Anytime") }
         if (ids.isEmpty()) { save(id, kind, style, "anytime"); return }
         AlertDialog.Builder(this)
-            .setTitle("Which folder?")
+            .setTitle(R.string.widget_folder_title)
             .setItems(names.toTypedArray()) { _, i -> save(id, kind, style, ids[i]) }
             .setOnCancelListener { finish() }
             .show()
     }
 
     private fun save(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String) {
-        WidgetStore.setConfig(this, id, style, folder)
+        chooseTheme(id, kind, style, folder)
+    }
+
+    private fun chooseTheme(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String) {
+        val themes = arrayOf(
+            getString(R.string.widget_theme_follow_app),
+            getString(R.string.widget_theme_teal),
+            getString(R.string.widget_theme_oled),
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_theme_title)
+            .setItems(themes) { _, choice ->
+                val theme = when (choice) {
+                    1 -> ThemeMode.CURRENT
+                    2 -> ThemeMode.OLED
+                    else -> null
+                }
+                saveConfig(id, kind, style, folder, theme)
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun saveConfig(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String, theme: Int?) {
+        WidgetStore.setConfig(this, id, style, folder, theme)
         WidgetUpdater.update(this, AppWidgetManager.getInstance(this), id, kind)
         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         finish()

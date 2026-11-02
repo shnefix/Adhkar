@@ -34,6 +34,15 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
     }
 
     override fun onReceive(ctx: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_DATE_CHANGED ||
+            intent.action == Intent.ACTION_TIME_CHANGED ||
+            intent.action == Intent.ACTION_TIMEZONE_CHANGED ||
+            intent.action == Intent.ACTION_BOOT_COMPLETED
+        ) {
+            Store.init(ctx)
+            WidgetUpdater.updateAll(ctx)
+            return
+        }
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         when (intent.action) {
             ACTION_COUNT, ACTION_RESET -> {
@@ -91,7 +100,7 @@ object WidgetUpdater {
         val h = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
             .takeIf { it > 0 }?.toFloat() ?: def.second
 
-        val bmp = WidgetRenderer(ctx).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density)
+        val bmp = WidgetRenderer(ctx, cfg.theme).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density)
 
         val layout = when {
             cfg.style == WidgetStyle.CLASSIC && kind == WidgetKind.LARGE -> R.layout.widget_classic_large
@@ -102,17 +111,24 @@ object WidgetUpdater {
         rv.setImageViewBitmap(R.id.img, bmp)
         rv.setContentDescription(
             R.id.img,
-            if (model.n == 0) "Azkar widget, no azkar" else "${model.folderName}: ${model.shown} of ${model.target}"
+            if (model.n == 0) ctx.getString(R.string.widget_no_azkar_description)
+            else "${model.folderName}: ${model.shown} of ${model.target}"
         )
+        rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
+        rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
 
         rv.setOnClickPendingIntent(R.id.hit_open, openApp(ctx, id, cfg.folder))
         val count = action(ctx, id, kind, ACTION_COUNT)
         rv.setOnClickPendingIntent(R.id.hit_count, count)
         if (layout == R.layout.widget_classic_large) {
+            rv.setContentDescription(R.id.hit_count2, ctx.getString(R.string.widget_action_count))
+            rv.setContentDescription(R.id.btn_plus, ctx.getString(R.string.widget_action_count))
             rv.setOnClickPendingIntent(R.id.hit_count2, count)
             rv.setOnClickPendingIntent(R.id.btn_plus, count)
         }
         if (layout == R.layout.widget_tasbih_large) {
+            rv.setContentDescription(R.id.btn_main, ctx.getString(R.string.widget_action_count))
+            rv.setContentDescription(R.id.btn_reset, ctx.getString(R.string.widget_action_reset))
             rv.setOnClickPendingIntent(R.id.btn_main, count)
             rv.setOnClickPendingIntent(R.id.btn_reset, action(ctx, id, kind, ACTION_RESET))
         }
