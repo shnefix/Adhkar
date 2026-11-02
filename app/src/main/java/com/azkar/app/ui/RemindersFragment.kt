@@ -1,11 +1,12 @@
 package com.azkar.app.ui
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.TimePickerDialog
+import android.Manifest
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,14 +34,32 @@ fun timeLabel(ctx: Context, h: Int, m: Int): String =
 
 class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
+    private var onPermissionResult: ((Boolean) -> Unit)? = null
+    private var syncing = false
+
     private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted) Toast.makeText(requireContext(), "Notifications are off for Azkar in system settings.", Toast.LENGTH_SHORT).show()
+        val callback = onPermissionResult
+        onPermissionResult = null
+        if (!granted) showPermissionDenied()
+        callback?.invoke(granted)
     }
 
-    private fun ensureNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    private fun hasNotificationPermission(): Boolean =
+        Build.VERSION.SDK_INT < 33 ||
+            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun requestNotifications(callback: (Boolean) -> Unit) {
+        if (hasNotificationPermission()) {
+            callback(true)
+            return
+        }
+        onPermissionResult = callback
+        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun showPermissionDenied() {
+        Toast.makeText(requireContext(), R.string.notif_denied_toast, Toast.LENGTH_SHORT).show()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -48,23 +67,32 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
 
         view.findViewById<ToggleSwitch>(R.id.sw_all).apply {
-            on = Store.notificationsOn()
+            on = Store.notificationsOn() && hasNotificationPermission()
             onToggle = { v ->
-                Store.setNotificationsOn(v)
-                if (v) ensureNotificationPermission()
-                ReminderScheduler.rescheduleAll(ctx)   // cancels everything when off
-                renderList()
+            if (!syncing) {
+                if (v) requestNotifications { granted ->
+                    if (granted) { Store.setNotificationsOn(true); ReminderScheduler.rescheduleAll(ctx) }
+                    renderList()
+                } else {
+                    Store.setNotificationsOn(false)
+                    ReminderScheduler.rescheduleAll(ctx)
+                    renderList()
+                }
             }
+        }
         }
         view.findViewById<View>(R.id.btn_add_rem).setOnClickListener { edit(null) }
         view.findViewById<View>(R.id.btn_test_notification).setOnClickListener {
-            val sample = Store.schedules().firstOrNull()
-            if (sample != null) {
-                ReminderScheduler.notify(ctx, sample.copy(title = getString(R.string.test_notification)))
-                Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
-            }
-        }
-        view.findViewById<View>(R.id.exact_row).setOnClickListener {
+    requestNotifications { granted ->
+        if (!granted) return@requestNotifications
+        val base = Store.schedules().firstOrNull() ?: Schedule("test", "", "", 8, 0, true, null)
+        ReminderScheduler.notify(ctx, base.copy(
+            title = getString(R.string.test_notification),
+            message = getString(R.string.test_notification_message)))
+        Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+    }
+}
+            view.findViewById<View>(R.id.exact_row).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
             }
@@ -165,11 +193,17 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 contentDescription = s.title + " reminder"
                 on = s.enabled
                 onToggle = { isOn ->
-                    val updated = s.copy(enabled = isOn)
-                    Store.upsertSchedule(updated)
-                    if (isOn) ensureNotificationPermission()
-                    ReminderScheduler.apply(ctx, updated)
-                    renderList()
+                    if (isOn) requestNotifications { granted ->
+                        if (granted) {
+                            val u = s.copy(enabled = true)
+                            Store.upsertSchedule(u); ReminderScheduler.apply(ctx, u)
+                        }
+                        renderList()   // denied: switch goes back to OFF
+                    } else {
+                        val u = s.copy(enabled = false)
+                        Store.upsertSchedule(u); ReminderScheduler.apply(ctx, u)
+                        renderList()
+                    }
                 }
             }
             list.addView(v)
@@ -231,9 +265,10 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 Store.upsertSchedule(s)
                 ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
                 ReminderScheduler.apply(ctx, s)
-                if (s.enabled) ensureNotificationPermission()
-                renderList()
-                dlg.dismiss()
+                if (s.enabled) requestNotifications { ok ->
+                    if (ok) ReminderScheduler.apply(ctx, s) else Store.upsertSchedule(s.copy(enabled = false))
+                    renderList()
+                } else renderList()
             }
         }
         dlg.show()

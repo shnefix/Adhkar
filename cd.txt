@@ -1,75 +1,132 @@
-﻿===== settings.gradle.kts =====
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-rootProject.name = "Azkar"
-include(":app")
+﻿
+===== C:\Users\foura\AzkarApp\app\src\androidTest\java\com\azkar\app\widgets\WidgetRendererTest.kt =====
 
-===== build.gradle.kts =====
-plugins {
-    id("com.android.application") version "8.5.2" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
-}
+package com.azkar.app.widgets
 
-===== gradle.properties =====
-org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-android.useAndroidX=true
-kotlin.code.style=official
-android.nonTransitiveRClass=true
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.azkar.app.ThemeMode
+import com.azkar.app.R
+import com.azkar.app.data.Builtins
+import com.azkar.app.data.Store
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
 
-===== app\build.gradle.kts =====
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-}
+@RunWith(AndroidJUnit4::class)
+class WidgetRendererTest {
+    private val context
+        get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-android {
-    namespace = "com.azkar.app"
-    compileSdk = 34
-
-    defaultConfig {
-        applicationId = "com.azkar.app"
-        minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+    @Test
+    fun checklistIsNotAvailableForSmallWidgets() {
+        assertFalse(WidgetKind.SMALL in WidgetStyle.CHECKLIST.kinds)
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
+    @Test
+    fun rendersEverySupportedStyleInBothThemes() {
+        Store.init(context)
+        val model = WidgetModel("Morning", Builtins.morning.items, emptyList(), 0, 0, "")
+        val cases = listOf(
+            WidgetStyle.CLASSIC to WidgetKind.SMALL,
+            WidgetStyle.CLASSIC to WidgetKind.MEDIUM,
+            WidgetStyle.CLASSIC to WidgetKind.LARGE,
+            WidgetStyle.CHECKLIST to WidgetKind.MEDIUM,
+            WidgetStyle.CHECKLIST to WidgetKind.LARGE,
+            WidgetStyle.TASBIH to WidgetKind.SMALL,
+            WidgetStyle.TASBIH to WidgetKind.LARGE,
+            WidgetStyle.CALLIGRAPHY to WidgetKind.SMALL,
+            WidgetStyle.CALLIGRAPHY to WidgetKind.MEDIUM,
+        )
+
+        for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
+            Store.setTheme(theme)
+            for ((style, kind) in cases) {
+                val (width, height) = when (kind) {
+                    WidgetKind.SMALL -> 158f to 158f
+                    WidgetKind.MEDIUM -> 338f to 158f
+                    WidgetKind.LARGE -> 338f to 354f
+                }
+                val bitmap = WidgetRenderer(context).render(style, kind, model, width, height, 1f)
+                assertEquals(width.toInt(), bitmap.width)
+                assertEquals(height.toInt(), bitmap.height)
+                assertTrue(bitmap.hasAlpha())
+                assertTrue(bitmap.getPixel(1, bitmap.height / 2) != 0)
+                bitmap.recycle()
+            }
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+
+    @Test
+    fun themeColorsMeetReadableContrast() {
+        val resources = context.resources
+        val palettes = listOf(
+            R.color.widget_teal_background to R.color.widget_teal_text,
+            R.color.widget_teal_background to R.color.widget_teal_muted,
+            R.color.widget_oled_background to R.color.widget_oled_text,
+            R.color.widget_oled_background to R.color.widget_oled_muted,
+        )
+        for ((backgroundId, foregroundId) in palettes) {
+            val background = resources.getColor(backgroundId, context.theme)
+            val foreground = resources.getColor(foregroundId, context.theme)
+            assertTrue(contrast(background, foreground) >= 4.5)
+        }
+
     }
-    kotlinOptions {
-        jvmTarget = "17"
+
+    @Test
+    fun rendersEmptyAndTinyWidgetsWithoutCrashing() {
+        Store.init(context)
+        val empty = WidgetModel("Empty", emptyList(), emptyList(), 0, 0, "")
+        for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
+            val bitmap = WidgetRenderer(context, theme).render(
+                WidgetStyle.CLASSIC, WidgetKind.SMALL, empty, -10f, 0f, 1f
+            )
+            assertEquals(1, bitmap.width)
+            assertEquals(1, bitmap.height)
+            bitmap.recycle()
+        }
+    }
+
+    @Test
+    fun rendersLongArabicTextWithExplicitTheme() {
+        val longText = "اللَّهُمَّ ".repeat(120)
+        val model = WidgetModel(
+            "A folder with an unusually long name that must be clipped",
+            listOf(com.azkar.app.data.ReaderItem(longText, 100)),
+            emptyList(),
+            0,
+            0,
+            ""
+        )
+        val bitmap = WidgetRenderer(context, ThemeMode.OLED).render(
+            WidgetStyle.CALLIGRAPHY, WidgetKind.MEDIUM, model, 338f, 158f, 1f
+        )
+        assertTrue(bitmap.width > 0)
+        assertTrue(bitmap.height > 0)
+        bitmap.recycle()
+    }
+
+    private fun contrast(first: Int, second: Int): Double {
+        fun channel(value: Int): Double {
+            val normalized = value / 255.0
+            return if (normalized <= 0.03928) normalized / 12.92 else Math.pow((normalized + 0.055) / 1.055, 2.4)
+        }
+        fun luminance(color: Int): Double =
+            0.2126 * channel(color shr 16 and 0xFF) +
+                0.7152 * channel(color shr 8 and 0xFF) +
+                0.0722 * channel(color and 0xFF)
+        val lighter = maxOf(luminance(first), luminance(second))
+        val darker = minOf(luminance(first), luminance(second))
+        return (lighter + 0.05) / (darker + 0.05)
     }
 }
 
-dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.2")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
-}
 
-===== app\proguard-rules.pro =====
+===== C:\Users\foura\AzkarApp\app\src\main\AndroidManifest.xml =====
 
-===== app\src\main\AndroidManifest.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -103,767 +160,256 @@ dependencies {
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Azkar - Small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+        <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Azkar - Wide">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+        <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Azkar - Large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
+        </receiver>
+        <receiver android:name=".widgets.WidgetRefreshReceiver" android:exported="false" />
+
+        <!-- Widget config activity -->
+        <activity
+            android:name=".widgets.WidgetConfigActivity"
+            android:exported="true"
+            android:label="Configure Azkar Widget"
+            android:theme="@style/Theme.Azkar.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
 
-===== app\src\main\java\com\azkar\app\data\EmojiRules.kt =====
-package com.azkar.app.data
 
-/** The app does not use emojis of people, faces, hands, body parts or animals. */
-object EmojiRules {
-    private val RESTRICTED: List<IntRange> = listOf(
-        // animals
-        0x1F400..0x1F43F, 0x1F54A..0x1F54A, 0x1F577..0x1F577, 0x1F980..0x1F99F, 0x1F9A1..0x1F9AE, 0x1FAB0..0x1FAB3,
-        // faces, people, hands, body parts
-        0x1F440..0x1F450, 0x1F466..0x1F478, 0x1F47C..0x1F47C, 0x1F481..0x1F483, 0x1F485..0x1F487, 0x1F4AA..0x1F4AA,
-        0x1F574..0x1F575, 0x1F57A..0x1F57A, 0x1F590..0x1F590, 0x1F595..0x1F596, 0x1F600..0x1F64F,
-        0x1F6A3..0x1F6A3, 0x1F6B4..0x1F6B6, 0x1F6C0..0x1F6C0, 0x1F6CC..0x1F6CC,
-        0x1F90C..0x1F90C, 0x1F90F..0x1F93A, 0x1F93C..0x1F93E,
-        0x1F9B0..0x1F9B9, 0x1F9BB..0x1F9BB, 0x1F9D0..0x1F9DF, 0x1F9E0..0x1F9E0,
-        0x1FAC0..0x1FAC2, 0x1FAE0..0x1FAE8, 0x1FAF0..0x1FAF8,
-        0x1F3C3..0x1F3C4, 0x1F3C7..0x1F3C7, 0x1F3CA..0x1F3CC,
-        0x261D..0x261D, 0x26F9..0x26F9, 0x270A..0x270D
-    )
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\MainActivity.kt =====
 
-    fun isRestricted(text: String): Boolean {
-        var i = 0
-        while (i < text.length) {
-            val cp = text.codePointAt(i)
-            if (RESTRICTED.any { cp in it }) return true
-            i += Character.charCount(cp)
-        }
-        return false
-    }
+package com.azkar.app
 
-    /** The folder-icon picker list: neutral symbols only. */
-    val FOLDER_EMOJIS = listOf(
-        "🌅", "🌙", "☀️", "🕌", "📿", "✨", "❤️", "📖", "🌿", "🌸", "⭐", "🕋",
-        "💧", "🌧️", "🛏️", "🍽️", "🚗", "🏠", "💼", "🎓", "🌹", "🔥", "🌍", "☁️",
-        "💚", "🛡️", "🕯️", "🌄", "🌆", "🌟", "💫", "📚", "🧭"
-    )
-}
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import com.azkar.app.data.Store
+import com.azkar.app.ui.HomeFragment
+import com.azkar.app.ui.LibraryFragment
+import com.azkar.app.ui.MyAzkarFragment
+import com.azkar.app.ui.ReaderFragment
+import com.azkar.app.ui.Tab
+import com.azkar.app.widgets.WidgetUpdater
+import dagger.hilt.android.AndroidEntryPoint
 
-===== app\src\main\java\com\azkar\app\data\ExportJson.kt =====
-package com.azkar.app.data
+@AndroidEntryPoint
+class MainActivity : AppCompatActivity() {
+    private var currentTab: Tab = Tab.HOME
+    private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-import org.json.JSONArray
-import org.json.JSONObject
-
-/** Builds a backup file that ImportJson reads back. Read-only: never touches stored data. */
-object ExportJson {
-    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also { if (z.note.isNotBlank()) it.put("note", z.note) }
-
-    fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT): String {
-        val folders = JSONArray()
-        s.folders.forEach { f ->
-            val az = JSONArray()
-            s.zikrs.filter { it.folderId == f.id }.forEach { az.put(item(it)) }
-            val o = JSONObject().put("id", f.id).put("name", f.name)
-            f.icon?.let { o.put("icon", it) }
-if (f.remember) o.put("remember", true)
-            folders.put(o.put("azkar", az))
-        }
-        val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
-        val unfiled = JSONArray()
-        s.zikrs.filter { it.folderId == null }.forEach { unfiled.put(item(it)) }
-        if (unfiled.length() > 0) root.put("unfiled", unfiled)
-        val rems = JSONArray()
-        s.schedules.forEach {
-            val o = JSONObject().put("id", it.id).put("title", it.title).put("message", it.message)
-                .put("time", "%02d:%02d".format(it.hour, it.minute)).put("enabled", it.enabled)
-            it.open?.let { f -> o.put("folder", f) }
-            rems.put(o)
-        }
-        root.put("reminders", rems)
-        root.put("settings", JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn).put("arabicSp", arabicSp))
-        return root.toString(2)
-    }
-}
-
-===== app\src\main\java\com\azkar\app\data\ImportJson.kt =====
-package com.azkar.app.data
-
-import org.json.JSONException
-import org.json.JSONObject
-
-/**
- * Parses and validates an Azkar JSON file (hand-written or produced by Export).
- * Only "folders" is required. Optional: folder "id"/"icon", zikr "note", top-level "unfiled", "reminders", "settings".
- */
-object ImportJson {
-    data class Item(val text: String, val count: Int, val note: String = "")
-    data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
-    data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
-    data class SettingsIn(val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null)
-    sealed class Parsed {
-        data class Ok(
-            val folders: List<FolderIn>,
-            val unfiled: List<Item> = emptyList(),
-            val reminders: List<ReminderIn> = emptyList(),
-            val settings: SettingsIn? = null
-        ) : Parsed()
-        data class Error(val message: String) : Parsed()
-    }
-
-    private val TIME = Regex("^(\\d{1,2}):(\\d{2})$")
-
-    private fun items(az: org.json.JSONArray, where: String): Any {
-        val out = ArrayList<Item>()
-        for (j in 0 until az.length()) {
-            val o = az.optJSONObject(j) ?: return "$where, zikr ${j + 1}: expected an object."
-            val text = if (o.isNull("text")) "" else o.optString("text", "")
-            if (text.isBlank()) return "$where, zikr ${j + 1}: missing \"text\"."
-            val n = when (val c = o.opt("count")) {
-                null, JSONObject.NULL -> 1
-                is Int -> c
-                is Long -> if (c in 1..999) c.toInt() else -1
-                is Double -> if (c % 1.0 == 0.0) c.toInt() else -1
-                is String -> c.trim().toIntOrNull() ?: -1
-                else -> -1
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        currentTab = savedInstanceState?.getInt("tab")?.let { Tab.values().getOrNull(it) } ?: Tab.HOME
+        Store.init(this)
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
-            if (n < 1 || n > 999) return "$where, zikr ${j + 1}: \"count\" must be a whole number from 1 to 999."
-            val note = if (o.isNull("note")) "" else o.optString("note", "")
-            out.add(Item(text, n, note))
         }
-        return out
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+        var contentShown = false
+        lifecycleScope.launch {
+            try {
+                repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                    if (contentShown) return@repeatOnLifecycle
+                    Store.awaitReady()
+                    ThemeMode.apply(Store.theme())
+                    if (Store.consumeRecoveryNotice()) {
+                        Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
+                    }
+                    setContentView(R.layout.activity_main)
+                    if (savedInstanceState == null) {
+                        showRoot(HomeFragment())
+                        handleIntent(intent)
+                    }
+                    contentShown = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Azkar", "Unable to initialize application data", e)
+                Toast.makeText(this@MainActivity, "Azkar data could not be loaded.", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    fun parse(raw: String): Parsed {
-        val s = raw.removePrefix("\uFEFF").trim()
-        if (s.isEmpty()) return Parsed.Error("The file is empty.")
-        if (s.startsWith("[")) return Parsed.Error("The file is a bare list. It must be an object like { \"folders\": [ ... ] }.")
-        val root = try { JSONObject(s) } catch (e: JSONException) {
-            return Parsed.Error("This is not valid JSON. " + (e.message ?: "").take(90))
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("tab", currentTab.ordinal)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        lifecycleScope.launch {
+            try {
+                repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                    Store.awaitReady()
+                    handleIntent(intent)
+                    return@repeatOnLifecycle
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Azkar", "Unable to handle application deep link", e)
+            }
         }
-        val arr = root.optJSONArray("folders") ?: return Parsed.Error(
-            if (root.has("folders")) "\"folders\" must be a list, like [ { \"name\": ..., \"azkar\": [...] } ]."
-            else "The file needs a top-level \"folders\" list."
+    }
+
+    private fun handleIntent(i: Intent?) {
+        val key = i?.getStringExtra("open") ?: return
+        i.removeExtra("open")
+        showRoot(HomeFragment())
+        if (Store.readerItems(key).isNotEmpty()) push(ReaderFragment.of(key))   // deleted or empty folder: just stay on Home
+    }
+
+    private fun showRoot(f: Fragment) {
+        supportFragmentManager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        supportFragmentManager.beginTransaction().replace(R.id.container, f).commit()
+    }
+
+    fun openTab(tab: Tab) {
+        if (tab == currentTab && supportFragmentManager.backStackEntryCount == 0) return
+        currentTab = tab
+        showRoot(
+            when (tab) {
+                Tab.HOME -> HomeFragment()
+                Tab.LIBRARY -> LibraryFragment()
+                Tab.MY -> MyAzkarFragment()
+            }
         )
-        val folders = ArrayList<FolderIn>()
-        for (i in 0 until arr.length()) {
-            val f = arr.optJSONObject(i) ?: return Parsed.Error("Folder ${i + 1}: expected an object.")
-            val name = if (f.isNull("name")) "" else f.optString("name", "").trim()
-            if (name.isEmpty()) return Parsed.Error("Folder ${i + 1}: missing \"name\".")
-            val az = f.optJSONArray("azkar") ?: return Parsed.Error("Folder \"$name\": missing an \"azkar\" list.")
-            val r = items(az, "Folder \"$name\"")
-            if (r is String) return Parsed.Error(r)
-            val id = if (f.isNull("id")) null else (f.opt("id") as? String)?.trim()?.ifEmpty { null }
-            val icon = (if (f.isNull("icon")) null else (f.opt("icon") as? String)?.trim()?.ifEmpty { null })
-    ?.takeUnless { EmojiRules.isRestricted(it) }   // people/animal emojis are dropped
-            folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false), if (f.opt("home") is Boolean) f.getBoolean("home") else null))
+    }
+
+    fun push(f: Fragment) {
+        supportFragmentManager.beginTransaction().replace(R.id.container, f).addToBackStack(null).commit()
+    }
+
+    fun pop() {
+        android.util.Log.d("AzkarNav", "pop() called from:", Throwable())
+        supportFragmentManager.popBackStack()
+    }
+
+    /** The last zikr of a collection was finished: back to Home. */
+    fun finishReading() {
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+    }
+    /** Resets the back stack and shows Home. */
+    fun goHome() {
+        android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+    }
+
+    override fun onStop() {
+        super.onStop()
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                Store.awaitReady()
+                WidgetUpdater.updateAll(this@MainActivity)
+            }.onFailure { android.util.Log.e("Azkar", "Widget refresh failed", it) }
         }
-        var unfiled: List<Item> = emptyList()
-        root.optJSONArray("unfiled")?.let {
-            val r = items(it, "Unfiled azkar")
-            if (r is String) return Parsed.Error(r)
-            unfiled = r as List<Item>
-        }
-        val rems = ArrayList<ReminderIn>()
-        root.optJSONArray("reminders")?.let { ra ->
-            for (i in 0 until ra.length()) {
-                val o = ra.optJSONObject(i) ?: return Parsed.Error("Reminder ${i + 1}: expected an object.")
-                val title = if (o.isNull("title")) "" else o.optString("title", "").trim()
-                if (title.isEmpty()) return Parsed.Error("Reminder ${i + 1}: missing \"title\".")
-                val m = TIME.matchEntire(if (o.isNull("time")) "" else o.optString("time", "").trim())
-                val h = m?.groupValues?.get(1)?.toInt() ?: -1
-                val mi = m?.groupValues?.get(2)?.toInt() ?: -1
-                if (h !in 0..23 || mi !in 0..59) return Parsed.Error("Reminder \"$title\": \"time\" must look like 06:30.")
-                val msg = if (o.isNull("message")) "" else o.optString("message", "")
-                val id = if (o.isNull("id")) "" else o.optString("id", "").trim()
-                val folder = if (o.isNull("folder")) null else (o.opt("folder") as? String)?.trim()?.ifEmpty { null }
-                rems.add(ReminderIn(id, title, msg.ifBlank { "Time for your azkar · tap to read" }, h, mi, o.optBoolean("enabled", true), folder))
-            }
-        }
-        val st = root.optJSONObject("settings")?.let { so ->
-            SettingsIn(
-                (so.opt("arabicSize") as? Number)?.toInt()?.takeIf { it in 0..2 },
-                if (so.opt("notificationsEnabled") is Boolean) so.getBoolean("notificationsEnabled") else null,
-                (so.opt("arabicSp") as? Number)?.toInt()?.takeIf { it in ReaderPrefs.FONT_MIN..ReaderPrefs.FONT_MAX }
-            )
-        }
-        if (folders.sumOf { it.items.size } + unfiled.size == 0 && rems.isEmpty()) {
-            return Parsed.Error(if (folders.isEmpty()) "The \"folders\" list is empty." else "The file contains no azkar.")
-        }
-        return Parsed.Ok(folders, unfiled, rems, st)
     }
 }
 
-===== app\src\main\java\com\azkar\app\data\ImportMerge.kt =====
-package com.azkar.app.data
 
-/** Pure merge of an import into the current data. Never overwrites or deletes anything that exists. */
-object ImportMerge {
-    data class State(val folders: List<Folder>, val zikrs: List<Zikr>, val schedules: List<Schedule>)
-    data class Summary(val created: Int, val merged: Int, val added: Int, val skipped: Int, val reminders: Int)
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\di\StorageModule.kt =====
 
-    fun apply(s: State, p: ImportJson.Parsed.Ok, newId: () -> String): Pair<State, Summary> {
-        val fl = s.folders.toMutableList()
-        val zl = s.zikrs.toMutableList()
-        val sl = s.schedules.toMutableList()
-        val idMap = HashMap<String, String>()          // folder id in the file -> folder id in the app
-        var created = 0; var merged = 0; var added = 0; var skipped = 0; var rem = 0
-
-        fun addItems(folderId: String?, items: List<ImportJson.Item>) {
-            items.forEach { item ->
-                if (zl.any { it.folderId == folderId && it.arabic == item.text }) skipped++
-                else { zl.add(Zikr(newId(), item.text, item.note, item.count, folderId)); added++ }
-            }
-        }
-
-        p.folders.forEach { f ->
-            val byId = f.id?.let { id -> fl.firstOrNull { it.id == id } }
-            val existing = byId ?: fl.firstOrNull { it.name.trim().equals(f.name.trim(), ignoreCase = true) }
-            val folder = existing ?: run {
-                val id = f.id?.takeIf { c -> c != "anytime" && !c.startsWith("zikr:") && fl.none { it.id == c } } ?: newId()
-                Folder(id, f.name.trim(), f.icon, f.remember).also { fl.add(it); created++ }
-            }
-            if (existing != null) merged++
-            f.id?.let { idMap[it] = folder.id }
-            addItems(folder.id, f.items)
-        }
-        addItems(null, p.unfiled)
-        p.reminders.forEach { r ->
-            val id = r.id.ifBlank { newId() }
-            if (sl.none { it.id == id }) {
-                val target = r.folder?.let { ref -> idMap[ref] ?: fl.firstOrNull { it.id == ref }?.id }
-                sl.add(Schedule(id, r.title, r.message, r.hour, r.minute, r.enabled, target)); rem++
-            }
-        }
-        return State(fl, zl, sl) to Summary(created, merged, added, skipped, rem)
-    }
-}
-
-===== app\src\main\java\com\azkar\app\data\Models.kt =====
-package com.azkar.app.data
-
-import com.azkar.app.R
-
-/** A zikr the user added. folderId is a built-in collection key, a custom folder id, or null ("Anytime"). */
-data class Zikr(
-    val id: String,
-    val arabic: String,
-    val note: String,
-    val repeat: Int,
-    val folderId: String?
-)
-
-/** A folder the user created. */
-data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false)
-
-/** One recitation inside the reader. */
-data class ReaderItem(val arabic: String, val target: Int, val id: String = "")
-
-/** Built-in collection (Home grid / Library). */
-data class Collection(
-    val key: String,
-    val title: String,
-    val homeArabic: String,
-    val libraryArabic: String,
-    val icon: Int,
-    val items: List<ReaderItem>
-)
-
-enum class Placement(val key: String, val label: String) {
-    TOP("top", "Top of Home"),
-    MIXED("mixed", "Mixed with collections"),
-    BOTTOM("bottom", "Bottom of Home");
-
-    companion object {
-        fun from(key: String?) = values().firstOrNull { it.key == key } ?: MIXED
-    }
-}
-
-object Builtins {
-    private fun r(a: String, n: Int) = ReaderItem(a, n)
-
-    val morning = Collection(
-        "morning", "Morning", "أذكار الصباح", "أذكار الصباح", R.drawable.ic_sun_1p75,
-        listOf(
-            r("اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ", 1),
-            r("بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ", 3),
-            r("سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", 100)
-        )
-    )
-    val evening = Collection(
-        "evening", "Evening", "أذكار المساء", "أذكار المساء", R.drawable.ic_moon_1p75,
-        listOf(
-            r("اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ", 1),
-            r("بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ", 3),
-            r("سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", 100)
-        )
-    )
-    val afterPrayer = Collection(
-        "afterPrayer", "After prayer", "بعد الصلاة", "أذكار بعد الصلاة", R.drawable.ic_mosque_1p75,
-        listOf(
-            r("سُبْحَانَ اللَّهِ", 33),
-            r("الْحَمْدُ لِلَّهِ", 33),
-            r("اللَّهُ أَكْبَرُ", 33)
-        )
-    )
-    val sleep = Collection(
-        "sleep", "Before sleep", "أذكار النوم", "أذكار النوم", R.drawable.ic_spark_1p75,
-        listOf(r("بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", 1))
-    )
-    val waking = Collection(
-        "waking", "Waking up", "الاستيقاظ", "أذكار الاستيقاظ", R.drawable.ic_sunrise_1p75,
-        listOf(r("الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", 1))
-    )
-    val worry = Collection(
-        "worry", "Worry and hardship", "دعاء الهم والحزن", "دعاء الهم والحزن", R.drawable.ic_heart_1p75,
-        listOf(r("حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ", 7))
-    )
-    val forgiveness = Collection(
-        "forgiveness", "Forgiveness", "الاستغفار", "الاستغفار", R.drawable.ic_drop_1p75,
-        listOf(r("أَسْتَغْفِرُ اللَّهَ", 100))
-    )
-
-    /** Library order. */
-    val library = listOf(morning, evening, afterPrayer, sleep, waking, worry, forgiveness)
-
-    /** Collections that can be hidden/reordered on the Home grid (Morning is the hero card). */
-    val homeCollections = listOf(evening, afterPrayer, sleep, waking)
-
-    /** Built-ins offered as folders when saving a zikr. */
-    val folderChoices = listOf(morning, evening, afterPrayer, sleep)
-
-    fun byKey(key: String?): Collection? = library.firstOrNull { it.key == key }
-}
-
-/** A reminder the user configured. [open] is the folder key to read when tapped (or null = just open the app). */
-data class Schedule(
-    val id: String, val title: String, val message: String,
-    val hour: Int, val minute: Int, val enabled: Boolean, val open: String?
-)
-
-===== app\src\main\java\com\azkar\app\data\ReaderPrefs.kt =====
-package com.azkar.app.data
-
-/** Reader constants and pure rules that do not need Android. */
-object ReaderPrefs {
-    const val FONT_MIN = 18
-    const val FONT_MAX = 40
-    const val FONT_DEFAULT = 26            // the old "Medium"
-    private val OLD_SIZES = intArrayOf(20, 26, 32)   // old Small / Medium / Large
-
-    fun spFromOldIndex(i: Int) = OLD_SIZES[i.coerceIn(0, 2)]
-    fun clampSp(sp: Int) = sp.coerceIn(FONT_MIN, FONT_MAX)
-}
-
-/** Where a folder should start reading when it is opened. */
-object ReaderResume {
-    /** (index, count). Falls back to the beginning if the saved zikr is gone, hidden or the id is unknown. */
-    fun start(ids: List<String>, targets: List<Int>, savedId: String?, savedCount: Int): Pair<Int, Int> {
-        if (savedId == null) return 0 to 0
-        val i = ids.indexOf(savedId)
-        if (i < 0 || i >= targets.size) return 0 to 0
-        return i to savedCount.coerceIn(0, targets[i])
-    }
-}
-
-===== app\src\main\java\com\azkar\app\data\Store.kt =====
-package com.azkar.app.data
+package com.azkar.app.di
 
 import android.content.Context
-import android.content.SharedPreferences
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.UUID
+import com.azkar.app.data.AzkarDao
+import com.azkar.app.data.AzkarDatabase
+import com.azkar.app.data.AzkarDatabaseProvider
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
-/** Persistent local storage (SharedPreferences + JSON), cached in memory. All writes go through the save* functions. */
-object Store {
-    private lateinit var sp: SharedPreferences
-    private lateinit var appCtx: Context
+@Module
+@InstallIn(SingletonComponent::class)
+object StorageModule {
+    @Provides
+    @Singleton
+    fun provideDatabase(@ApplicationContext context: Context): AzkarDatabase =
+        AzkarDatabaseProvider.get(context)
 
-    private const val K_ZIKRS = "zikrs"
-    private const val K_FOLDERS = "folders"
-    private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
-    private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 1
-    private const val K_ORDER = "home_order"
-    private const val K_HIDDEN = "home_hidden"
-    private const val K_PLACE = "home_place"
-    private const val K_SIZE = "arabic_size"
-    private const val K_THEME = "theme_mode"
-    private const val K_HZ = "hidden_zikrs"
-    private const val K_REM = "reminder_"
-    private const val K_NOTIF = "notif_on"
-    private const val K_SCHED = "schedules"
-    private const val K_SP = "arabic_sp"
-    private const val K_TAP = "tap_advance"
-    private const val K_AWAKE = "keep_awake"
-    private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
-    private const val K_POSC = "posc_"    // posc_<folderId> = its count
-
-    // In-memory copies: the single source of truth for every screen.
-    private var zCache: List<Zikr> = emptyList()
-    private var fCache: List<Folder> = emptyList()
-    private var sCache: List<Schedule> = emptyList()
-    private var hzCache: Set<String> = emptySet()
-
-    @Synchronized
-    fun init(context: Context) {
-        if (::sp.isInitialized) return
-        appCtx = context.applicationContext
-        sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
-        zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
-        fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
-        sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
-        hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
-        syncDefaults()
-        migrateSchedules()
-        sanitizeIcons()
-    }
-
-    // ---------- Default azkar (assets/default_folders.json) ----------
-    private fun defaults(): ImportJson.Parsed.Ok? = try {
-        val raw = appCtx.assets.open("default_folders.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
-        ImportJson.parse(raw) as? ImportJson.Parsed.Ok
-    } catch (e: Exception) {
-        android.util.Log.w("Azkar", "default folders were not loaded", e)
-        null
-    }
-
-    /**
-     * Gives every user the defaults from the JSON, additively: folders match by id then name,
-     * azkar are skipped if the same text already exists in that folder, nothing is overwritten or deleted.
-     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). Users of the previous build already
-     * received everything, so for them it only records the version.
-     */
-    private fun syncDefaults() {
-        if (sp.getInt(K_DEFAULTS_VER, 0) >= DEFAULTS_VERSION) return
-        val alreadyHave = sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
-        if (!alreadyHave && !mergeDefaults()) return          // asset unreadable: try again next start
-        sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
-    }
-
-    private fun mergeDefaults(): Boolean {
-        val p = defaults() ?: return false
-        val before = fCache.map { it.id }.toSet()
-        val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
-        saveFolders(ns.folders)
-        saveZikrs(ns.zikrs)
-        val created = ns.folders.map { it.id }.filter { it !in before }.toSet()
-        val hide = p.folders.filter { it.home != true }.mapNotNull { it.id }.filter { it in created }
-        if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
-        return true
-    }
-
-    /** One time: the three fixed reminders become editable schedules (same on/off state). */
-    private fun migrateSchedules() {
-        if (sp.contains(K_SCHED)) return
-        saveSchedules(
-            listOf(
-                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, reminderOn("m", true), "morning"),
-                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, reminderOn("e", true), "evening"),
-                Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, reminderOn("s", false), "sleep")
-            )
-        )
-    }
-
-    // ---------- Parsing / saving (the only code that touches the caches) ----------
-    private fun parseZikrs(raw: String): List<Zikr> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Zikr(o.getString("id"), o.getString("ar"), o.optString("note", ""), o.optInt("n", 1), if (o.isNull("f")) null else o.getString("f"))
-        }
-    }
-
-    private fun parseFolders(raw: String): List<Folder> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Folder(
-                o.getString("id"), o.getString("name"),
-                if (o.isNull("ic")) null else o.optString("ic", "").ifEmpty { null },
-                o.optBoolean("rm", false)
-            )
-        }
-    }
-
-    private fun parseSchedules(raw: String): List<Schedule> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Schedule(
-                o.getString("id"), o.optString("t", ""), o.optString("m", ""), o.optInt("h", 8), o.optInt("mi", 0),
-                o.optBoolean("on", true), if (o.isNull("open")) null else o.getString("open")
-            )
-        }
-    }
-
-    @Synchronized
-    private fun saveZikrs(list: List<Zikr>) {
-        zCache = list.toList()
-        val arr = JSONArray()
-        list.forEach {
-            arr.put(JSONObject().put("id", it.id).put("ar", it.arabic).put("note", it.note).put("n", it.repeat)
-                .put("f", it.folderId ?: JSONObject.NULL))
-        }
-        sp.edit().putString(K_ZIKRS, arr.toString()).apply()
-    }
-
-    @Synchronized
-    private fun saveFolders(list: List<Folder>) {
-        fCache = list.toList()
-        val arr = JSONArray()
-        list.forEach { f ->
-            val o = JSONObject().put("id", f.id).put("name", f.name)
-            f.icon?.let { o.put("ic", it) }
-            if (f.remember) o.put("rm", true)
-            arr.put(o)
-        }
-        sp.edit().putString(K_FOLDERS, arr.toString()).apply()
-    }
-
-    @Synchronized
-    private fun saveSchedules(list: List<Schedule>) {
-        sCache = list.toList()
-        val arr = JSONArray()
-        list.forEach {
-            arr.put(JSONObject().put("id", it.id).put("t", it.title).put("m", it.message).put("h", it.hour)
-                .put("mi", it.minute).put("on", it.enabled).put("open", it.open ?: JSONObject.NULL))
-        }
-        sp.edit().putString(K_SCHED, arr.toString()).apply()
-    }
-
-    // ---------- Azkar ----------
-    fun zikrs(): List<Zikr> = zCache
-    fun zikr(id: String): Zikr? = zCache.firstOrNull { it.id == id }
-    fun zikrsIn(folderId: String): List<Zikr> = zCache.filter { it.folderId == folderId }
-
-    /** Number of azkar per folder id (null key = Anytime), computed in one pass. */
-    fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
-
-    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?): Zikr {
-        zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
-            val merged = it.copy(note = note.ifBlank { it.note }, repeat = repeat)
-            updateZikr(merged)
-            return merged
-        }
-        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId)
-        saveZikrs(zCache + z)
-        return z
-    }
-
-    fun updateZikr(z: Zikr) = saveZikrs(zCache.map { if (it.id == z.id) z else it })
-    fun deleteZikr(id: String) {
-        saveZikrs(zCache.filter { it.id != id })
-        if (id in hzCache) setZikrsHidden(listOf(id), false)
-    }
-
-    /** Takes a zikr out of its folder (it stays saved as "Anytime"). */
-    fun unfile(id: String) = saveZikrs(zCache.map { if (it.id == id) it.copy(folderId = null) else it })
-
-    /** Reorders the zikrs of one folder; other azkar keep their relative position. */
-    fun reorderFolder(folderId: String, orderedIds: List<String>) {
-        val all = zCache
-        val byId = all.associateBy { it.id }
-        val queue = orderedIds.mapNotNull { byId[it] }.toMutableList()
-        saveZikrs(all.map { if (it.folderId == folderId && queue.isNotEmpty()) queue.removeAt(0) else it })
-    }
-
-    // ---------- Folders ----------
-    fun folders(): List<Folder> = fCache
-    fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
-
-    fun addFolder(name: String, icon: String? = null): Folder {
-        val f = Folder(UUID.randomUUID().toString(), name, icon?.takeUnless { EmojiRules.isRestricted(it) })
-        saveFolders(fCache + f)
-        return f
-    }
-
-    fun renameFolder(id: String, name: String) = saveFolders(fCache.map { if (it.id == id) it.copy(name = name) else it })
-    fun setFolderIcon(id: String, icon: String?) = saveFolders(
-        fCache.map { if (it.id == id) it.copy(icon = icon?.takeUnless { e -> EmojiRules.isRestricted(e) }) else it }
-    )
-
-    /** One time per start: folders that already use a people/animal emoji fall back to the default icon. */
-    private fun sanitizeIcons() {
-        if (fCache.any { it.icon != null && EmojiRules.isRestricted(it.icon) }) {
-            saveFolders(fCache.map { if (it.icon != null && EmojiRules.isRestricted(it.icon)) it.copy(icon = null) else it })
-        }
-    }
-
-    fun moveFolder(id: String, d: Int) {
-        val l = fCache.toMutableList()
-        val i = l.indexOfFirst { it.id == id }
-        val j = i + d
-        if (i < 0 || j !in l.indices) return
-        val t = l[i]; l[i] = l[j]; l[j] = t
-        saveFolders(l)
-    }
-
-    fun folderIndex(id: String) = fCache.indexOfFirst { it.id == id }
-
-    /** Deletes the folder; its azkar stay saved as "Anytime" and reminders pointing at it just open the app. */
-    fun deleteFolder(id: String) {
-        saveFolders(fCache.filter { it.id != id })
-        saveZikrs(zCache.map { if (it.folderId == id) it.copy(folderId = null) else it })
-        if (sCache.any { it.open == id }) saveSchedules(sCache.map { if (it.open == id) it.copy(open = null) else it })
-        setHomeOrder(homeOrder().filter { it != id })
-        setHidden(hidden() - id)
-        clearPosition(id)
-    }
-
-    fun folderName(key: String?): String {
-        if (key == null) return "Anytime"
-        return folder(key)?.name ?: Builtins.byKey(key)?.title ?: "Anytime"
-    }
-
-    fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
-
-    // ---------- Import / export ----------
-    fun importAll(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
-        val (ns, sum) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
-        saveFolders(ns.folders); saveZikrs(ns.zikrs); saveSchedules(ns.schedules)
-        val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
-        sp2?.let { setArabicSp(it) }
-        p.settings?.notificationsOn?.let { setNotificationsOn(it) }
-        return sum
-    }
-
-    fun exportJson(): String = ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn(), arabicSp())
-
-    // ---------- Home customisation ----------
-    val defaultOrder: List<String> get() = fCache.map { it.id }
-
-    fun homeOrder(): List<String> {
-        val valid = defaultOrder
-        val raw: String? = sp.getString(K_ORDER, null)
-        val saved: List<String> = if (raw == null) emptyList() else {
-            val arr = JSONArray(raw)
-            (0 until arr.length()).map { arr.getString(it) }
-        }
-        return saved.filter { it in valid }.distinct().let { kept -> kept + valid.filter { it !in kept } }
-    }
-
-    fun setHomeOrder(order: List<String>) {
-        sp.edit().putString(K_ORDER, JSONArray(order).toString()).apply()
-    }
-
-    fun hidden(): Set<String> {
-        val arr = JSONArray(sp.getString(K_HIDDEN, "[]"))
-        return (0 until arr.length()).map { arr.getString(it) }.toSet()
-    }
-
-    fun setHidden(set: Set<String>) {
-        sp.edit().putString(K_HIDDEN, JSONArray(set.toList()).toString()).apply()
-    }
-
-    fun placement(): Placement = Placement.from(sp.getString(K_PLACE, null))
-    fun setPlacement(p: Placement) = sp.edit().putString(K_PLACE, p.key).apply()
-
-    /** Resets order/placement; default folders that are not meant for Home (no "home": true) are hidden again. */
-    fun resetHome() {
-        sp.edit().remove(K_ORDER).remove(K_HIDDEN).remove(K_PLACE).apply()
-        val hide = defaults()?.folders?.filter { it.home != true }?.mapNotNull { it.id }.orEmpty()
-        setHidden(hide.filter { folder(it) != null }.toSet())
-    }
-
-    // ---------- Settings ----------
-    /** 0 = small, 1 = medium (default), 2 = large. */
-    fun arabicSize() = sp.getInt(K_SIZE, 1)
-    fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
-
-    // ---------- Per-folder reading position ----------
-    fun rememberPosition(folderId: String) = folder(folderId)?.remember == true
-
-    fun setFolderRemember(id: String, on: Boolean) {
-        saveFolders(fCache.map { if (it.id == id) it.copy(remember = on) else it })
-        if (!on) clearPosition(id)          // old progress must never leak back in
-    }
-
-    fun savePosition(folderId: String, zikrId: String, count: Int) {
-        sp.edit().putString(K_POS + folderId, zikrId).putInt(K_POSC + folderId, count).apply()
-    }
-
-    fun savedPosition(folderId: String): Pair<String, Int>? {
-        val id = sp.getString(K_POS + folderId, null) ?: return null
-        return id to sp.getInt(K_POSC + folderId, 0)
-    }
-
-    fun clearPosition(folderId: String) {
-        sp.edit().remove(K_POS + folderId).remove(K_POSC + folderId).apply()
-    }
-
-    // ---------- Reader settings ----------
-    /** Arabic size in sp. Existing Small/Medium/Large choices carry over as 20/26/32. */
-    fun arabicSp(): Int = ReaderPrefs.clampSp(sp.getInt(K_SP, ReaderPrefs.spFromOldIndex(arabicSize())))
-    fun setArabicSp(v: Int) = sp.edit().putInt(K_SP, ReaderPrefs.clampSp(v)).apply()
-    fun tapAdvance() = sp.getBoolean(K_TAP, true)
-    fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
-    fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
-    fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
-
-    /** 0 = current teal theme (default), 1 = OLED black. */
-    fun theme() = sp.getInt(K_THEME, 0)
-    fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
-
-    private fun parseIds(raw: String): Set<String> {
-        val a = JSONArray(raw)
-        return (0 until a.length()).map { a.getString(it) }.toSet()
-    }
-
-    fun hiddenZikrs(): Set<String> = hzCache
-
-    @Synchronized
-    fun setZikrsHidden(ids: kotlin.collections.Collection<String>, hide: Boolean) {
-        hzCache = Visibility.apply(hzCache, ids, hide)
-        sp.edit().putString(K_HZ, JSONArray(hzCache.toList()).toString()).apply()
-    }
-
-    fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
-
-    // ---------- Notification schedules ----------
-    fun notificationsOn() = sp.getBoolean(K_NOTIF, true)
-    fun setNotificationsOn(v: Boolean) = sp.edit().putBoolean(K_NOTIF, v).apply()
-
-    fun schedules(): List<Schedule> = sCache
-    fun schedule(id: String): Schedule? = sCache.firstOrNull { it.id == id }
-    fun newScheduleId(): String = UUID.randomUUID().toString()
-
-    fun upsertSchedule(s: Schedule) {
-        saveSchedules(if (sCache.any { it.id == s.id }) sCache.map { if (it.id == s.id) s else it } else sCache + s)
-    }
-
-    fun deleteSchedule(id: String) = saveSchedules(sCache.filter { it.id != id })
-
-    // ---------- Reader content ----------
-    fun readerItems(key: String): List<ReaderItem> {
-        if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id)) } ?: emptyList()
-        }
-        val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id) }
-    }
-
-    fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
-
-    fun readerIndex(z: Zikr): Int {
-        val src = if (z.folderId == null) zCache.filter { it.folderId == null } else zikrsIn(z.folderId)
-        return Visibility.readerIndex(src, hzCache, z.id).coerceAtLeast(0)
-    }
+    @Provides
+    fun provideAzkarDao(database: AzkarDatabase): AzkarDao = database.azkarDao()
 }
 
-===== app\src\main\java\com\azkar\app\data\Visibility.kt =====
-package com.azkar.app.data
 
-/** Pure rules for hiding azkar from the reading sequence. Hiding never changes a zikr itself. */
-object Visibility {
-    /** The azkar the reader shows, in their normal folder order. */
-    fun visible(items: List<Zikr>, hidden: Set<String>): List<Zikr> = items.filter { it.id !in hidden }
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\domain\ObserveAzkarContent.kt =====
 
-    /** Reader position of [id] among the visible azkar, or -1 if it is hidden or missing. */
-    fun readerIndex(items: List<Zikr>, hidden: Set<String>, id: String): Int =
-        visible(items, hidden).indexOfFirst { it.id == id }
+package com.azkar.app.domain
 
-    fun apply(hidden: Set<String>, ids: kotlin.collections.Collection<String>, hide: Boolean): Set<String> =
-        if (hide) hidden + ids else hidden - ids.toSet()
+import com.azkar.app.data.AzkarContent
+import com.azkar.app.data.AzkarRepository
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+
+class ObserveAzkarContent @Inject constructor(
+    private val repository: AzkarRepository
+) {
+    operator fun invoke(): Flow<AzkarContent> = repository.content
 }
 
-===== app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt =====
+
 package com.azkar.app.reminders
 
 import android.annotation.SuppressLint
@@ -888,7 +434,9 @@ import com.azkar.app.ThemeMode
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
-import java.util.Calendar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 object ReminderScheduler {
     const val CHANNEL = "azkar_reminders_v2"
@@ -934,14 +482,10 @@ object ReminderScheduler {
     }
 
     fun schedule(ctx: Context, s: Schedule) {
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, s.hour); set(Calendar.MINUTE, s.minute)
-            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
-        }
         val am = alarms(ctx)
-        if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, s.id))
-        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pending(ctx, s.id))
+        val at = ReminderTime.next(s.hour, s.minute)
+        if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
     }
 
     fun cancel(ctx: Context, id: String) {
@@ -991,12 +535,20 @@ object ReminderScheduler {
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Store.init(ctx)
-        ReminderScheduler.createChannel(ctx)
-        val id = intent.getStringExtra("id") ?: return          // ignores old-style alarms
-        val s = Store.schedule(id) ?: return                    // deleted schedule: nothing to show
-        if (!Store.notificationsOn() || !s.enabled) return
-        ReminderScheduler.notify(ctx, s)
-        ReminderScheduler.schedule(ctx, s)                      // next day
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                ReminderScheduler.createChannel(ctx)
+                val id = intent.getStringExtra("id") ?: return@launch
+                val s = Store.schedule(id) ?: return@launch
+                if (!Store.notificationsOn() || !s.enabled) return@launch
+                ReminderScheduler.notify(ctx, s)
+                ReminderScheduler.schedule(ctx, s)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 }
 
@@ -1004,13 +556,43 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Store.init(ctx)
-            ReminderScheduler.createChannel(ctx)
-            ReminderScheduler.rescheduleAll(ctx)
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    Store.awaitReady()
+                    ReminderScheduler.createChannel(ctx)
+                    ReminderScheduler.rescheduleAll(ctx)
+                } finally {
+                    pending.finish()
+                }
+            }
         }
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\AddZikrFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\reminders\ReminderTime.kt =====
+
+package com.azkar.app.reminders
+
+import java.util.Calendar
+
+object ReminderTime {
+    fun next(hour: Int, minute: Int, now: Long = System.currentTimeMillis()): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= now) add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return cal.timeInMillis
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\AddZikrFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1050,7 +632,32 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\CompleteFragment.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\AzkarContentViewModel.kt =====
+
+package com.azkar.app.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.azkar.app.data.AzkarContent
+import com.azkar.app.data.AzkarRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+
+@HiltViewModel
+class AzkarContentViewModel @Inject constructor(
+    repository: AzkarRepository
+) : ViewModel() {
+    val content: StateFlow<AzkarContent?> = repository.content
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\CompleteFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1072,7 +679,8 @@ class CompleteFragment : Fragment(R.layout.fragment_complete) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\CustomizeHomeFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\CustomizeHomeFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1214,7 +822,9 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.content.res.ColorStateList
@@ -1341,7 +951,9 @@ v.findViewById<View>(R.id.hide).setOnClickListener { Store.setZikrsHidden(listOf
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\EditZikrFragment.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\EditZikrFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1387,7 +999,9 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\FolderCards.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\FolderCards.kt =====
+
 package com.azkar.app.ui
 
 import android.content.res.ColorStateList
@@ -1472,7 +1086,8 @@ class GridGap(private val dp: Int, private val span: Int = 2) : RecyclerView.Ite
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\FolderFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\FolderFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1580,7 +1195,8 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\FolderUi.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\FolderUi.kt =====
+
 package com.azkar.app.ui
 
 import android.content.DialogInterface
@@ -1687,23 +1303,32 @@ val dlg = AlertDialog.Builder(ctx).setTitle("New folder").setView(ScrollView(ctx
     dlg.show()
 }
 
-===== app\src\main\java\com\azkar\app\ui\HomeFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\HomeFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
+import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Folder
 import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home) {
+    private val viewModel: HomeViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
@@ -1712,60 +1337,99 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }
         val sections = view.findViewById<LinearLayout>(R.id.sections)
 
-        fun open(f: Folder) {
-            when {
-                Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
-                Store.readerItems(f.id).isEmpty() -> {
-                    Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
-                    nav().push(FolderFragment.of(f.id))
+        fun render(content: AzkarContent) {
+            sections.removeAllViews()
+
+            fun open(f: Folder) {
+                when {
+                    Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
+                    Store.readerItems(f.id).isEmpty() -> {
+                        Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
+                        nav().push(FolderFragment.of(f.id))
+                    }
+                    else -> nav().push(ReaderFragment.of(f.id))
                 }
-                else -> nav().push(ReaderFragment.of(f.id))
+            }
+
+            fun card(f: Folder): View {
+                val c = Builtins.byKey(f.id)
+                return if (c != null) {
+                    layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
+                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, c.icon)
+                        findViewById<TextView>(R.id.title).text = f.name
+                        findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
+                        setOnClickListener { open(f) }
+                    }
+                } else {
+                    layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
+                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
+                        findViewById<TextView>(R.id.title).text = f.name
+                        setOnClickListener { open(f) }
+                    }
+                }
+            }
+
+            val foldersById = content.folders.associateBy { it.id }
+            val hidden = Store.hidden()
+            val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { foldersById[it] }
+            val collections = shown.filter { Builtins.byKey(it.id) != null }
+            val mine = shown.filter { Builtins.byKey(it.id) == null }
+
+            fun section(label: String?, cards: List<View>): View? {
+                if (cards.isEmpty()) return null
+                val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                if (label != null) box.addView(Ui.caps(ctx, label))
+                box.addView(Ui.grid(ctx, cards, 2, 12), Ui.lp(top = if (label != null) 12 else 0, ctx = ctx))
+                return box
+            }
+
+            val daily = section("Daily collections", collections.map { card(it) })
+            val own = section(null, mine.map { card(it) })
+            val parts: List<View?> = when (Store.placement()) {
+                Placement.TOP -> listOf(own, daily)
+                Placement.BOTTOM -> listOf(daily, own)
+                Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
+            }
+            parts.filterNotNull().forEachIndexed { i, v ->
+                sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx))
             }
         }
 
-        fun card(f: Folder): View {
-            val c = Builtins.byKey(f.id)
-            return if (c != null) {
-                layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
-                    Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, c.icon)
-                    findViewById<TextView>(R.id.title).text = f.name
-                    findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
-                    setOnClickListener { open(f) }
-                }
-            } else {
-                layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
-                    Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
-                    findViewById<TextView>(R.id.title).text = f.name
-                    setOnClickListener { open(f) }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    if (content != null) render(content)
                 }
             }
         }
-
-        val hidden = Store.hidden()
-        val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { Store.folder(it) }
-        val collections = shown.filter { Builtins.byKey(it.id) != null }
-        val mine = shown.filter { Builtins.byKey(it.id) == null }
-
-        fun section(label: String?, cards: List<View>): View? {
-            if (cards.isEmpty()) return null
-            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            if (label != null) box.addView(Ui.caps(ctx, label))
-            box.addView(Ui.grid(ctx, cards, 2, 12), Ui.lp(top = if (label != null) 12 else 0, ctx = ctx))
-            return box
-        }
-
-        val daily = section("Daily collections", collections.map { card(it) })
-        val own = section(null, mine.map { card(it) })
-        val parts: List<View?> = when (Store.placement()) {
-            Placement.TOP -> listOf(own, daily)
-            Placement.BOTTOM -> listOf(daily, own)
-            Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
-        }
-        parts.filterNotNull().forEachIndexed { i, v -> sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx)) }
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\LibraryFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\HomeViewModel.kt =====
+
+package com.azkar.app.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.azkar.app.data.AzkarContent
+import com.azkar.app.data.AzkarRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    repository: AzkarRepository
+) : ViewModel() {
+    val content: StateFlow<AzkarContent?> = repository.content
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\LibraryFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -1774,13 +1438,21 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
-import com.azkar.app.data.Store
+import com.azkar.app.data.AzkarContent
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class LibraryFragment : Fragment(R.layout.fragment_library) {
+    private val viewModel: AzkarContentViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
@@ -1797,11 +1469,11 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val teal = ctx.getColor(R.color.teal)
         val gold = ctx.getColor(R.color.gold)
 
-        fun build(q: String): List<Card> {
+        fun build(q: String, content: AzkarContent): List<Card> {
             val query = q.trim().lowercase()
-            val counts = Store.zikrCounts()          // one pass, from memory
+            val counts = content.zikrs.groupingBy { it.folderId }.eachCount()
             val out = ArrayList<Card>()
-            Store.folders().forEach { f ->
+            content.folders.forEach { f ->
                 if (query.isNotEmpty() && !f.name.lowercase().contains(query)) return@forEach
                 val b = Builtins.byKey(f.id)
                 out.add(Card(f.id, f.name, azkarCount(counts[f.id] ?: 0), f.icon, b?.icon ?: R.drawable.ic_folder_1p75,
@@ -1815,22 +1487,33 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             }
             if (query.isEmpty()) {
                 out.add(Card("new", "New folder", "", null, R.drawable.ic_plus_2, gold, true) {
-                    promptNewFolder { _ -> adapter.submitList(build(search.text.toString())) }
+                    promptNewFolder { _ ->
+                        viewModel.content.value?.let { adapter.submitList(build(search.text.toString(), it)) }
+                    }
                 })
             }
             return out
         }
 
-        adapter.submitList(build(""))
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    if (content != null) adapter.submitList(build(search.text.toString(), content))
+                }
+            }
+        }
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) { adapter.submitList(build(s?.toString() ?: "")) }
+            override fun afterTextChanged(s: Editable?) {
+                viewModel.content.value?.let { adapter.submitList(build(s?.toString() ?: "", it)) }
+            }
         })
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\Lists.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\Lists.kt =====
+
 package com.azkar.app.ui
 
 import android.graphics.Rect
@@ -1953,7 +1636,8 @@ class ZikrAdapter(
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.net.Uri
@@ -1965,18 +1649,30 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
+import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+@AndroidEntryPoint
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
+    private val viewModel: AzkarContentViewModel by viewModels()
+    private var latestContent: AzkarContent? = null
 
     private var t0 = 0L
     private val cards = CardAdapter()
@@ -2023,7 +1719,14 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             itemAnimator = null
         }
 
-        refresh()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    latestContent = content
+                    if (content != null) refresh(content)
+                }
+            }
+        }
 
         view.viewTreeObserver.addOnPreDrawListener(
             object : ViewTreeObserver.OnPreDrawListener {
@@ -2039,14 +1742,15 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         )
     }
 
-    private fun refresh() {
+    private fun refresh(content: AzkarContent? = latestContent) {
+        val current = content ?: return
         val ctx = requireContext()
-        val counts = Store.zikrCounts()
+        val counts = current.zikrs.groupingBy { it.folderId }.eachCount()
         val teal = ctx.getColor(R.color.teal)
         val gold = ctx.getColor(R.color.gold)
         val list = ArrayList<Card>()
 
-        Store.folders().forEach { f ->
+        current.folders.forEach { f ->
             val b = Builtins.byKey(f.id)
 
             list.add(
@@ -2092,43 +1796,46 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                 gold,
                 true
             ) {
-                promptNewFolder { refresh() }
+                promptNewFolder { latestContent?.let(::refresh) }
             }
         )
 
         cards.submitList(list)
 
-        val n = Store.folders().size
+        val n = current.folders.size
         view?.findViewById<TextView>(R.id.folder_count)?.text =
             if (n == 1) "1 folder" else "$n folders"
     }
 
     private fun writeExport(uri: Uri) {
         val ctx = requireContext()
-
-        try {
-            val text = Store.exportJson()
-
-            ctx.contentResolver.openOutputStream(uri, "wt")?.use {
-                it.write(text.toByteArray(Charsets.UTF_8))
-            } ?: throw java.io.IOException("Could not open the file for writing.")
-
-            AlertDialog.Builder(ctx)
-                .setTitle("Export complete")
-                .setMessage(
-                    "Saved ${Store.folders().size} folders, " +
-                        "${Store.zikrs().size} azkar and " +
-                        "${Store.schedules().size} reminders."
-                )
-                .setPositiveButton("OK", null)
-                .show()
-
-        } catch (e: Exception) {
-            AlertDialog.Builder(ctx)
-                .setTitle("Export failed")
-                .setMessage("The file could not be saved. " + (e.message ?: ""))
-                .setPositiveButton("OK", null)
-                .show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val text = Store.exportJsonAsync()
+                check(withContext(Dispatchers.Default) { ImportJson.parse(text) is ImportJson.Parsed.Ok }) {
+                    "Generated backup failed validation."
+                }
+                withContext(Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(text.toByteArray(Charsets.UTF_8))
+                    } ?: throw java.io.IOException("Could not open the file for writing.")
+                }
+                AlertDialog.Builder(ctx)
+                    .setTitle("Export complete")
+                    .setMessage(
+                        "Saved ${latestContent?.folders?.size ?: 0} folders, " +
+                            "${latestContent?.zikrs?.size ?: 0} azkar and " +
+                            "${latestContent?.schedules?.size ?: 0} reminders."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                AlertDialog.Builder(ctx)
+                    .setTitle("Export failed")
+                    .setMessage("The file could not be saved. " + (e.message ?: ""))
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
         }
     }
 
@@ -2245,22 +1952,23 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             .setTitle("Import from JSON")
             .setMessage(msg)
             .setPositiveButton("Import") { _, _ ->
-
-                val r = Store.importAll(p)
-
-                ReminderScheduler.rescheduleAll(requireContext())
-
-                refresh()
-
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Import complete")
-                    .setMessage(
-                        "${r.created} new folders, ${r.merged} merged, " +
-                            "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
-                            "${r.reminders} reminders added."
-                    )
-                    .setPositiveButton("OK", null)
-                    .show()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val r = Store.importAllAsync(p)
+                        ReminderScheduler.rescheduleAll(requireContext())
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Import complete")
+                            .setMessage(
+                                "${r.created} new folders, ${r.merged} merged, " +
+                                    "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
+                                    "${r.reminders} reminders added."
+                            )
+                            .setPositiveButton("OK", null)
+                            .show()
+                    } catch (e: Exception) {
+                        showError("Import failed: " + (e.message ?: "database write failed"))
+                    }
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -2295,7 +2003,9 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\MyLists.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\MyLists.kt =====
+
 package com.azkar.app.ui
 
 import android.view.LayoutInflater
@@ -2402,7 +2112,8 @@ class MyAdapter(
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\ReaderFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\ReaderFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.os.Bundle
@@ -2558,7 +2269,9 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\ReaderNav.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\ReaderNav.kt =====
+
 package com.azkar.app.ui
 
 /** Pure navigation rules of the reader (no Android classes), so they can be unit tested. */
@@ -2592,7 +2305,8 @@ class ReaderNav(private val targets: List<Int>, start: Int = 0, count: Int = 0) 
         if (canPage(-1)) { index--; count = 0; Outcome.MOVED } else Outcome.BOUNCE
 }
 
-===== app\src\main\java\com\azkar\app\ui\RemindersFragment.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\RemindersFragment.kt =====
+
 package com.azkar.app.ui
 
 import android.Manifest
@@ -2620,6 +2334,7 @@ import com.azkar.app.R
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
+import com.azkar.app.widgets.WidgetUpdater
 
 fun timeLabel(ctx: Context, h: Int, m: Int): String =
     if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
@@ -2651,6 +2366,13 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
         view.findViewById<View>(R.id.btn_add_rem).setOnClickListener { edit(null) }
+        view.findViewById<View>(R.id.btn_test_notification).setOnClickListener {
+            val sample = Store.schedules().firstOrNull()
+            if (sample != null) {
+                ReminderScheduler.notify(ctx, sample.copy(title = getString(R.string.test_notification)))
+                Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+            }
+        }
         view.findViewById<View>(R.id.exact_row).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
@@ -2685,7 +2407,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         })
         // Theme (same pill style as the Arabic text size selector)
         val themes = view.findViewById<LinearLayout>(R.id.themes)
-        val themeNames = arrayOf("Teal (current)", "OLED black")
+        val themeNames = arrayOf("Teal", "OLED black")
         fun renderThemes() {
             themes.removeAllViews()
             val sel = Store.theme()
@@ -2704,6 +2426,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                     setOnClickListener {
                         if (Store.theme() != idx) {
                             Store.setTheme(idx)
+                            WidgetUpdater.updateAll(ctx)
                             ThemeMode.apply(idx)   // recreates the activity; this screen is restored from the back stack
                         }
                         renderThemes()
@@ -2826,7 +2549,8 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\Tabs.kt =====
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\Tabs.kt =====
+
 package com.azkar.app.ui
 
 import android.content.res.ColorStateList
@@ -2860,7 +2584,9 @@ fun Fragment.bindNav(view: View, active: Tab) {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\Ui.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\Ui.kt =====
+
 package com.azkar.app.ui
 
 import android.content.Context
@@ -2954,7 +2680,9 @@ object Ui {
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\Views.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\Views.kt =====
+
 package com.azkar.app.ui
 
 import android.content.Context
@@ -3220,7 +2948,9 @@ class FlowLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
     }
 }
 
-===== app\src\main\java\com\azkar\app\ui\ZikrForm.kt =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\ui\ZikrForm.kt =====
+
 
 package com.azkar.app.ui
 
@@ -3357,149 +3087,1044 @@ class ZikrForm(
     }
 }
 
-===== app\src\main\java\com\azkar\app\AzkarApp.kt =====
-package com.azkar.app
 
-import android.app.Application
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\AzkarWidgetProviders.kt =====
+
+package com.azkar.app.widgets
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration
+import android.net.Uri
+import android.os.Bundle
+import android.widget.RemoteViews
+import com.azkar.app.MainActivity
+import com.azkar.app.R
 import com.azkar.app.data.Store
-import com.azkar.app.reminders.ReminderScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class AzkarApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        Store.init(this)
-        ThemeMode.apply(Store.theme())   // before any activity exists
-        ReminderScheduler.createChannel(this)
-        ReminderScheduler.rescheduleAll(this)
+const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
+const val ACTION_RESET = "com.azkar.app.widget.RESET"
+const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
+
+abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
+
+    override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
+        Store.init(ctx)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                ids.forEach { WidgetUpdater.update(ctx, mgr, it, kind) }
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    override fun onAppWidgetOptionsChanged(ctx: Context, mgr: AppWidgetManager, id: Int, newOptions: Bundle) {
+        Store.init(ctx)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                WidgetUpdater.update(ctx, mgr, id, kind)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    override fun onDeleted(ctx: Context, ids: IntArray) {
+        ids.forEach { WidgetStore.clear(ctx, it) }
+    }
+
+    override fun onReceive(ctx: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_DATE_CHANGED ||
+            intent.action == Intent.ACTION_TIME_CHANGED ||
+            intent.action == Intent.ACTION_TIMEZONE_CHANGED ||
+            intent.action == Intent.ACTION_BOOT_COMPLETED
+        ) {
+            Store.init(ctx)
+            dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
+            return
+        }
+        val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        when (intent.action) {
+            ACTION_COUNT, ACTION_RESET -> {
+                if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
+                Store.init(ctx)
+                dispatch(ctx) {
+                    if (intent.action == ACTION_COUNT) WidgetLogic.tap(ctx, id, kind) else WidgetLogic.reset(ctx, id)
+                    WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
+                }
+            }
+            ACTION_REFRESH -> {
+                Store.init(ctx)
+                dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
+            }
+            else -> super.onReceive(ctx, intent)
+        }
+    }
+
+    private fun dispatch(ctx: Context, block: suspend () -> Unit) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                block()
+            } finally {
+                pending.finish()
+            }
+        }
     }
 }
 
-===== app\src\main\java\com\azkar\app\MainActivity.kt =====
-package com.azkar.app
+class SmallWidgetProvider : BaseWidgetProvider(WidgetKind.SMALL)      // 2x2
+class MediumWidgetProvider : BaseWidgetProvider(WidgetKind.MEDIUM)    // 4x2
+class LargeWidgetProvider : BaseWidgetProvider(WidgetKind.LARGE)      // 4x4
 
-import android.Manifest
+object WidgetUpdater {
+    private val DEFAULT_DP = mapOf(
+        WidgetKind.SMALL to (158f to 158f),
+        WidgetKind.MEDIUM to (338f to 158f),
+        WidgetKind.LARGE to (338f to 354f),
+    )
+
+    fun providerClass(kind: WidgetKind): Class<*> = when (kind) {
+        WidgetKind.SMALL -> SmallWidgetProvider::class.java
+        WidgetKind.MEDIUM -> MediumWidgetProvider::class.java
+        WidgetKind.LARGE -> LargeWidgetProvider::class.java
+    }
+
+    fun kindOf(ctx: Context, id: Int): WidgetKind {
+        val cn = AppWidgetManager.getInstance(ctx).getAppWidgetInfo(id)?.provider?.className
+        return WidgetKind.values().firstOrNull { providerClass(it).name == cn } ?: WidgetKind.SMALL
+    }
+
+    /** Re-draws every widget (call it when the app's data may have changed, e.g. MainActivity.onStop). */
+    fun updateAll(ctx: Context) {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        WidgetKind.values().forEach { k ->
+            mgr.getAppWidgetIds(ComponentName(ctx, providerClass(k))).forEach { update(ctx, mgr, it, k) }
+        }
+    }
+
+    fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        WidgetStore.scheduleRefresh(ctx, id, cfg.refresh)
+        val model = WidgetModel.load(ctx, id, cfg.folder)
+
+        // Real size of this widget on the launcher grid, in dp.
+        val o = mgr.getAppWidgetOptions(id)
+        val land = ctx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val def = DEFAULT_DP.getValue(kind)
+        val w = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH))
+            .takeIf { it > 0 }?.toFloat() ?: def.first
+        val h = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
+            .takeIf { it > 0 }?.toFloat() ?: def.second
+
+        val bmp = WidgetRenderer(ctx, cfg.theme).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density)
+
+        val layout = when {
+            cfg.style == WidgetStyle.CLASSIC && kind == WidgetKind.LARGE -> R.layout.widget_classic_large
+            cfg.style == WidgetStyle.TASBIH && kind == WidgetKind.LARGE -> R.layout.widget_tasbih_large
+            else -> R.layout.widget_plain
+        }
+        val rv = RemoteViews(ctx.packageName, layout)
+        rv.setImageViewBitmap(R.id.img, bmp)
+        rv.setContentDescription(
+            R.id.img,
+            if (model.n == 0) ctx.getString(R.string.widget_no_azkar_description)
+            else "${model.folderName}: ${model.shown} of ${model.target}"
+        )
+        rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
+        rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
+
+        val primary = if (cfg.tapAction == WidgetStore.TapAction.COUNT) {
+            action(ctx, id, kind, ACTION_COUNT)
+        } else {
+            openApp(ctx, id, cfg.folder)
+        }
+        rv.setOnClickPendingIntent(R.id.hit_open, primary)
+        val count = action(ctx, id, kind, ACTION_COUNT)
+        rv.setOnClickPendingIntent(R.id.hit_count, count)
+        if (layout == R.layout.widget_classic_large) {
+            rv.setContentDescription(R.id.hit_count2, ctx.getString(R.string.widget_action_count))
+            rv.setContentDescription(R.id.btn_plus, ctx.getString(R.string.widget_action_count))
+            rv.setOnClickPendingIntent(R.id.hit_count2, count)
+            rv.setOnClickPendingIntent(R.id.btn_plus, count)
+        }
+
+        if (layout == R.layout.widget_tasbih_large) {
+            rv.setContentDescription(R.id.btn_main, ctx.getString(R.string.widget_action_count))
+            rv.setContentDescription(R.id.btn_reset, ctx.getString(R.string.widget_action_reset))
+            rv.setOnClickPendingIntent(R.id.btn_main, count)
+            rv.setOnClickPendingIntent(R.id.btn_reset, action(ctx, id, kind, ACTION_RESET))
+        }
+
+        mgr.updateAppWidget(id, rv)
+    }
+
+    private fun action(ctx: Context, id: Int, kind: WidgetKind, action: String): PendingIntent {
+        val i = Intent(ctx, providerClass(kind)).setAction(action)
+            .setData(Uri.parse("azkar://widget/$id/$action"))
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+        return PendingIntent.getBroadcast(ctx, id * 2 + (if (action == ACTION_COUNT) 0 else 1), i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    /** Opens the app straight into this folder's reader (MainActivity already handles the "open" extra). */
+    private fun openApp(ctx: Context, id: Int, folder: String): PendingIntent {
+        val i = Intent(ctx, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra("open", folder)
+        return PendingIntent.getActivity(ctx, 100000 + id, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetConfigActivity.kt =====
+
+package com.azkar.app.widgets
+
+import android.app.Activity
+import android.appwidget.AppWidgetManager
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import com.azkar.app.R
+import com.azkar.app.ThemeMode
 import com.azkar.app.data.Store
-import com.azkar.app.ui.HomeFragment
-import com.azkar.app.ui.LibraryFragment
-import com.azkar.app.ui.MyAzkarFragment
-import com.azkar.app.ui.ReaderFragment
-import com.azkar.app.ui.Tab
+import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
-    private var currentTab: Tab = Tab.HOME
-    private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+/** Shown when a widget is added: pick the design, folder, and theme. */
+class WidgetConfigActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        currentTab = savedInstanceState?.getInt("tab")?.let { Tab.values().getOrNull(it) } ?: Tab.HOME
+        setResult(Activity.RESULT_CANCELED)
         Store.init(this)
-        if (Build.VERSION.SDK_INT >= 28) {
-            window.attributes = window.attributes.apply {
-                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        val id = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            ?: AppWidgetManager.INVALID_APPWIDGET_ID
+        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+        lifecycleScope.launch {
+            Store.awaitReady()
+            chooseStyle(id, WidgetUpdater.kindOf(this@WidgetConfigActivity, id))
+        }
+    }
+
+    private fun chooseStyle(id: Int, kind: WidgetKind) {
+        val styles = WidgetStyle.values().filter { kind in it.kinds }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_style_title)
+            .setItems(styles.map { it.label }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun chooseFolder(id: Int, kind: WidgetKind, style: WidgetStyle) {
+        val ids = ArrayList<String>()
+        val names = ArrayList<String>()
+        Store.folders().forEach { f -> ids.add(f.id); names.add((f.icon?.let { "$it " } ?: "") + f.name) }
+        if (Store.zikrs().any { it.folderId == null }) { ids.add("anytime"); names.add("Anytime") }
+        if (ids.isEmpty()) { save(id, kind, style, "anytime"); return }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_folder_title)
+            .setItems(names.toTypedArray()) { _, i -> save(id, kind, style, ids[i]) }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun save(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String) {
+        chooseTheme(id, kind, style, folder)
+    }
+
+    private fun chooseTheme(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String) {
+        val themes = arrayOf(
+            getString(R.string.widget_theme_follow_app),
+            getString(R.string.widget_theme_teal),
+            getString(R.string.widget_theme_oled),
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_theme_title)
+            .setItems(themes) { _, choice ->
+                val theme = when (choice) {
+                    1 -> ThemeMode.CURRENT
+                    2 -> ThemeMode.OLED
+                    else -> null
+                }
+                chooseRefresh(id, kind, style, folder, theme)
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun chooseRefresh(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String, theme: Int?) {
+        val values = WidgetStore.Refresh.values()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_refresh_title)
+            .setItems(values.map { getString(it.label) }.toTypedArray()) { _, i ->
+                chooseTapAction(id, kind, style, folder, theme, values[i])
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun chooseTapAction(
+        id: Int,
+        kind: WidgetKind,
+        style: WidgetStyle,
+        folder: String,
+        theme: Int?,
+        refresh: WidgetStore.Refresh
+    ) {
+        val values = WidgetStore.TapAction.values()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_tap_action_title)
+            .setItems(values.map { getString(it.label) }.toTypedArray()) { _, i ->
+                saveConfig(id, kind, style, folder, theme, refresh, values[i])
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun saveConfig(
+        id: Int,
+        kind: WidgetKind,
+        style: WidgetStyle,
+        folder: String,
+        theme: Int?,
+        refresh: WidgetStore.Refresh,
+        tapAction: WidgetStore.TapAction
+    ) {
+        WidgetStore.setConfig(this, id, style, folder, theme, refresh, tapAction)
+        WidgetUpdater.update(this, AppWidgetManager.getInstance(this), id, kind)
+        setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+        finish()
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetModels.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.Context
+import com.azkar.app.data.ReaderItem
+import com.azkar.app.data.Store
+import android.text.format.DateFormat
+import java.util.Date
+import kotlin.math.ceil
+import kotlin.math.min
+
+enum class WidgetKind { SMALL, MEDIUM, LARGE }
+
+private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE)
+
+/** The four available designs. [kinds] = which sizes exist for that design. */
+enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
+    CLASSIC("Classic", ALL_KINDS),
+    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE)),
+    TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
+    CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
+}
+
+/** Everything a renderer needs for one widget, already read from [Store]. */
+class WidgetModel(
+    val folderName: String,
+    val items: List<ReaderItem>,
+    val labels: List<String>,   // short left-hand label per zikr (its note, or "×N")
+    val idx: Int,               // index of the zikr being recited; == n when the whole folder is finished
+    val count: Int,             // recitations done on the current zikr
+    val date: String,
+) {
+    val n = items.size
+    val finished = n > 0 && idx >= n
+    val curIdx = if (n == 0) 0 else min(idx, n - 1)
+    val cur: ReaderItem? = items.getOrNull(curIdx)
+    val target = cur?.target ?: 1
+    val shown = if (finished) target else count.coerceIn(0, target)
+    val done = if (finished) n else idx
+    val position = if (n == 0) 0 else min(idx + 1, n)
+
+    // Tasbih beads: one ring = up to 33 beads
+    val beadTotal = min(33, target).coerceAtLeast(1)
+    val beadFilled = when {
+        shown == 0 -> 0
+        shown % beadTotal == 0 -> beadTotal
+        else -> shown % beadTotal
+    }
+    val round = if (shown == 0) 1 else (shown - 1) / beadTotal + 1
+    val rounds = ceil(target / beadTotal.toDouble()).toInt().coerceAtLeast(1)
+
+    companion object {
+        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel {
+            val items = Store.readerItems(folder)
+            val (i, c) = WidgetStore.progress(ctx, widgetId)
+            val idx = i.coerceIn(0, items.size)
+            val cnt = if (idx < items.size) c.coerceIn(0, (items[idx].target - 1).coerceAtLeast(0)) else 0
+            val labels = items.map { it0 ->
+                Store.zikr(it0.id)?.note?.trim()?.takeIf { s -> s.isNotEmpty() } ?: "×${it0.target}"
+            }
+            return WidgetModel(
+                Store.folderName(folder), items, labels, idx, cnt,
+                DateFormat.format("EEE, d MMM", Date()).toString()
+            )
+        }
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetPalette.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.Context
+import com.azkar.app.R
+
+internal data class WidgetPalette(
+    val background: Int,
+    val border: Int,
+    val accent: Int,
+    val accentSoft: Int,
+    val text: Int,
+    val muted: Int,
+    val soft: Int,
+    val track: Int,
+    val beadTrack: Int,
+    val chip: Int,
+    val panel: Int,
+    val panelBorder: Int,
+    val outline: Int,
+) {
+    companion object {
+        fun from(ctx: Context, oled: Boolean): WidgetPalette {
+            fun color(tealId: Int, oledId: Int): Int = ctx.getColor(if (oled) oledId else tealId)
+            return WidgetPalette(
+                background = color(R.color.widget_teal_background, R.color.widget_oled_background),
+                border = color(R.color.widget_teal_border, R.color.widget_oled_border),
+                accent = color(R.color.widget_teal_accent, R.color.widget_oled_accent),
+                accentSoft = color(R.color.widget_teal_accent_soft, R.color.widget_oled_accent_soft),
+                text = color(R.color.widget_teal_text, R.color.widget_oled_text),
+                muted = color(R.color.widget_teal_muted, R.color.widget_oled_muted),
+                soft = color(R.color.widget_teal_soft, R.color.widget_oled_soft),
+                track = color(R.color.widget_teal_track, R.color.widget_oled_track),
+                beadTrack = color(R.color.widget_teal_bead_track, R.color.widget_oled_bead_track),
+                chip = color(R.color.widget_teal_chip, R.color.widget_oled_chip),
+                panel = color(R.color.widget_teal_panel, R.color.widget_oled_panel),
+                panelBorder = color(R.color.widget_teal_panel_border, R.color.widget_oled_panel_border),
+                outline = color(R.color.widget_teal_outline, R.color.widget_oled_outline),
+            )
+        }
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetRefreshReceiver.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.azkar.app.data.Store
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+class WidgetRefreshReceiver : BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        Store.init(ctx)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                WidgetUpdater.updateAll(ctx)
+            } finally {
+                pending.finish()
             }
         }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
-        setContentView(R.layout.activity_main)
-        if (savedInstanceState == null) {
-            showRoot(HomeFragment())
-            handleIntent(intent)
-        }
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetRenderer.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextDirectionHeuristics
+import android.text.TextPaint
+import android.text.TextUtils
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.PathParser
+import com.azkar.app.R
+import com.azkar.app.data.Store
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+/**
+ * Draws the 14 widget designs using the app's selected theme. All coordinates are in dp
+ * (the canvas is scaled), so the numbers below are the same numbers as in the design file.
+ */
+class WidgetRenderer(ctx: Context, theme: Int? = null) {
+    init {
+        Store.init(ctx)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putInt("tab", currentTab.ordinal)
-    }
+    private val palette = WidgetPalette.from(ctx, (theme ?: Store.theme()) == com.azkar.app.ThemeMode.OLED)
+    private val strings = WidgetStrings(ctx)
+    private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
+    private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
+    private val dmBold = ResourcesCompat.getFont(ctx, R.font.dm_sans_bold) ?: Typeface.DEFAULT_BOLD
+    private val dmReg = ResourcesCompat.getFont(ctx, R.font.dm_sans_regular) ?: Typeface.DEFAULT
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handleIntent(intent)
-    }
+    private val BLACK get() = palette.background
+    private val CARD_BORDER get() = palette.border
+    private val GOLD get() = palette.accent
+    private val GOLD_SOFT get() = palette.accentSoft
+    private val TEXT get() = palette.text
+    private val MUTED get() = palette.muted
+    private val SOFT get() = palette.soft
+    private val TRACK get() = palette.track
+    private val BEAD_TRACK get() = palette.beadTrack
+    private val CHIP get() = palette.chip
+    private val PANEL get() = palette.panel
+    private val PANEL_BORDER get() = palette.panelBorder
+    private val OUTLINE get() = palette.outline
 
-    private fun handleIntent(i: Intent?) {
-        val key = i?.getStringExtra("open") ?: return
-        i.removeExtra("open")
-        showRoot(HomeFragment())
-        if (Store.readerItems(key).isNotEmpty()) push(ReaderFragment.of(key))   // deleted or empty folder: just stay on Home
-    }
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val arabicPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
 
-    private fun showRoot(f: Fragment) {
-        supportFragmentManager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        supportFragmentManager.beginTransaction().replace(R.id.container, f).commit()
-    }
+    private enum class V { TOP, CENTER, BOTTOM }
 
-    fun openTab(tab: Tab) {
-        if (tab == currentTab && supportFragmentManager.backStackEntryCount == 0) return
-        currentTab = tab
-        showRoot(
-            when (tab) {
-                Tab.HOME -> HomeFragment()
-                Tab.LIBRARY -> LibraryFragment()
-                Tab.MY -> MyAzkarFragment()
+    // ───────────────────────── entry point ─────────────────────────
+
+    fun render(style: WidgetStyle, kind: WidgetKind, m: WidgetModel, wDp: Float, hDp: Float, density: Float): Bitmap {
+        val widthDp = wDp.coerceAtLeast(1f)
+        val heightDp = hDp.coerceAtLeast(1f)
+        var s = density
+        val px = widthDp * heightDp * s * s
+        if (px > MAX_PIXELS) s *= sqrt(MAX_PIXELS / px)       // RemoteViews bitmaps must stay small
+        val bmp = Bitmap.createBitmap(max(1, (widthDp * s).roundToInt()), max(1, (heightDp * s).roundToInt()), Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.scale(s, s)
+        if (m.n == 0) { empty(c, widthDp, heightDp); return bmp }
+        when (style) {
+            WidgetStyle.CLASSIC -> when (kind) {
+                WidgetKind.SMALL -> classicSmall(c, widthDp, heightDp, m)
+                WidgetKind.MEDIUM -> classicMedium(c, widthDp, heightDp, m)
+                WidgetKind.LARGE -> classicLarge(c, widthDp, heightDp, m)
             }
+            WidgetStyle.CHECKLIST -> when (kind) {
+                WidgetKind.MEDIUM -> checklistMedium(c, widthDp, heightDp, m)
+                WidgetKind.LARGE -> checklistLarge(c, widthDp, heightDp, m)
+                WidgetKind.SMALL -> error("Checklist does not support small widgets")
+            }
+            WidgetStyle.TASBIH -> if (kind == WidgetKind.LARGE) tasbihLarge(c, widthDp, heightDp, m) else tasbihSmall(c, widthDp, heightDp, m)
+            WidgetStyle.CALLIGRAPHY -> if (kind == WidgetKind.SMALL) calligraphySmall(c, widthDp, heightDp, m) else calligraphyMedium(c, widthDp, heightDp, m)
+        }
+        return bmp
+    }
+
+    // ───────────────────────── 1 · CLASSIC ─────────────────────────
+
+    private fun classicSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
+        text(c, m.folderName.uppercase(), l, t + 8, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 24)
+        moon(c, r - 16, t, 16f)
+        val barTop = b - 23
+        bar(c, l, barTop, r, 4f, m.shown / m.target.toFloat())
+        text(c, "${m.shown} / ${m.target}", r, b - 6.5f, 11f, TEXT, dmBold, Paint.Align.RIGHT)
+        arabic(c, m.cur!!.arabic, l, t + 22, r, barTop - 8, 27f, 1.5f, TEXT)
+    }
+
+    private fun classicMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
+        val leftR = r - 84f - 14f
+        text(c, "${m.folderName.uppercase()} · ${m.position} OF ${m.n}", l, t + 6, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, leftR - l)
+        arabic(c, m.cur!!.arabic, l, t + 16, leftR, b, 24f, 1.6f, TEXT, true, Layout.Alignment.ALIGN_CENTER, V.BOTTOM)
+        val cx = r - 42f
+        val top = h / 2f - 48f
+        val cy = top + 38f
+        ring(c, cx, cy, 31f, 6f, m.shown / m.target.toFloat())
+        text(c, "${m.shown}", cx, cy - 6f, 20f, TEXT, dmBold, Paint.Align.CENTER)
+        text(c, if (m.finished) strings.done else strings.of(m.target), cx, cy + 11f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+    }
+
+    private fun classicLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 19f; val r = w - 19f; val t = 19f; val b = h - 19f
+        header(c, m, l, r, t, "${m.position} / ${m.n}")
+        val pTop = t + 45f
+        val pBot = b - 52f - 12f
+        val rect = RectF(l, pTop, r, pBot)
+        c.drawRoundRect(rect, 18f, 18f, fillP(PANEL))
+        c.drawRoundRect(RectF(l + .5f, pTop + .5f, r - .5f, pBot - .5f), 18f, 18f, strokeP(PANEL_BORDER, 1f))
+        arabic(c, m.cur!!.arabic, l + 14, pTop + 14, r - 14, pBot - 14, 24f, 1.7f, GOLD_SOFT)
+        val cy = b - 26f
+        ring(c, l + 26f, cy, 21f, 5f, m.shown / m.target.toFloat())
+        text(c, "${m.shown}", l + 26f, cy, 13f, TEXT, dmBold, Paint.Align.CENTER)
+        button(c, RectF(r - 56f, cy - 22f, r, cy + 22f), if (m.finished) "↺" else "", true, 13f)
+    }
+
+    // ───────────────────────── 2 · CHECKLIST ─────────────────────────
+
+    private fun stateOf(m: WidgetModel, i: Int) = when {
+        m.finished || i < m.idx -> 0     // done
+        i == m.idx -> 1                  // current
+        else -> 2                        // pending
+    }
+
+    private fun checklistMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 17f; val r = w - 17f; val t = 15f
+        text(c, "${m.folderName.uppercase()} AZKAR", l, t + 9, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 50)
+        text(c, "${m.done} / ${m.n}", r, t + 9, 11f, MUTED, dmReg, Paint.Align.RIGHT)
+        val shown = min(3, m.n)
+        val start = (m.curIdx - 1).coerceIn(0, m.n - shown)
+        var y = t + 24f
+        for (k in 0 until shown) {
+            val i = start + k
+            val rh = if (stateOf(m, i) == 1) 34f else 30f
+            checkRow(c, m, i, y, rh, l, r, false)
+            y += rh + 6f
+        }
+    }
+
+    private fun checklistLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
+        text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 60)
+        text(c, strings.azkar(m.n), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
+        text(c, "${m.done} / ${m.n}", r, t + 8, 11f, GOLD, dmBold, Paint.Align.RIGHT)
+        bar(c, l, t + 43f, r, 4f, m.done / m.n.toFloat())
+        val listTop = t + 57f
+        val maxRows = max(1, floor((b - listTop - 6f) / 40f).toInt())
+        val shown = min(m.n, maxRows)
+        val start = if (m.n <= maxRows) 0 else (m.curIdx - maxRows / 2).coerceIn(0, m.n - maxRows)
+        var y = listTop
+        for (k in 0 until shown) {
+            val i = start + k
+            val cur = stateOf(m, i) == 1
+            if (cur) y += 4f
+            val rh = if (cur) 42f else 40f
+            checkRow(c, m, i, y, rh, l, r, !cur && k != shown - 1)
+            y += rh
+        }
+    }
+
+    private fun checkRow(c: Canvas, m: WidgetModel, i: Int, y: Float, rh: Float, l: Float, r: Float, divider: Boolean) {
+        val state = stateOf(m, i)
+        val cy = y + rh / 2
+        var x0 = l; var x1 = r
+        if (state == 1) {
+            c.drawRoundRect(RectF(l - 6, y, r + 6, y + rh), 12f, 12f, fillP(PANEL))
+            x0 = l + 4; x1 = r - 4
+        }
+        when (state) {
+            0 -> checkCircle(c, x0 + 9, cy)
+            1 -> c.drawCircle(x0 + 9, cy, 8f, strokeP(GOLD, 2f))
+            else -> c.drawCircle(x0 + 9, cy, 8.25f, strokeP(OUTLINE, 1.5f))
+        }
+        val tx = x0 + 28
+        if (state == 1) {
+            text(c, "${m.count}/${m.items[i].target}", x1, cy, 12f, GOLD, dmBold, Paint.Align.RIGHT)
+            text(c, m.labels[i], tx, cy, 13f, TEXT, dmBold, Paint.Align.LEFT, 0f, x1 - 44f - tx)
+        } else {
+            val aw = min(120f, (x1 - tx) * 0.55f)
+            arabicLine(c, m.items[i].arabic, x1 - aw, x1, cy, 16f, MUTED)
+            text(c, m.labels[i], tx, cy, 13f, if (state == 0) MUTED else TEXT, dmReg, Paint.Align.LEFT, 0f, x1 - aw - 8f - tx)
+        }
+        if (divider) c.drawLine(l, y + rh - .5f, r, y + rh - .5f, strokeP(PANEL_BORDER, 1f))
+    }
+
+    // ───────────────────────── 3 · TASBIH ─────────────────────────
+
+    private fun tasbihSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val s = (min(w, h) / 158f).coerceIn(0.8f, 1.4f)
+        val cx = w / 2; val cy = h / 2
+        beads(c, cx, cy, 50f * s, 6f * s, m.beadTotal, m.beadFilled)
+        text(c, "${m.beadFilled}", cx, cy - 5f, 30f, TEXT, dmBold, Paint.Align.CENTER)
+        text(c, strings.of(m.beadTotal), cx, cy + 19f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+    }
+
+    private fun tasbihLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 19f; val r = w - 19f; val t = 19f; val b = h - 19f
+        text(c, strings.tasbih, l, t + 9, 15f, TEXT, dmBold)
+        text(c, strings.round(m.round, m.rounds, m.target), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        chip(c, "${m.shown} / ${m.target}", r, t)
+        val btnTop = b - 44f
+        val top = t + 43f
+        val bot = btnTop - 10f
+        val outer = min(190f, min(bot - top, w - 38f))
+        val s = outer / 190f
+        val cx = w / 2; val cy = (top + bot) / 2
+        beads(c, cx, cy, 80f * s, 9f * s, m.beadTotal, m.beadFilled)
+        arabic(c, m.cur!!.arabic, cx - 58f * s, cy - 28f * s, cx + 58f * s, cy + 11f * s, 28f * s, 1.4f, TEXT)
+        text(c, strings.countOf(m.beadFilled, m.beadTotal), cx, cy + 20.5f * s, 12f, MUTED, dmReg, Paint.Align.CENTER)
+        button(c, RectF(l, btnTop, l + 72f, b), strings.reset, false, 13f)
+        button(c, RectF(l + 82f, btnTop, r, b), "", true, 14f)
+    }
+
+    // ───────────────────────── 4 · CALLIGRAPHY ─────────────────────────
+
+    private fun calligraphySmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
+        text(c, strings.dhikr, w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f)
+        text(c, "${m.shown}", w / 2, b - 7.5f, 12f, MUTED, dmReg, Paint.Align.CENTER, 0f, r - l)
+        arabic(c, m.cur!!.arabic, l, t + 18, r, b - 24, 34f, 1.4f, TEXT)
+    }
+
+    private fun calligraphyMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
+        card(c, w, h, CARD_BORDER)
+        val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
+        text(c, "${m.folderName.uppercase()} · ${m.position} OF ${m.n}", w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f, r - l)
+        if (m.n <= 24) segments(c, l, b - 3f, r, 3f, m.n, m.done) else bar(c, l, b - 3f, r, 3f, m.done / m.n.toFloat())
+        arabic(c, m.cur!!.arabic, l, t + 20, r, b - 13f, 31f, 1.4f, TEXT)
+    }
+
+    private fun empty(c: Canvas, w: Float, h: Float) {
+        card(c, w, h, CARD_BORDER)
+        text(c, strings.noAzkar, w / 2, h / 2 - 8, 13f, TEXT, dmBold, Paint.Align.CENTER, 0f, w - 30)
+        text(c, strings.tapToOpen, w / 2, h / 2 + 10, 11f, MUTED, dmReg, Paint.Align.CENTER, 0f, w - 30)
+    }
+
+    // ───────────────────────── shared pieces ─────────────────────────
+
+    /** Title + subtitle on the left, count chip on the right (Classic large). */
+    private fun header(c: Canvas, m: WidgetModel, l: Float, r: Float, t: Float, chipText: String) {
+        text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 70)
+        text(c, strings.azkar(m.n), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        chip(c, chipText, r, t)
+    }
+
+    private fun card(c: Canvas, w: Float, h: Float, border: Int) {
+        val rect = RectF(.5f, .5f, w - .5f, h - .5f)
+        c.drawRoundRect(rect, 26f, 26f, fillP(BLACK))
+        c.drawRoundRect(rect, 26f, 26f, strokeP(border, 1f))
+    }
+
+    private fun chip(c: Canvas, s: String, right: Float, top: Float) {
+        tp.reset(); tp.isAntiAlias = true; tp.textSize = 11f; tp.typeface = dmBold
+        val wd = tp.measureText(s) + 20f
+        c.drawRoundRect(RectF(right - wd, top, right, top + 21f), 10.5f, 10.5f, fillP(CHIP))
+        text(c, s, right - wd / 2, top + 10.5f, 11f, GOLD, dmBold, Paint.Align.CENTER)
+    }
+
+    private fun button(c: Canvas, r: RectF, label: String, filled: Boolean, size: Float) {
+        val rad = r.height() / 2
+        if (filled) c.drawRoundRect(r, rad, rad, fillP(GOLD))
+        else c.drawRoundRect(RectF(r.left + .5f, r.top + .5f, r.right - .5f, r.bottom - .5f), rad, rad, strokeP(OUTLINE, 1f))
+        text(c, label, r.centerX(), r.centerY(), size, if (filled) BLACK else TEXT, dmBold, Paint.Align.CENTER, 0f, r.width() - 8f)
+    }
+
+    private fun bar(c: Canvas, l: Float, t: Float, r: Float, h: Float, progress: Float) {
+        c.drawRoundRect(RectF(l, t, r, t + h), h / 2, h / 2, fillP(TRACK))
+        val pr = progress.coerceIn(0f, 1f)
+        if (pr > 0f) c.drawRoundRect(RectF(l, t, l + (r - l) * pr, t + h), h / 2, h / 2, fillP(GOLD))
+    }
+
+    private fun segments(c: Canvas, l: Float, t: Float, r: Float, h: Float, total: Int, filled: Int) {
+        val gap = 3f
+        val sw = (r - l - gap * (total - 1)) / total
+        for (i in 0 until total) {
+            val x = l + i * (sw + gap)
+            c.drawRoundRect(RectF(x, t, x + sw, t + h), 1.5f, 1.5f, fillP(if (i < filled) GOLD else TRACK))
+        }
+    }
+
+    private fun ring(c: Canvas, cx: Float, cy: Float, r: Float, sw: Float, progress: Float) {
+        c.drawCircle(cx, cy, r, strokeP(TRACK, sw))
+        val pr = progress.coerceIn(0f, 1f)
+        if (pr > 0f) c.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -90f, 360f * pr, false, strokeP(GOLD, sw, Paint.Cap.ROUND))
+    }
+
+    private fun beads(c: Canvas, cx: Float, cy: Float, r: Float, d: Float, total: Int, filled: Int) {
+        for (i in 0 until total) {
+            val a = Math.toRadians(-90.0 + 360.0 * i / total)
+            c.drawCircle(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat(), d / 2, fillP(if (i < filled) GOLD else BEAD_TRACK))
+        }
+    }
+
+    private val moonPath: Path by lazy { PathParser.createPathFromPathData("M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z") }
+    private val checkPath: Path by lazy { PathParser.createPathFromPathData("M5 12.5l4.5 4.5L19 7.5") }
+
+    private fun moon(c: Canvas, x: Float, y: Float, size: Float) {
+        c.save(); c.translate(x, y); c.scale(size / 24f, size / 24f)
+        val paint = strokeP(GOLD, 1.8f); paint.strokeJoin = Paint.Join.ROUND; paint.strokeCap = Paint.Cap.ROUND
+        c.drawPath(moonPath, paint)
+        c.restore()
+    }
+
+    private fun checkCircle(c: Canvas, cx: Float, cy: Float) {
+        c.drawCircle(cx, cy, 9f, fillP(GOLD))
+        c.save(); c.translate(cx - 5.5f, cy - 5.5f); c.scale(11f / 24f, 11f / 24f)
+        val paint = strokeP(BLACK, 3.2f); paint.strokeJoin = Paint.Join.ROUND; paint.strokeCap = Paint.Cap.ROUND
+        c.drawPath(checkPath, paint)
+        c.restore()
+    }
+
+    // ───────────────────────── text ─────────────────────────
+
+    private fun fillP(color: Int): Paint { p.reset(); p.isAntiAlias = true; p.style = Paint.Style.FILL; p.color = color; return p }
+    private fun strokeP(color: Int, w: Float, cap: Paint.Cap = Paint.Cap.BUTT): Paint {
+        p.reset(); p.isAntiAlias = true; p.style = Paint.Style.STROKE; p.color = color; p.strokeWidth = w; p.strokeCap = cap; return p
+    }
+
+    /** Latin UI text, vertically centred on [cy]. */
+    private fun text(
+        c: Canvas, s: String, x: Float, cy: Float, size: Float, color: Int, tf: Typeface,
+        align: Paint.Align = Paint.Align.LEFT, spacing: Float = 0f, maxW: Float = 0f,
+    ) {
+        tp.reset(); tp.isAntiAlias = true
+        tp.textSize = size; tp.color = color; tp.typeface = tf; tp.textAlign = align; tp.letterSpacing = spacing
+        var str = s
+        if (maxW > 0f && tp.measureText(str) > maxW) str = TextUtils.ellipsize(s, tp, maxW, TextUtils.TruncateAt.END).toString()
+        val fm = tp.fontMetrics
+        c.drawText(str, x, cy - (fm.ascent + fm.descent) / 2f, tp)
+    }
+
+    private fun layout(s: String, w: Int, size: Float, lh: Float, color: Int, bold: Boolean, align: Layout.Alignment, maxLines: Int): StaticLayout {
+        val t = arabicPaint
+        t.reset()
+        t.typeface = if (bold) amiriBold else amiriReg
+        t.textSize = size; t.color = color
+        val fm = t.fontMetrics
+        val b = StaticLayout.Builder.obtain(s, 0, s.length, t, w)
+            .setAlignment(align)
+            .setTextDirection(TextDirectionHeuristics.RTL)
+            .setIncludePad(false)
+            .setLineSpacing(size * lh - (fm.descent - fm.ascent), 1f)
+        if (maxLines > 0) b.setMaxLines(maxLines).setEllipsize(TextUtils.TruncateAt.END).setEllipsizedWidth(w)
+        return b.build()
+    }
+
+    /** Arabic paragraph in a box. Shrinks the font until it fits. */
+    private fun arabic(
+        c: Canvas, s: String, l: Float, t: Float, r: Float, b: Float, size: Float, lh: Float, color: Int,
+        bold: Boolean = true, align: Layout.Alignment = Layout.Alignment.ALIGN_CENTER, v: V = V.CENTER,
+    ) {
+        val w = max(1, (r - l).toInt())
+        var sz = size
+        var lay = layout(s, w, sz, lh, color, bold, align, 0)
+        while (lay.height > (b - t) && sz > size * 0.5f) { sz *= 0.93f; lay = layout(s, w, sz, lh, color, bold, align, 0) }
+        val y = when (v) { V.TOP -> t; V.CENTER -> t + ((b - t) - lay.height) / 2f; V.BOTTOM -> b - lay.height }
+        c.save(); c.translate(l, y); lay.draw(c); c.restore()
+    }
+
+    /** One Arabic line, right-aligned, ellipsized, centred on [cy]. */
+    private fun arabicLine(c: Canvas, s: String, l: Float, r: Float, cy: Float, size: Float, color: Int) {
+        val lay = layout(s, max(1, (r - l).toInt()), size, 1.2f, color, false, Layout.Alignment.ALIGN_NORMAL, 1)
+        c.save(); c.translate(l, cy - lay.height / 2f); lay.draw(c); c.restore()
+    }
+
+    private companion object { const val MAX_PIXELS = 1_100_000f }
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetStore.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.Context
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.net.Uri
+import com.azkar.app.data.Store
+import com.azkar.app.R
+import android.util.Log
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/** Per-widget settings and progress. Progress resets itself every new day. */
+object WidgetStore {
+    private fun sp(ctx: Context) = ctx.getSharedPreferences("azkar_widgets", Context.MODE_PRIVATE)
+    private fun today() = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+
+    enum class Refresh(val minutes: Long, val label: Int) {
+        ON_CHANGE(0, R.string.widget_refresh_on_change),
+        HOURLY(60, R.string.widget_refresh_hourly),
+        EVERY_SIX_HOURS(360, R.string.widget_refresh_six_hours),
+        DAILY(1440, R.string.widget_refresh_daily)
+    }
+
+    enum class TapAction(val label: Int) {
+        OPEN(R.string.widget_tap_open), COUNT(R.string.widget_tap_count)
+    }
+
+    data class Config(
+        val style: WidgetStyle,
+        val folder: String,
+        val theme: Int?,
+        val refresh: Refresh,
+        val tapAction: TapAction
+    )
+
+    fun config(ctx: Context, id: Int, kind: WidgetKind): Config {
+        val s = sp(ctx)
+        val savedStyle = s.getString("style_$id", null)
+        val style = try {
+            savedStyle?.let(WidgetStyle::valueOf)
+        } catch (e: IllegalArgumentException) {
+            Log.w("WidgetStore", "Invalid widget style '$savedStyle' for $id", e)
+            null
+        }
+            ?.takeIf { kind in it.kinds } ?: WidgetStyle.CLASSIC
+        val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: "anytime"
+        val theme = if (s.contains("theme_$id")) s.getInt("theme_$id", com.azkar.app.ThemeMode.CURRENT) else null
+        val refresh = runCatching { Refresh.valueOf(s.getString("refresh_$id", Refresh.ON_CHANGE.name)!!) }
+            .getOrDefault(Refresh.ON_CHANGE)
+        val tap = runCatching { TapAction.valueOf(s.getString("tap_$id", TapAction.OPEN.name)!!) }
+            .getOrDefault(TapAction.OPEN)
+        return Config(style, folder, theme, refresh, tap)
+    }
+
+    fun setConfig(
+        ctx: Context,
+        id: Int,
+        style: WidgetStyle,
+        folder: String,
+        theme: Int?,
+        refresh: Refresh = Refresh.ON_CHANGE,
+        tapAction: TapAction = TapAction.OPEN
+    ) {
+        val edit = sp(ctx).edit()
+            .putString("style_$id", style.name)
+            .putString("folder_$id", folder)
+            .putString("refresh_$id", refresh.name)
+            .putString("tap_$id", tapAction.name)
+        if (theme == null) edit.remove("theme_$id") else edit.putInt("theme_$id", theme)
+        edit.commit()
+        saveProgress(ctx, id, 0, 0)
+        scheduleRefresh(ctx, id, refresh)
+    }
+
+    /** (index, count) for today; (0, 0) if the saved progress is from a previous day. */
+    fun progress(ctx: Context, id: Int): Pair<Int, Int> {
+        val s = sp(ctx)
+        if (s.getString("day_$id", "") != today()) return 0 to 0
+        return s.getInt("idx_$id", 0) to s.getInt("cnt_$id", 0)
+    }
+
+    fun saveProgress(ctx: Context, id: Int, idx: Int, count: Int) {
+        sp(ctx).edit().putString("day_$id", today()).putInt("idx_$id", idx).putInt("cnt_$id", count).apply()
+    }
+
+    fun clear(ctx: Context, id: Int) {
+        cancelRefresh(ctx, id)
+        sp(ctx).edit().remove("style_$id").remove("folder_$id").remove("theme_$id").remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
+    }
+
+    fun scheduleRefresh(ctx: Context, id: Int, refresh: Refresh) {
+        cancelRefresh(ctx, id)
+        if (refresh == Refresh.ON_CHANGE) return
+        val alarm = ctx.getSystemService(AlarmManager::class.java)
+        val pi = refreshPending(ctx, id, true)!!
+        alarm.setInexactRepeating(
+            AlarmManager.RTC,
+            System.currentTimeMillis() + refresh.minutes * 60_000L,
+            refresh.minutes * 60_000L,
+            pi
         )
     }
 
-    fun push(f: Fragment) {
-        supportFragmentManager.beginTransaction().replace(R.id.container, f).addToBackStack(null).commit()
+    fun cancelRefresh(ctx: Context, id: Int) {
+        val alarm = ctx.getSystemService(AlarmManager::class.java)
+        refreshPending(ctx, id)?.let { alarm.cancel(it); it.cancel() }
     }
 
-    fun pop() {
-        android.util.Log.d("AzkarNav", "pop() called from:", Throwable())
-        supportFragmentManager.popBackStack()
-    }
+    private fun refreshPending(ctx: Context, id: Int, create: Boolean = false): PendingIntent? =
+        PendingIntent.getBroadcast(
+            ctx, id, refreshIntent(ctx, id),
+            (if (create) PendingIntent.FLAG_UPDATE_CURRENT else PendingIntent.FLAG_NO_CREATE) or PendingIntent.FLAG_IMMUTABLE
+        )
 
-    /** The last zikr of a collection was finished: back to Home. */
-    fun finishReading() {
-        currentTab = Tab.HOME
-        showRoot(HomeFragment())
-    }
-    /** Resets the back stack and shows Home. */
-    fun goHome() {
-        android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
-        currentTab = Tab.HOME
-        showRoot(HomeFragment())
-    }
+    private fun refreshIntent(ctx: Context, id: Int): Intent =
+        Intent(ctx, WidgetRefreshReceiver::class.java).setData(Uri.parse("azkar://widget-refresh/$id"))
+            .putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 }
 
-===== app\src\main\java\com\azkar\app\ThemeMode.kt =====
-package com.azkar.app
+/** What a tap does. */
+object WidgetLogic {
+    /** +1 on the current zikr; moves on when it is complete; after the last one the next tap starts over. */
+    fun tap(ctx: Context, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        val items = Store.readerItems(cfg.folder)
+        if (items.isEmpty()) return
+        var (idx, cnt) = WidgetStore.progress(ctx, id)
+        idx = idx.coerceIn(0, items.size)
+        if (idx >= items.size) { idx = 0; cnt = 0 }
+        else {
+            cnt++
+            if (cnt >= items[idx].target) { idx++; cnt = 0 }
+        }
+        WidgetStore.saveProgress(ctx, id, idx, cnt)
+    }
 
-import androidx.appcompat.app.AppCompatDelegate
-
-/** The two in-app themes. Never follows the phone's system dark mode. */
-object ThemeMode {
-    const val CURRENT = 0
-    const val OLED = 1
-
-    /** OLED = night resources (values-night); Current = day resources. Recreates the activity if the mode changed. */
-    fun apply(choice: Int) = AppCompatDelegate.setDefaultNightMode(
-        if (choice == OLED) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-    )
+    fun reset(ctx: Context, id: Int) = WidgetStore.saveProgress(ctx, id, 0, 0)
 }
 
-===== app\src\main\res\layout\activity_main.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\java\com\azkar\app\widgets\WidgetStrings.kt =====
+
+package com.azkar.app.widgets
+
+import android.content.Context
+import com.azkar.app.R
+
+internal class WidgetStrings(private val ctx: Context) {
+    val done = ctx.getString(R.string.widget_done)
+    val tasbih = ctx.getString(R.string.widget_tasbih)
+    val reset = ctx.getString(R.string.widget_reset)
+    val dhikr = ctx.getString(R.string.widget_dhikr)
+    val noAzkar = ctx.getString(R.string.widget_no_azkar)
+    val tapToOpen = ctx.getString(R.string.widget_tap_to_open)
+    fun of(count: Int) = ctx.getString(R.string.widget_of, count)
+    fun azkar(count: Int) = ctx.getString(R.string.widget_azkar, count)
+    fun countOf(count: Int, total: Int) = ctx.getString(R.string.widget_count_of, count, total)
+    fun round(round: Int, rounds: Int, target: Int) = ctx.getString(R.string.widget_round, round, rounds, target)
+}
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\activity_main.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/container" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"/>
 
-===== app\src\main\res\layout\dialog_reminder.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\dialog_reminder.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="Title" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -3512,7 +4137,8 @@ object ThemeMode {
 <TextView style="@style/T" android:id="@+id/r_folder" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:gravity="center_vertical" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:drawableEnd="@drawable/ic_chev_dn_2p25" android:drawableTint="@color/muted" android:clickable="true" android:focusable="true"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\fragment_add_zikr.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_add_zikr.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
@@ -3564,7 +4190,9 @@ object ThemeMode {
 </LinearLayout>
 </ScrollView>
 
-===== app\src\main\res\layout\fragment_complete.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_complete.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:gravity="center" android:padding="24dp" android:background="@color/bg" android:layout_width="match_parent" android:layout_height="match_parent">
 <LinearLayout android:gravity="center" android:background="@drawable/bg_icon20" android:layout_width="88dp" android:layout_height="88dp">
@@ -3576,7 +4204,8 @@ object ThemeMode {
 <TextView style="@style/TB" android:id="@+id/btn_home" android:text="Back to Home" android:textSize="17sp" android:textColor="@color/bg" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="40dp" android:layout_width="match_parent" android:layout_height="56dp"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\fragment_customize_home.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_customize_home.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
@@ -3612,7 +4241,9 @@ object ThemeMode {
 </LinearLayout>
 </ScrollView>
 
-===== app\src\main\res\layout\fragment_edit_folder.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_edit_folder.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -3920,7 +4551,8 @@ object ThemeMode {
     </LinearLayout>
 </ScrollView>
 
-===== app\src\main\res\layout\fragment_edit_zikr.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_edit_zikr.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
@@ -3975,7 +4607,9 @@ object ThemeMode {
 </LinearLayout>
 </ScrollView>
 
-===== app\src\main\res\layout\fragment_folder_view.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_folder_view.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -4003,7 +4637,8 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\fragment_home.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_home.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
 <ScrollView android:id="@+id/scroll" android:layout_width="match_parent" android:layout_height="match_parent" android:scrollbars="none" android:overScrollMode="ifContentScrolls">
@@ -4023,7 +4658,9 @@ object ThemeMode {
 <include layout="@layout/view_nav" android:layout_width="match_parent" android:layout_height="88dp" android:layout_gravity="bottom"/>
 </FrameLayout>
 
-===== app\src\main\res\layout\fragment_library.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_library.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
 <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
@@ -4039,7 +4676,8 @@ object ThemeMode {
 <include layout="@layout/view_nav" android:layout_width="match_parent" android:layout_height="88dp" android:layout_gravity="bottom"/>
 </FrameLayout>
 
-===== app\src\main\res\layout\fragment_my_azkar.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_my_azkar.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
 <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
@@ -4069,7 +4707,9 @@ object ThemeMode {
 <include layout="@layout/view_nav" android:layout_width="match_parent" android:layout_height="88dp" android:layout_gravity="bottom"/>
 </FrameLayout>
 
-===== app\src\main\res\layout\fragment_reader.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_reader.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <com.azkar.app.ui.SwipeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/swipe" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="12dp" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingBottom="16dp" android:background="@color/bg">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -4104,7 +4744,9 @@ object ThemeMode {
 </LinearLayout>
 </com.azkar.app.ui.SwipeLayout>
 
-===== app\src\main\res\layout\fragment_reminders.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\fragment_reminders.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/scroll" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -4112,58 +4754,59 @@ object ThemeMode {
 <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
-<TextView style="@style/TB" android:text="Settings" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/settings"  android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <View android:layout_width="44dp" android:layout_height="44dp"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="20dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Notifications" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/notifications" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/notif_sub" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_all" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="All notifications"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:id="@+id/exact_row" android:visibility="gone" android:gravity="center_vertical" android:padding="14dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/T" android:text="Exact timing is off, so reminders may arrive a few minutes late. Tap to allow it." android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-<TextView style="@style/TB" android:text="Allow" android:textSize="15sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/exact_alarm_help" android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/allow" android:textSize="15sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Reminders" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/reminders" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/reminders" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:id="@+id/rem_empty" android:text="No reminders yet. Add your first one below." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:layout_marginTop="10dp" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_add_rem" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="12dp" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
-<TextView style="@style/TB" android:text="Add reminder" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/add_reminder" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<TextView android:id="@+id/btn_test_notification" style="@style/TB" android:text="@string/test_notification" android:textColor="@color/gold" android:gravity="center" android:minHeight="48dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Completion screen" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="Show a summary when a collection is finished" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/completion_screen" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/completion_screen_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_complete" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Completion screen"/>
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Tap to advance" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="Tapping the card moves to the next dhikr" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/tap_to_advance" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/tap_to_advance_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_tap" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Tap to advance"/>
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Keep screen on" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="While you are reading" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/keep_screen_on" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/keep_screen_on_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_awake" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Keep screen on"/>
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
 <LinearLayout android:orientation="vertical" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Arabic text size" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/arabic_text_size" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <SeekBar android:id="@+id/size_slider" android:layout_weight="1" android:layout_width="0dp" android:layout_height="44dp" android:paddingStart="0dp" android:paddingEnd="12dp"/>
 <TextView style="@style/TB" android:id="@+id/size_value" android:text="" android:textSize="15sp" android:textColor="@color/gold" android:gravity="end" android:minWidth="52dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -4173,16 +4816,17 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Appearance" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/appearance" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="Theme" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/theme" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/themes" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>
 </LinearLayout>
 </ScrollView>
 
-===== app\src\main\res\layout\item_customize_row.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_customize_row.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:layout_height="52dp" android:gravity="center_vertical" android:paddingStart="14dp" android:paddingEnd="6dp" android:background="@drawable/bg_card18" android:id="@+id/row" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/gold" android:id="@+id/ic"/>
@@ -4199,7 +4843,9 @@ object ThemeMode {
 </FrameLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_folder_card.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_folder_card.xml =====
+
 
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -4273,7 +4919,9 @@ object ThemeMode {
 
 </LinearLayout>
 
-===== app\src\main\res\layout\item_folder_new.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_folder_new.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:paddingTop="14dp" android:paddingBottom="14dp" android:paddingHorizontal="12dp" android:background="@drawable/bg_dashgold18" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <ImageView android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/gold" android:src="@drawable/ic_plus_2"/>
@@ -4283,7 +4931,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_folder_tile.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_folder_tile.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:paddingTop="14dp" android:paddingBottom="14dp" android:paddingHorizontal="12dp" android:background="@drawable/bg_card18" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <ImageView android:layout_width="24dp" android:layout_height="24dp" android:tint="@color/gold" android:id="@+id/ic" android:src="@drawable/ic_folder_1p75"/>
@@ -4294,7 +4944,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_folder_zikr.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_folder_zikr.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="88dp" android:paddingHorizontal="6dp" android:background="@drawable/bg_card20" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_width="44dp" android:layout_height="wrap_content">
@@ -4322,7 +4974,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_home_collection.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_home_collection.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card20" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:id="@+id/ic_wrap" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon20">
@@ -4335,7 +4989,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_home_folder.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_home_folder.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card20" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon20">
@@ -4348,7 +5004,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_library.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_library.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:layout_height="64dp" android:paddingHorizontal="16dp" android:gravity="center_vertical" android:background="@drawable/bg_card18" android:clickable="true" android:focusable="true" android:layout_width="match_parent">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon20">
@@ -4362,7 +5020,9 @@ object ThemeMode {
 <ImageView android:src="@drawable/ic_chev_r_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/muted"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_library_zikr.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_library_zikr.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:gravity="top" android:paddingTop="14dp" android:paddingBottom="14dp" android:paddingStart="16dp" android:paddingEnd="4dp" android:background="@drawable/bg_card18" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
@@ -4378,7 +5038,8 @@ object ThemeMode {
 </FrameLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_my_header.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_my_header.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="My azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -4398,7 +5059,8 @@ object ThemeMode {
 <TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_radio.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_radio.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:layout_height="44dp" android:gravity="center_vertical" android:clickable="true" android:focusable="true" android:layout_width="match_parent">
 <FrameLayout android:id="@+id/ring" android:layout_width="22dp" android:layout_height="22dp">
@@ -4407,7 +5069,9 @@ object ThemeMode {
 <TextView style="@style/TB" android:text="" android:textSize="15sp" android:textColor="@color/text" android:id="@+id/label" android:layout_marginStart="10dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_reminder.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_reminder.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <View android:layout_width="match_parent" android:layout_height="1dp" android:id="@+id/divider"/>
@@ -4420,7 +5084,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\item_saved.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\item_saved.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:gravity="top" android:paddingTop="14dp" android:paddingBottom="14dp" android:paddingStart="18dp" android:paddingEnd="8dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
@@ -4436,12 +5102,14 @@ object ThemeMode {
 </FrameLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\notification_reminder.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\notification_reminder.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal" android:gravity="center_vertical"
     android:padding="12dp" android:background="@drawable/bg_notif_day"
-    android:layout_width="match_parent" android:layout_height="wrap_content">
+    android:layout_width="match_parent" android:layout_height="match_parent" android:minHeight="64dp">
     <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
         <TextView android:id="@+id/n_title" android:fontFamily="@font/dm_sans_bold" android:textSize="15sp" android:textColor="@color/notif_day_text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         <TextView android:id="@+id/n_body" android:fontFamily="@font/dm_sans_regular" android:textSize="13sp" android:textColor="@color/notif_day_muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -4449,12 +5117,14 @@ object ThemeMode {
     <TextView android:id="@+id/n_ar" android:fontFamily="@font/amiri_bold" android:textSize="22sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\notification_reminder_oled.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\notification_reminder_oled.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal" android:gravity="center_vertical"
     android:padding="12dp" android:background="@drawable/bg_notif_oled"
-    android:layout_width="match_parent" android:layout_height="wrap_content">
+    android:layout_width="match_parent" android:layout_height="match_parent" android:minHeight="64dp">
     <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
         <TextView android:id="@+id/n_title" android:fontFamily="@font/dm_sans_bold" android:textSize="15sp" android:textColor="@color/notif_oled_text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         <TextView android:id="@+id/n_body" android:fontFamily="@font/dm_sans_regular" android:textSize="13sp" android:textColor="@color/notif_oled_muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -4462,7 +5132,9 @@ object ThemeMode {
     <TextView android:id="@+id/n_ar" android:fontFamily="@font/amiri_bold" android:textSize="22sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 
-===== app\src\main\res\layout\view_hero.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\view_hero.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:id="@+id/hero" android:padding="22dp" android:background="@drawable/bg_hero24" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="horizontal" android:gravity="top" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -4481,7 +5153,9 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\layout\view_nav.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\view_nav.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_height="88dp" android:background="@color/nav_bg" android:id="@+id/nav_bar" android:layout_gravity="bottom" android:layout_width="match_parent">
 <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/nav_border"/>
@@ -4501,11 +5175,71 @@ object ThemeMode {
 </LinearLayout>
 </LinearLayout>
 
-===== app\src\main\res\values\colors.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\widget_classic_large.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/img" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="fitXY" android:contentDescription="@null"/>
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+        <FrameLayout android:id="@+id/hit_open" android:layout_width="match_parent" android:layout_height="56dp"/>
+        <FrameLayout android:id="@+id/hit_count" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <!-- bottom row: 52dp tall, 19dp from the bottom/right edge, "+1" button is 56dp wide -->
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="71dp"
+            android:paddingBottom="19dp" android:paddingEnd="19dp">
+            <FrameLayout android:id="@+id/hit_count2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"/>
+            <FrameLayout android:id="@+id/btn_plus" android:layout_width="56dp" android:layout_height="match_parent"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\widget_plain.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bitmap + two tap areas: the top strip opens the app, the rest counts +1. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/img" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="fitXY" android:contentDescription="@null"/>
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+        <FrameLayout android:id="@+id/hit_open" android:layout_width="match_parent" android:layout_height="30dp"/>
+        <FrameLayout android:id="@+id/hit_count" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+    </LinearLayout>
+</FrameLayout>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\layout\widget_tasbih_large.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/img" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="fitXY" android:contentDescription="@null"/>
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+        <FrameLayout android:id="@+id/hit_open" android:layout_width="match_parent" android:layout_height="56dp"/>
+        <FrameLayout android:id="@+id/hit_count" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <!-- bottom row: Reset (72dp) + 10dp gap + main button, 44dp tall, 19dp margins -->
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="63dp"
+            android:paddingBottom="19dp" android:paddingStart="19dp" android:paddingEnd="19dp">
+            <FrameLayout android:id="@+id/btn_reset" android:layout_width="72dp" android:layout_height="match_parent"/>
+            <FrameLayout android:id="@+id/btn_main" android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:layout_marginStart="10dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values\colors.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#0D2124</color>
+    <color name="amiri_black">#000000</color>
     <color name="text">#EDF4F1</color>
+    <color name="text_primary">#EDF4F1</color>
     <color name="card">#153237</color>
     <color name="border">#234A4B</color>
     <color name="card2">#1B3E43</color>
@@ -4524,8 +5258,34 @@ object ThemeMode {
     <color name="gold_highlight">#55E8B44A</color>
     <color name="hint">#757575</color>
     <color name="dialog_bg">#424242</color>
+    <color name="widget_teal_background">#0D2124</color>
+    <color name="widget_teal_border">#234A4B</color>
+    <color name="widget_teal_accent">#E8B44A</color>
+    <color name="widget_teal_accent_soft">#F6EFD9</color>
+    <color name="widget_teal_text">#EDF4F1</color>
+    <color name="widget_teal_muted">#9DB8B3</color>
+    <color name="widget_teal_soft">#C3D6D1</color>
+    <color name="widget_teal_track">#24504F</color>
+    <color name="widget_teal_bead_track">#2B5A58</color>
+    <color name="widget_teal_chip">#1B3E43</color>
+    <color name="widget_teal_panel">#153237</color>
+    <color name="widget_teal_panel_border">#2B5A58</color>
+    <color name="widget_teal_outline">#2B5A58</color>
+    <color name="widget_oled_background">#000000</color>
+    <color name="widget_oled_border">#232323</color>
+    <color name="widget_oled_accent">#E3C06E</color>
+    <color name="widget_oled_accent_soft">#EBCB82</color>
+    <color name="widget_oled_text">#F7F3E8</color>
+    <color name="widget_oled_muted">#A9A699</color>
+    <color name="widget_oled_soft">#C9C5B6</color>
+    <color name="widget_oled_track">#262626</color>
+    <color name="widget_oled_bead_track">#2E2E2E</color>
+    <color name="widget_oled_chip">#1A1A1A</color>
+    <color name="widget_oled_panel">#111111</color>
+    <color name="widget_oled_panel_border">#1F1F1F</color>
+    <color name="widget_oled_outline">#3A3A3A</color>
     <!-- Notification palettes: NEVER override these in values-night. -->
-    <color name="notif_day_card">#000000</color>
+    <color name="notif_day_card">#0D2124</color>
     <color name="notif_day_border">#000000</color>
     <color name="notif_day_text">#EDF4F1</color>
     <color name="notif_day_muted">#9DB8B3</color>
@@ -4535,13 +5295,62 @@ object ThemeMode {
     <color name="notif_oled_muted">#9A9A9A</color>
 </resources>
 
-===== app\src\main\res\values\strings.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values\strings.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Azkar</string>
+    <string name="widget_done">Done</string>
+    <string name="widget_tasbih">Tasbih</string>
+    <string name="widget_reset">Reset</string>
+    <string name="widget_dhikr">DHIKR</string>
+    <string name="widget_no_azkar">No azkar in this folder</string>
+    <string name="widget_tap_to_open">Tap to open Azkar</string>
+    <string name="widget_of">of %1$d</string>
+    <string name="widget_round">Round %1$d of %2$d · %3$d total</string>
+    <string name="widget_azkar">%1$d azkar</string>
+    <string name="widget_count_of">%1$d of %2$d</string>
+    <string name="widget_action_open">Open Azkar</string>
+    <string name="widget_action_count">Count one recitation</string>
+    <string name="widget_action_reset">Reset count</string>
+    <string name="widget_no_azkar_description">Azkar widget, no azkar available</string>
+    <string name="widget_refresh_title">Refresh widget</string>
+    <string name="widget_refresh_on_change">When app data changes</string>
+    <string name="widget_refresh_hourly">Every hour</string>
+    <string name="widget_refresh_six_hours">Every 6 hours</string>
+    <string name="widget_refresh_daily">Once a day</string>
+    <string name="widget_tap_action_title">Main tap action</string>
+    <string name="widget_tap_open">Open this folder</string>
+    <string name="widget_tap_count">Count one recitation</string>
+    <string name="data_recovered">Some saved data was corrupted and could not be restored. Default azkar were loaded; please import a backup if you have one.</string>
+    <string name="exact_alarm_help">Exact timing is unavailable, so reminders may arrive late. Allow alarm access for precise times; some phones also require removing battery restrictions.</string>
+    <string name="allow">Allow</string>
+    <string name="test_notification">Send test notification</string>
+    <string name="test_notification_sent">Test notification sent.</string>
+    <string name="settings">Settings</string>
+    <string name="notifications">Notifications</string>
+    <string name="reminders">Reminders</string>
+    <string name="reading">Reading</string>
+    <string name="appearance">Appearance</string>
+    <string name="add_reminder">Add reminder</string>
+    <string name="no_reminders">No reminders yet. Add your first one below.</string>
+    <string name="completion_screen">Completion screen</string>
+    <string name="completion_screen_summary">Show a summary when a collection is finished</string>
+    <string name="tap_to_advance">Tap to advance</string>
+    <string name="tap_to_advance_summary">Tapping the card moves to the next dhikr</string>
+    <string name="keep_screen_on">Keep screen on</string>
+    <string name="keep_screen_on_summary">While you are reading</string>
+    <string name="arabic_text_size">Arabic text size</string>
+    <string name="theme">Theme</string>
+    <string name="back">Back</string>
+    <string name="all_notifications">All notifications</string>
+    <string name="completion_screen_description">Completion screen</string>
 </resources>
 
-===== app\src\main\res\values\themes.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values\themes.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Azkar" parent="Theme.AppCompat.NoActionBar">
@@ -4585,9 +5394,60 @@ object ThemeMode {
         <item name="android:includeFontPadding">false</item>
     </style>
     <style name="AzkarAlertDialog" parent="Theme.AppCompat.Dialog.Alert"/>
+
+
+    <!-- Widget configuration theme -->
+    <style name="Theme.Azkar.Config" parent="Theme.AppCompat.Dialog">
+        <item name="android:windowFrame">@null</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>
 
-===== app\src\main\res\values-night\colors.xml =====
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values\widget_strings.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_small_desc">Azkar · small</string>
+    <string name="widget_medium_desc">Azkar · wide</string>
+    <string name="widget_large_desc">Azkar · large</string>
+    <string name="widget_theme_title">Widget theme</string>
+    <string name="widget_theme_follow_app">Follow app theme</string>
+    <string name="widget_theme_teal">Teal</string>
+    <string name="widget_theme_oled">OLED black</string>
+    <string name="widget_folder_title">Which folder?</string>
+    <string name="widget_style_title">Widget style</string>
+</resources>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values-ar\strings.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_done">تم</string>
+    <string name="widget_tasbih">تسبيح</string>
+    <string name="widget_reset">إعادة ضبط</string>
+    <string name="widget_dhikr">ذكر</string>
+    <string name="widget_no_azkar">لا توجد أذكار في هذا المجلد</string>
+    <string name="widget_tap_to_open">اضغط لفتح الأذكار</string>
+    <string name="widget_of">من %1$d</string>
+    <string name="widget_round">الجولة %1$d من %2$d · المجموع %3$d</string>
+    <string name="widget_azkar">%1$d أذكار</string>
+    <string name="widget_count_of">%1$d من %2$d</string>
+    <string name="widget_action_open">فتح الأذكار</string>
+    <string name="widget_action_count">عد تسبيحة واحدة</string>
+    <string name="widget_action_reset">إعادة ضبط العداد</string>
+    <string name="widget_no_azkar_description">أداة الأذكار، لا توجد أذكار</string>
+</resources>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\values-night\colors.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The in-app "OLED black" theme. Do not override gold: the notification layouts rely on it staying constant. -->
 <resources>
@@ -4607,7 +5467,8 @@ object ThemeMode {
     <color name="dialog_bg">#121212</color>
 </resources>
 
-===== app\src\main\res\values-night\themes.xml =====
+===== C:\Users\foura\AzkarApp\app\src\main\res\values-night\themes.xml =====
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AzkarAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
@@ -4615,66 +5476,169 @@ object ThemeMode {
     </style>
 </resources>
 
-===== FILE LISTING: res/font, res/drawable, res/mipmap-anydpi-v26, assets =====
-app\src\main\res\font\amiri_bold.ttf
-app\src\main\res\font\amiri_regular.ttf
-app\src\main\res\font\dm_sans_bold.ttf
-app\src\main\res\font\dm_sans_medium.ttf
-app\src\main\res\font\dm_sans_regular.ttf
-app\src\main\res\drawable\bg_card18.xml
-app\src\main\res\drawable\bg_card18_sel.xml
-app\src\main\res\drawable\bg_card20.xml
-app\src\main\res\drawable\bg_card22.xml
-app\src\main\res\drawable\bg_card24.xml
-app\src\main\res\drawable\bg_card28.xml
-app\src\main\res\drawable\bg_chipfill12.xml
-app\src\main\res\drawable\bg_chipline12.xml
-app\src\main\res\drawable\bg_danger24.xml
-app\src\main\res\drawable\bg_dashgold18.xml
-app\src\main\res\drawable\bg_dashgold24.xml
-app\src\main\res\drawable\bg_dashline20.xml
-app\src\main\res\drawable\bg_gold22.xml
-app\src\main\res\drawable\bg_gold28.xml
-app\src\main\res\drawable\bg_hero24.xml
-app\src\main\res\drawable\bg_icon20.xml
-app\src\main\res\drawable\bg_in20.xml
-app\src\main\res\drawable\bg_in24.xml
-app\src\main\res\drawable\bg_in26.xml
-app\src\main\res\drawable\bg_in26g.xml
-app\src\main\res\drawable\bg_in26s.xml
-app\src\main\res\drawable\bg_notif_day.xml
-app\src\main\res\drawable\bg_notif_oled.xml
-app\src\main\res\drawable\bg_prev18.xml
-app\src\main\res\drawable\ic_addbox_1p75.xml
-app\src\main\res\drawable\ic_bell_1p75.xml
-app\src\main\res\drawable\ic_book_1p75.xml
-app\src\main\res\drawable\ic_check_2p25.xml
-app\src\main\res\drawable\ic_chev_dn_2p25.xml
-app\src\main\res\drawable\ic_chev_l_2.xml
-app\src\main\res\drawable\ic_chev_r_2.xml
-app\src\main\res\drawable\ic_chev_r_2p25.xml
-app\src\main\res\drawable\ic_chev_up_2p25.xml
-app\src\main\res\drawable\ic_close_2.xml
-app\src\main\res\drawable\ic_drop_1p75.xml
-app\src\main\res\drawable\ic_export_1p75.xml
-app\src\main\res\drawable\ic_eyeoff_1p75.xml
-app\src\main\res\drawable\ic_eye_1p75.xml
-app\src\main\res\drawable\ic_folder_1p75.xml
-app\src\main\res\drawable\ic_heart_1p75.xml
-app\src\main\res\drawable\ic_home_1p75.xml
-app\src\main\res\drawable\ic_import_1p75.xml
-app\src\main\res\drawable\ic_launcher_fg.xml
-app\src\main\res\drawable\ic_minus_2p25.xml
-app\src\main\res\drawable\ic_moon_1p75.xml
-app\src\main\res\drawable\ic_mosque_1p75.xml
-app\src\main\res\drawable\ic_pencil_1p75.xml
-app\src\main\res\drawable\ic_plus_2.xml
-app\src\main\res\drawable\ic_plus_2p25.xml
-app\src\main\res\drawable\ic_search_1p75.xml
-app\src\main\res\drawable\ic_sliders_1p75.xml
-app\src\main\res\drawable\ic_spark_1p75.xml
-app\src\main\res\drawable\ic_sunrise_1p75.xml
-app\src\main\res\drawable\ic_sun_1p75.xml
-app\src\main\res\drawable\ic_trash_1p75.xml
-app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml
-app\src\main\assets\default_folders.json
+===== C:\Users\foura\AzkarApp\app\src\main\res\xml\azkar_widget_info.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/app_name"
+    android:initialLayout="@layout/widget_plain"
+    android:minHeight="96dp"
+    android:minWidth="180dp"
+    android:previewLayout="@layout/widget_plain"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen|keyguard" />
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\xml\widget_large_info.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp" android:minHeight="250dp"
+    android:minResizeWidth="250dp" android:minResizeHeight="250dp"
+    android:targetCellWidth="4" android:targetCellHeight="4"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_plain"
+    android:configure="com.azkar.app.widgets.WidgetConfigActivity"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:description="@string/widget_large_desc"/>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\xml\widget_medium_info.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp" android:minHeight="110dp"
+    android:minResizeWidth="250dp" android:minResizeHeight="110dp"
+    android:targetCellWidth="4" android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_plain"
+    android:configure="com.azkar.app.widgets.WidgetConfigActivity"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:description="@string/widget_medium_desc"/>
+
+
+===== C:\Users\foura\AzkarApp\app\src\main\res\xml\widget_small_info.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp" android:minHeight="110dp"
+    android:minResizeWidth="110dp" android:minResizeHeight="110dp"
+    android:targetCellWidth="2" android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_plain"
+    android:configure="com.azkar.app.widgets.WidgetConfigActivity"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:description="@string/widget_small_desc"/>
+
+
+===== C:\Users\foura\AzkarApp\app\src\test\java\com\azkar\app\reminders\ReminderTimeTest.kt =====
+
+package com.azkar.app.reminders
+
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.util.Calendar
+
+class ReminderTimeTest {
+    @Test
+    fun schedulesTomorrowWhenTodaysTimeHasPassed() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.JANUARY, 10, 18, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val next = Calendar.getInstance().apply { timeInMillis = ReminderTime.next(17, 0, now.timeInMillis) }
+        assertTrue(next.after(now))
+        assertTrue(next.get(Calendar.DAY_OF_YEAR) != now.get(Calendar.DAY_OF_YEAR))
+    }
+
+    @Test
+    fun preservesValidLocalTimeAcrossDaylightSavingTransitions() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.MARCH, 28, 23, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val next = Calendar.getInstance().apply { timeInMillis = ReminderTime.next(8, 0, now.timeInMillis) }
+        assertTrue(next.get(Calendar.HOUR_OF_DAY) == 8)
+        assertTrue(next.after(now))
+    }
+}
+
+
+===== C:\Users\foura\AzkarApp\build.gradle.kts =====
+
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.kapt) apply false
+    alias(libs.plugins.hilt) apply false
+}
+
+
+===== C:\Users\foura\AzkarApp\settings.gradle.kts =====
+
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "Azkar"
+include(":app")
+
+
+===== C:\Users\foura\AzkarApp\gradle\libs.versions.toml =====
+
+[versions]
+agp = "8.5.2"
+kotlin = "1.9.24"
+coreKtx = "1.13.1"
+appcompat = "1.7.0"
+fragment = "1.8.2"
+recyclerview = "1.3.2"
+lifecycle = "2.8.4"
+room = "2.6.1"
+hilt = "2.52"
+junit = "4.13.2"
+androidxTest = "1.6.1"
+androidxTestRules = "1.6.1"
+androidxTestCore = "1.6.1"
+androidxTestExt = "1.2.1"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExt" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+

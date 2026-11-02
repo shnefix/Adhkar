@@ -78,7 +78,8 @@ class WidgetRendererTest {
         Store.init(context)
         val empty = WidgetModel("Empty", emptyList(), emptyList(), 0, 0, "")
         for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
-            val bitmap = WidgetRenderer(context, theme).render(
+            Store.setTheme(theme)
+            val bitmap = WidgetRenderer(context).render(
                 WidgetStyle.CLASSIC, WidgetKind.SMALL, empty, -10f, 0f, 1f
             )
             assertEquals(1, bitmap.width)
@@ -88,7 +89,7 @@ class WidgetRendererTest {
     }
 
     @Test
-    fun rendersLongArabicTextWithExplicitTheme() {
+    fun rendersLongArabicTextWithAppTheme() {
         val longText = "اللَّهُمَّ ".repeat(120)
         val model = WidgetModel(
             "A folder with an unusually long name that must be clipped",
@@ -98,7 +99,8 @@ class WidgetRendererTest {
             0,
             ""
         )
-        val bitmap = WidgetRenderer(context, ThemeMode.OLED).render(
+        Store.setTheme(ThemeMode.OLED)
+        val bitmap = WidgetRenderer(context).render(
             WidgetStyle.CALLIGRAPHY, WidgetKind.MEDIUM, model, 338f, 158f, 1f
         )
         assertTrue(bitmap.width > 0)

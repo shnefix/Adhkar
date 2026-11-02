@@ -3,10 +3,6 @@
     <string name="widget_small_desc">Azkar · small</string>
     <string name="widget_medium_desc">Azkar · wide</string>
     <string name="widget_large_desc">Azkar · large</string>
-    <string name="widget_theme_title">Widget theme</string>
-    <string name="widget_theme_follow_app">Follow app theme</string>
-    <string name="widget_theme_teal">Teal</string>
-    <string name="widget_theme_oled">OLED black</string>
     <string name="widget_folder_title">Which folder?</string>
     <string name="widget_style_title">Widget style</string>
 </resources>

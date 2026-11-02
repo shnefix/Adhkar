@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 
 const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
-const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
 
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
 
@@ -73,10 +72,6 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
                     WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
                 }
             }
-            ACTION_REFRESH -> {
-                Store.init(ctx)
-                dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
-            }
             else -> super.onReceive(ctx, intent)
         }
     }
@@ -126,7 +121,6 @@ object WidgetUpdater {
 
     fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
-        WidgetStore.scheduleRefresh(ctx, id, cfg.refresh)
         val model = WidgetModel.load(ctx, id, cfg.folder)
 
         // Real size of this widget on the launcher grid, in dp.
@@ -138,7 +132,7 @@ object WidgetUpdater {
         val h = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
             .takeIf { it > 0 }?.toFloat() ?: def.second
 
-        val bmp = WidgetRenderer(ctx, cfg.theme).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density)
+        val bmp = WidgetRenderer(ctx).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density)
 
         val layout = when {
             cfg.style == WidgetStyle.CLASSIC && kind == WidgetKind.LARGE -> R.layout.widget_classic_large
@@ -155,11 +149,7 @@ object WidgetUpdater {
         rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
         rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
 
-        val primary = if (cfg.tapAction == WidgetStore.TapAction.COUNT) {
-            action(ctx, id, kind, ACTION_COUNT)
-        } else {
-            openApp(ctx, id, cfg.folder)
-        }
+        val primary = openApp(ctx, id, cfg.folder)
         rv.setOnClickPendingIntent(R.id.hit_open, primary)
         val count = action(ctx, id, kind, ACTION_COUNT)
         rv.setOnClickPendingIntent(R.id.hit_count, count)

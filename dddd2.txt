@@ -1,0 +1,946 @@
+﻿
+
+######## app\src\main\java\com\azkar\app\MainActivity.kt ########
+package com.azkar.app
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import com.azkar.app.data.Store
+import com.azkar.app.ui.HomeFragment
+import com.azkar.app.ui.LibraryFragment
+import com.azkar.app.ui.MyAzkarFragment
+import com.azkar.app.ui.ReaderFragment
+import com.azkar.app.ui.Tab
+import com.azkar.app.widgets.WidgetUpdater
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class MainActivity : AppCompatActivity() {
+    private var currentTab: Tab = Tab.HOME
+    private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        currentTab = savedInstanceState?.getInt("tab")?.let { Tab.values().getOrNull(it) } ?: Tab.HOME
+        Store.init(this)
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+        var contentShown = false
+        lifecycleScope.launch {
+            try {
+                repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                    if (contentShown) return@repeatOnLifecycle
+                    Store.awaitReady()
+                    ThemeMode.apply(Store.theme())
+                    if (Store.consumeRecoveryNotice()) {
+                        Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
+                    }
+                    setContentView(R.layout.activity_main)
+                    if (savedInstanceState == null) {
+                        showRoot(HomeFragment())
+                        handleIntent(intent)
+                    }
+                    contentShown = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Azkar", "Unable to initialize application data", e)
+                Toast.makeText(this@MainActivity, "Azkar data could not be loaded.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("tab", currentTab.ordinal)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        lifecycleScope.launch {
+            try {
+                repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                    Store.awaitReady()
+                    handleIntent(intent)
+                    return@repeatOnLifecycle
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Azkar", "Unable to handle application deep link", e)
+            }
+        }
+    }
+
+    private fun handleIntent(i: Intent?) {
+        val key = i?.getStringExtra("open") ?: return
+        i.removeExtra("open")
+        showRoot(HomeFragment())
+        if (Store.readerItems(key).isNotEmpty()) push(ReaderFragment.of(key))   // deleted or empty folder: just stay on Home
+    }
+
+    private fun showRoot(f: Fragment) {
+        supportFragmentManager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        supportFragmentManager.beginTransaction().replace(R.id.container, f).commit()
+    }
+
+    fun openTab(tab: Tab) {
+        if (tab == currentTab && supportFragmentManager.backStackEntryCount == 0) return
+        currentTab = tab
+        showRoot(
+            when (tab) {
+                Tab.HOME -> HomeFragment()
+                Tab.LIBRARY -> LibraryFragment()
+                Tab.MY -> MyAzkarFragment()
+            }
+        )
+    }
+
+    fun push(f: Fragment) {
+        supportFragmentManager.beginTransaction().replace(R.id.container, f).addToBackStack(null).commit()
+    }
+
+    fun pop() {
+        android.util.Log.d("AzkarNav", "pop() called from:", Throwable())
+        supportFragmentManager.popBackStack()
+    }
+
+    /** The last zikr of a collection was finished: back to Home. */
+    fun finishReading() {
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+    }
+    /** Resets the back stack and shows Home. */
+    fun goHome() {
+        android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
+        currentTab = Tab.HOME
+        showRoot(HomeFragment())
+    }
+
+    override fun onStop() {
+        super.onStop()
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                Store.awaitReady()
+                WidgetUpdater.updateAll(this@MainActivity)
+            }.onFailure { android.util.Log.e("Azkar", "Widget refresh failed", it) }
+        }
+    }
+}
+
+######## app\src\main\java\com\azkar\app\AzkarApp.kt ########
+package com.azkar.app
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+import com.azkar.app.data.Store
+import com.azkar.app.reminders.ReminderScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+@HiltAndroidApp
+class AzkarApp : Application() {
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    override fun onCreate() {
+        super.onCreate()
+        Store.init(this)
+        ReminderScheduler.createChannel(this)
+        appScope.launch {
+            runCatching {
+                Store.awaitReady()
+                ReminderScheduler.rescheduleAll(this@AzkarApp)
+            }.onFailure { android.util.Log.e("Azkar", "Background startup failed", it) }
+        }
+    }
+}
+
+######## app\src\main\java\com\azkar\app\ui\RemindersFragment.kt ########
+package com.azkar.app.ui
+
+import android.Manifest
+import android.app.AlarmManager
+import android.app.TimePickerDialog
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.text.format.DateFormat
+import android.view.Gravity
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import com.azkar.app.ThemeMode
+import com.azkar.app.R
+import com.azkar.app.data.Schedule
+import com.azkar.app.data.Store
+import com.azkar.app.reminders.ReminderScheduler
+import com.azkar.app.widgets.WidgetUpdater
+
+fun timeLabel(ctx: Context, h: Int, m: Int): String =
+    if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
+    else "%d:%02d %s".format(if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
+
+class RemindersFragment : Fragment(R.layout.fragment_reminders) {
+
+    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(requireContext(), "Notifications are off for Azkar in system settings.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val ctx = requireContext()
+        view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
+
+        view.findViewById<ToggleSwitch>(R.id.sw_all).apply {
+            on = Store.notificationsOn()
+            onToggle = { v ->
+                Store.setNotificationsOn(v)
+                if (v) ensureNotificationPermission()
+                ReminderScheduler.rescheduleAll(ctx)   // cancels everything when off
+                renderList()
+            }
+        }
+        view.findViewById<View>(R.id.btn_add_rem).setOnClickListener { edit(null) }
+        view.findViewById<View>(R.id.btn_test_notification).setOnClickListener {
+            val sample = Store.schedules().firstOrNull()
+            if (sample != null) {
+                ReminderScheduler.notify(ctx, sample.copy(title = getString(R.string.test_notification)))
+                Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+            }
+        }
+        view.findViewById<View>(R.id.exact_row).setOnClickListener {
+            if (Build.VERSION.SDK_INT >= 31) {
+                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
+            }
+        }
+
+// Reading switches
+        view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = Store.tapAdvance(); onToggle = { Store.setTapAdvance(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = Store.keepScreenOn(); onToggle = { Store.setKeepScreenOn(it) } }
+
+        // Arabic text size slider (the preview updates while you drag; the reader uses it on its next open)
+        val slider = view.findViewById<android.widget.SeekBar>(R.id.size_slider)
+        val sizeValue = view.findViewById<TextView>(R.id.size_value)
+        val preview = view.findViewById<TextView>(R.id.size_preview)
+        fun showSize(sp: Int) {
+            sizeValue.text = "$sp sp"
+            preview.textSize = sp.toFloat()
+            val lh = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp * 1.85f, resources.displayMetrics)
+            androidx.core.widget.TextViewCompat.setLineHeight(preview, lh.toInt())   // same 1.85 line height as the reader
+        }
+        slider.max = com.azkar.app.data.ReaderPrefs.FONT_MAX - com.azkar.app.data.ReaderPrefs.FONT_MIN
+        slider.progress = Store.arabicSp() - com.azkar.app.data.ReaderPrefs.FONT_MIN
+        showSize(Store.arabicSp())
+        slider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                val sp = com.azkar.app.data.ReaderPrefs.FONT_MIN + p
+                showSize(sp)
+                if (fromUser) Store.setArabicSp(sp)
+            }
+            override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+        })
+        // Theme (same pill style as the Arabic text size selector)
+        val themes = view.findViewById<LinearLayout>(R.id.themes)
+        val themeNames = arrayOf("Teal", "OLED black")
+        fun renderThemes() {
+            themes.removeAllViews()
+            val sel = Store.theme()
+            themeNames.forEachIndexed { idx, name ->
+                val on = idx == sel
+                val b = TextView(ctx, null, 0, R.style.TB).apply {
+                    text = name
+                    textSize = 15f
+                    gravity = Gravity.CENTER
+                    contentDescription = name + " theme"
+                    setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
+                    val line = if (on) ctx.getColor(R.color.gold) else ctx.getColor(R.color.border2)
+                    background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, line, 14f)
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        if (Store.theme() != idx) {
+                            Store.setTheme(idx)
+                            WidgetUpdater.updateAll(ctx)
+                            ThemeMode.apply(idx)   // recreates the activity; this screen is restored from the back stack
+                        }
+                        renderThemes()
+                    }
+                }
+                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
+                if (idx > 0) p.marginStart = Ui.pxi(ctx, 8f)
+                themes.addView(b, p)
+            }
+        }
+        renderThemes()
+        renderList()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (view != null) {
+            ReminderScheduler.rescheduleAll(requireContext())   // picks up a newly granted exact-alarm permission
+            renderList()
+        }
+    }
+
+    private fun renderList() {
+        val root = view ?: return
+        val ctx = requireContext()
+        val list = root.findViewById<LinearLayout>(R.id.reminders)
+        list.removeAllViews()
+        val all = Store.schedules()
+        val globalOn = Store.notificationsOn()
+        list.visibility = if (all.isEmpty()) View.GONE else View.VISIBLE
+        root.findViewById<View>(R.id.rem_empty).visibility = if (all.isEmpty()) View.VISIBLE else View.GONE
+        root.findViewById<TextView>(R.id.notif_sub).text =
+            if (!globalOn) "All reminders are paused" else "${all.count { it.enabled }} of ${all.size} reminders on"
+
+        all.forEachIndexed { idx, s ->
+            val v = layoutInflater.inflate(R.layout.item_reminder, list, false)
+            v.findViewById<View>(R.id.divider).setBackgroundColor(if (idx == 0) 0 else ctx.getColor(R.color.border))
+            v.findViewById<TextView>(R.id.title).text = s.title
+            v.findViewById<TextView>(R.id.time).text = timeLabel(ctx, s.hour, s.minute) + " · Every day"
+            v.findViewById<View>(R.id.row).apply {
+                alpha = if (globalOn) 1f else 0.5f
+                setOnClickListener { edit(s) }
+            }
+            v.findViewById<ToggleSwitch>(R.id.sw).apply {
+                contentDescription = s.title + " reminder"
+                on = s.enabled
+                onToggle = { isOn ->
+                    val updated = s.copy(enabled = isOn)
+                    Store.upsertSchedule(updated)
+                    if (isOn) ensureNotificationPermission()
+                    ReminderScheduler.apply(ctx, updated)
+                    renderList()
+                }
+            }
+            list.addView(v)
+        }
+
+        val needExact = Build.VERSION.SDK_INT >= 31 &&
+            !(ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        root.findViewById<View>(R.id.exact_row).visibility =
+            if (needExact && globalOn && all.any { it.enabled }) View.VISIBLE else View.GONE
+    }
+
+    private fun edit(existing: Schedule?) {
+        val ctx = requireContext()
+        val v = layoutInflater.inflate(R.layout.dialog_reminder, null)
+        val title = v.findViewById<EditText>(R.id.r_title)
+        val msg = v.findViewById<EditText>(R.id.r_msg)
+        val timeTv = v.findViewById<TextView>(R.id.r_time)
+        var h = existing?.hour ?: 8
+        var m = existing?.minute ?: 0
+        title.setText(existing?.title ?: "")
+        msg.setText(existing?.message ?: "")
+        fun showTime() { timeTv.text = timeLabel(ctx, h, m) }
+        showTime()
+        timeTv.setOnClickListener {
+            TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
+        }
+
+        var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
+        val folderTv = v.findViewById<TextView>(R.id.r_folder)
+        fun folderLabel(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + f.name
+        fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: "Just open the app" }
+        showFolder()
+        folderTv.setOnClickListener {
+            val fs = Store.folders()
+            val names = arrayOf("Just open the app") + fs.map { folderLabel(it) }
+            AlertDialog.Builder(ctx).setTitle("Open folder")
+                .setItems(names) { _, which -> folder = if (which == 0) null else fs[which - 1].id; showFolder() }
+                .show()
+        }
+
+        val b = AlertDialog.Builder(ctx)
+            .setTitle(if (existing == null) "New reminder" else "Edit reminder")
+            .setView(v)
+            .setPositiveButton("Save", null)
+            .setNegativeButton("Cancel", null)
+        if (existing != null) b.setNeutralButton("Delete") { _, _ ->
+            ReminderScheduler.cancel(ctx, existing.id)   // cancel the alarm before forgetting it
+            Store.deleteSchedule(existing.id)
+            renderList()
+        }
+        val dlg = b.create()
+        dlg.setOnShowListener {
+            dlg.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val t = title.text.toString().trim()
+                if (t.isEmpty()) { title.error = "Enter a title"; return@setOnClickListener }
+                val text = msg.text.toString().trim().ifEmpty { "Time for your azkar · tap to read" }
+                val s = (existing ?: Schedule(Store.newScheduleId(), t, text, h, m, true, null))
+                    .copy(title = t, message = text, hour = h, minute = m, open = folder)
+                Store.upsertSchedule(s)
+                ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
+                ReminderScheduler.apply(ctx, s)
+                if (s.enabled) ensureNotificationPermission()
+                renderList()
+                dlg.dismiss()
+            }
+        }
+        dlg.show()
+    }
+}
+
+######## app\src\main\java\com\azkar\app\ui\HomeFragment.kt ########
+package com.azkar.app.ui
+
+import android.os.Bundle
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.azkar.app.R
+import com.azkar.app.data.AzkarContent
+import com.azkar.app.data.Builtins
+import com.azkar.app.data.Folder
+import com.azkar.app.data.Placement
+import com.azkar.app.data.Store
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+
+@AndroidEntryPoint
+class HomeFragment : Fragment(R.layout.fragment_home) {
+    private val viewModel: HomeViewModel by viewModels()
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val ctx = requireContext()
+        bindNav(view, Tab.HOME)
+        view.findViewById<View>(R.id.btn_notifications).setOnClickListener { nav().push(RemindersFragment()) }
+        view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }
+        val sections = view.findViewById<LinearLayout>(R.id.sections)
+
+        fun render(content: AzkarContent) {
+            sections.removeAllViews()
+
+            fun open(f: Folder) {
+                when {
+                    Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
+                    Store.readerItems(f.id).isEmpty() -> {
+                        Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
+                        nav().push(FolderFragment.of(f.id))
+                    }
+                    else -> nav().push(ReaderFragment.of(f.id))
+                }
+            }
+
+            fun card(f: Folder): View {
+                val c = Builtins.byKey(f.id)
+                return if (c != null) {
+                    layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
+                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, c.icon)
+                        findViewById<TextView>(R.id.title).text = f.name
+                        findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
+                        setOnClickListener { open(f) }
+                    }
+                } else {
+                    layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
+                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
+                        findViewById<TextView>(R.id.title).text = f.name
+                        setOnClickListener { open(f) }
+                    }
+                }
+            }
+
+            val foldersById = content.folders.associateBy { it.id }
+            val hidden = Store.hidden()
+            val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { foldersById[it] }
+            val collections = shown.filter { Builtins.byKey(it.id) != null }
+            val mine = shown.filter { Builtins.byKey(it.id) == null }
+
+            fun section(label: String?, cards: List<View>): View? {
+                if (cards.isEmpty()) return null
+                val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                if (label != null) box.addView(Ui.caps(ctx, label))
+                box.addView(Ui.grid(ctx, cards, 2, 12), Ui.lp(top = if (label != null) 12 else 0, ctx = ctx))
+                return box
+            }
+
+            val daily = section("Daily collections", collections.map { card(it) })
+            val own = section(null, mine.map { card(it) })
+            val parts: List<View?> = when (Store.placement()) {
+                Placement.TOP -> listOf(own, daily)
+                Placement.BOTTOM -> listOf(daily, own)
+                Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
+            }
+            parts.filterNotNull().forEachIndexed { i, v ->
+                sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx))
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    if (content != null) render(content)
+                }
+            }
+        }
+    }
+}
+
+######## app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt ########
+package com.azkar.app.reminders
+
+import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.view.View
+import android.widget.RemoteViews
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.azkar.app.MainActivity
+import com.azkar.app.R
+import com.azkar.app.ThemeMode
+import com.azkar.app.data.Builtins
+import com.azkar.app.data.Schedule
+import com.azkar.app.data.Store
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+object ReminderScheduler {
+    const val CHANNEL = "azkar_reminders_v2"
+    private const val ACTION = "com.azkar.app.REMINDER"
+
+    fun createChannel(ctx: Context) {
+        val ch = NotificationChannel(CHANNEL, "Daily reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Your azkar reminders"
+            enableVibration(true)
+            setShowBadge(true)
+        }
+        ctx.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+    }
+
+    private fun alarms(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    /** Exact alarms need a user grant on Android 12+. */
+    fun canExact(ctx: Context) = Build.VERSION.SDK_INT < 31 || alarms(ctx).canScheduleExactAlarms()
+
+    // One alarm per schedule id (unique data URI), so editing replaces and deleting cancels exactly that alarm.
+    private fun intentFor(ctx: Context, id: String) =
+        Intent(ctx, ReminderReceiver::class.java).setAction(ACTION).setData(Uri.parse("azkar://reminder/$id")).putExtra("id", id)
+
+    private fun pending(ctx: Context, id: String): PendingIntent =
+        PendingIntent.getBroadcast(ctx, 0, intentFor(ctx, id), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    /** Alarms from the old fixed reminders (request codes 0..2, no action). */
+    private fun cancelLegacy(ctx: Context) {
+        for (i in 0..2) {
+            PendingIntent.getBroadcast(ctx, i, Intent(ctx, ReminderReceiver::class.java), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+                ?.let { alarms(ctx).cancel(it); it.cancel() }
+        }
+    }
+
+    fun rescheduleAll(ctx: Context) {
+        cancelLegacy(ctx)
+        Store.schedules().forEach { apply(ctx, it) }
+    }
+
+    /** Schedules or cancels one reminder according to the global and individual switches. */
+    fun apply(ctx: Context, s: Schedule) {
+        if (Store.notificationsOn() && s.enabled) schedule(ctx, s) else cancel(ctx, s.id)
+    }
+
+    fun schedule(ctx: Context, s: Schedule) {
+        val am = alarms(ctx)
+        val at = ReminderTime.next(s.hour, s.minute)
+        if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
+    }
+
+    fun cancel(ctx: Context, id: String) {
+        PendingIntent.getBroadcast(ctx, 0, intentFor(ctx, id), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+            ?.let { alarms(ctx).cancel(it); it.cancel() }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun notify(ctx: Context, s: Schedule) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+        val nid = 100 + (s.id.hashCode() and 0xFFFF)
+        val open = PendingIntent.getActivity(
+            ctx, nid,
+            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .apply { s.open?.let { putExtra("open", it) } },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val ar = s.open?.let { Builtins.byKey(it)?.homeArabic } ?: ""
+        // The system UI inflates RemoteViews with the device's night setting, not ours,
+        // so each theme has its own layout built only from colours that never flip.
+        val layout = if (Store.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
+        val rv = RemoteViews(ctx.packageName, layout).apply {
+            setTextViewText(R.id.n_title, s.title)
+            setTextViewText(R.id.n_body, s.message)
+            setTextViewText(R.id.n_ar, ar)
+            setViewVisibility(R.id.n_ar, if (ar.isEmpty()) View.GONE else View.VISIBLE)
+        }
+        val n = NotificationCompat.Builder(ctx, CHANNEL)
+            .setSmallIcon(R.drawable.ic_bell_1p75)
+            .setColor(ctx.getColor(R.color.gold))
+            .setContentTitle(s.title)
+            .setContentText(s.message)
+            .setCustomContentView(rv)
+            .setCustomBigContentView(rv)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(ctx).notify(nid, n)
+    }
+}
+
+class ReminderReceiver : BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        Store.init(ctx)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                ReminderScheduler.createChannel(ctx)
+                val id = intent.getStringExtra("id") ?: return@launch
+                val s = Store.schedule(id) ?: return@launch
+                if (!Store.notificationsOn() || !s.enabled) return@launch
+                ReminderScheduler.notify(ctx, s)
+                ReminderScheduler.schedule(ctx, s)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+}
+
+class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            Store.init(ctx)
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    Store.awaitReady()
+                    ReminderScheduler.createChannel(ctx)
+                    ReminderScheduler.rescheduleAll(ctx)
+                } finally {
+                    pending.finish()
+                }
+            }
+        }
+    }
+}
+
+######## app\src\main\java\com\azkar\app\data\ReaderPrefs.kt ########
+package com.azkar.app.data
+
+/** Reader constants and pure rules that do not need Android. */
+object ReaderPrefs {
+    const val FONT_MIN = 18
+    const val FONT_MAX = 40
+    const val FONT_DEFAULT = 26            // the old "Medium"
+    private val OLD_SIZES = intArrayOf(20, 26, 32)   // old Small / Medium / Large
+
+    fun spFromOldIndex(i: Int) = OLD_SIZES[i.coerceIn(0, 2)]
+    fun clampSp(sp: Int) = sp.coerceIn(FONT_MIN, FONT_MAX)
+}
+
+/** Where a folder should start reading when it is opened. */
+object ReaderResume {
+    /** (index, count). Falls back to the beginning if the saved zikr is gone, hidden or the id is unknown. */
+    fun start(ids: List<String>, targets: List<Int>, savedId: String?, savedCount: Int): Pair<Int, Int> {
+        if (savedId == null) return 0 to 0
+        val i = ids.indexOf(savedId)
+        if (i < 0 || i >= targets.size) return 0 to 0
+        return i to savedCount.coerceIn(0, targets[i])
+    }
+}
+
+######## app\src\main\AndroidManifest.xml ########
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <application
+        android:name=".AzkarApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Azkar"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Azkar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".reminders.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Azkar - Small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+        <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Azkar - Wide">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+        <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Azkar - Large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
+        </receiver>
+        <receiver android:name=".widgets.WidgetRefreshReceiver" android:exported="false" />
+
+        <!-- Widget config activity -->
+        <activity
+            android:name=".widgets.WidgetConfigActivity"
+            android:exported="true"
+            android:label="Configure Azkar Widget"
+            android:theme="@style/Theme.Azkar.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+######## app\src\main\res\layout\fragment_reminders.xml ########
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/scroll" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
+<LinearLayout android:orientation="vertical" android:id="@+id/content" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+<FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back" android:clickable="true" android:focusable="true">
+<ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+<TextView style="@style/TB" android:text="@string/settings"  android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<View android:layout_width="44dp" android:layout_height="44dp"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="20dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/notifications" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/notif_sub" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_all" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="All notifications"/>
+</LinearLayout>
+<LinearLayout android:orientation="horizontal" android:id="@+id/exact_row" android:visibility="gone" android:gravity="center_vertical" android:padding="14dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/T" android:text="@string/exact_alarm_help" android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/allow" android:textSize="15sp" android:textColor="@color/gold" android:layout_marginStart="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="@string/reminders" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/reminders" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/rem_empty" android:text="No reminders yet. Add your first one below." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:layout_marginTop="10dp" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:id="@+id/btn_add_rem" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="12dp" android:layout_width="match_parent">
+<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
+<TextView style="@style/TB" android:text="@string/add_reminder" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<TextView android:id="@+id/btn_test_notification" style="@style/TB" android:text="@string/test_notification" android:textColor="@color/gold" android:gravity="center" android:minHeight="48dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="@string/reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/completion_screen" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/completion_screen_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_complete" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Completion screen"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/tap_to_advance" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/tap_to_advance_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_tap" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Tap to advance"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/keep_screen_on" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/keep_screen_on_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_awake" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Keep screen on"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="vertical" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/arabic_text_size" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<SeekBar android:id="@+id/size_slider" android:layout_weight="1" android:layout_width="0dp" android:layout_height="44dp" android:paddingStart="0dp" android:paddingEnd="12dp"/>
+<TextView style="@style/TB" android:id="@+id/size_value" android:text="" android:textSize="15sp" android:textColor="@color/gold" android:gravity="end" android:minWidth="52dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<TextView style="@style/Ar" android:id="@+id/size_preview" android:text="سُبْحَانَ اللَّهِ وَبِحَمْدِهِ" android:textColor="@color/arabic" android:textDirection="rtl" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="@string/appearance" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/theme" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:id="@+id/themes" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
+</ScrollView>
+
+######## app\build.gradle.kts ########
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.hilt)
+}
+
+android {
+    namespace = "com.azkar.app"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.azkar.app"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    val hasReleaseSigning = providers.gradleProperty("AZKAR_STORE_FILE").isPresent
+    signingConfigs {
+        create("release") {
+            val storeFilePath = providers.gradleProperty("AZKAR_STORE_FILE").orNull
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = providers.gradleProperty("AZKAR_STORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("AZKAR_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("AZKAR_KEY_PASSWORD").orNull
+            }
+        }
+        buildTypes {
+            release {
+                isMinifyEnabled = true
+                isShrinkResources = true
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+                // CI can verify the shrunk artifact without storing production credentials.
+                signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+}

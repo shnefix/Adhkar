@@ -15,14 +15,6 @@
     <string name="widget_action_count">Count one recitation</string>
     <string name="widget_action_reset">Reset count</string>
     <string name="widget_no_azkar_description">Azkar widget, no azkar available</string>
-    <string name="widget_refresh_title">Refresh widget</string>
-    <string name="widget_refresh_on_change">When app data changes</string>
-    <string name="widget_refresh_hourly">Every hour</string>
-    <string name="widget_refresh_six_hours">Every 6 hours</string>
-    <string name="widget_refresh_daily">Once a day</string>
-    <string name="widget_tap_action_title">Main tap action</string>
-    <string name="widget_tap_open">Open this folder</string>
-    <string name="widget_tap_count">Count one recitation</string>
     <string name="data_recovered">Some saved data was corrupted and could not be restored. Default azkar were loaded; please import a backup if you have one.</string>
     <string name="exact_alarm_help">Exact timing is unavailable, so reminders may arrive late. Allow alarm access for precise times; some phones also require removing battery restrictions.</string>
     <string name="allow">Allow</string>
@@ -46,4 +38,17 @@
     <string name="back">Back</string>
     <string name="all_notifications">All notifications</string>
     <string name="completion_screen_description">Completion screen</string>
+    <string name="not_now">Not now</string>
+    <string name="open_settings">Open settings</string>
+    <string name="notif_rationale_title">Allow notifications?</string>
+    <string name="notif_rationale_message">Azkar needs notification permission to remind you at the times you choose. It only sends the reminders you set up.</string>
+    <string name="notif_denied_toast">Notifications are off, so reminders will not reach you.</string>
+    <string name="notif_denied_title">Notifications are blocked</string>
+    <string name="notif_denied_message">Turn on notifications for Azkar in system settings to receive reminders.</string>
+    <string name="notif_blocked_sub">Notifications are blocked in system settings</string>
+    <string name="test_notification_message">This is how your reminders will look.</string>
+    <string name="reminders_paused">All reminders are paused</string>
+    <string name="reminders_on_count">%1$d of %2$d reminders on</string>
+    <string name="channel_name">Daily reminders</string>
+    <string name="channel_description">Your azkar reminders</string>
 </resources>

@@ -31,8 +31,8 @@ object ReminderScheduler {
     private const val ACTION = "com.azkar.app.REMINDER"
 
     fun createChannel(ctx: Context) {
-        val ch = NotificationChannel(CHANNEL, "Daily reminders", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Your azkar reminders"
+        val ch = NotificationChannel(CHANNEL, ctx.getString(R.string.channel_name), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = ctx.getString(R.string.channel_description)
             enableVibration(true)
             setShowBadge(true)
         }

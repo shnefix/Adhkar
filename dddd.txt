@@ -1,0 +1,460 @@
+﻿
+
+===== ALL KOTLIN FILES =====
+app\src\androidTest\java\com\azkar\app\data\ImportExportTest.kt
+app\src\androidTest\java\com\azkar\app\data\RoomMigrationTest.kt
+app\src\androidTest\java\com\azkar\app\data\StoreRollbackTest.kt
+app\src\androidTest\java\com\azkar\app\widgets\WidgetRendererTest.kt
+app\src\main\java\com\azkar\app\data\AzkarDao.kt
+app\src\main\java\com\azkar\app\data\AzkarDatabase.kt
+app\src\main\java\com\azkar\app\data\AzkarDatabaseProvider.kt
+app\src\main\java\com\azkar\app\data\AzkarEntities.kt
+app\src\main\java\com\azkar\app\data\AzkarRepository.kt
+app\src\main\java\com\azkar\app\data\AzkarRoomMigrations.kt
+app\src\main\java\com\azkar\app\data\EmojiRules.kt
+app\src\main\java\com\azkar\app\data\ExportJson.kt
+app\src\main\java\com\azkar\app\data\ImportJson.kt
+app\src\main\java\com\azkar\app\data\ImportMerge.kt
+app\src\main\java\com\azkar\app\data\Models.kt
+app\src\main\java\com\azkar\app\data\ReaderPrefs.kt
+app\src\main\java\com\azkar\app\data\RoomMigration.kt
+app\src\main\java\com\azkar\app\data\Store.kt
+app\src\main\java\com\azkar\app\data\Visibility.kt
+app\src\main\java\com\azkar\app\di\StorageModule.kt
+app\src\main\java\com\azkar\app\domain\ObserveAzkarContent.kt
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt
+app\src\main\java\com\azkar\app\reminders\ReminderTime.kt
+app\src\main\java\com\azkar\app\ui\AddZikrFragment.kt
+app\src\main\java\com\azkar\app\ui\AzkarContentViewModel.kt
+app\src\main\java\com\azkar\app\ui\CompleteFragment.kt
+app\src\main\java\com\azkar\app\ui\CustomizeHomeFragment.kt
+app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt
+app\src\main\java\com\azkar\app\ui\EditZikrFragment.kt
+app\src\main\java\com\azkar\app\ui\FolderCards.kt
+app\src\main\java\com\azkar\app\ui\FolderFragment.kt
+app\src\main\java\com\azkar\app\ui\FolderUi.kt
+app\src\main\java\com\azkar\app\ui\HomeFragment.kt
+app\src\main\java\com\azkar\app\ui\HomeViewModel.kt
+app\src\main\java\com\azkar\app\ui\LibraryFragment.kt
+app\src\main\java\com\azkar\app\ui\Lists.kt
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt
+app\src\main\java\com\azkar\app\ui\MyLists.kt
+app\src\main\java\com\azkar\app\ui\ReaderFragment.kt
+app\src\main\java\com\azkar\app\ui\ReaderNav.kt
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt
+app\src\main\java\com\azkar\app\ui\Tabs.kt
+app\src\main\java\com\azkar\app\ui\Ui.kt
+app\src\main\java\com\azkar\app\ui\Views.kt
+app\src\main\java\com\azkar\app\ui\ZikrForm.kt
+app\src\main\java\com\azkar\app\widgets\AzkarWidgetProviders.kt
+app\src\main\java\com\azkar\app\widgets\WidgetConfigActivity.kt
+app\src\main\java\com\azkar\app\widgets\WidgetModels.kt
+app\src\main\java\com\azkar\app\widgets\WidgetPalette.kt
+app\src\main\java\com\azkar\app\widgets\WidgetRefreshReceiver.kt
+app\src\main\java\com\azkar\app\widgets\WidgetRenderer.kt
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt
+app\src\main\java\com\azkar\app\widgets\WidgetStrings.kt
+app\src\main\java\com\azkar\app\AzkarApp.kt
+app\src\main\java\com\azkar\app\MainActivity.kt
+app\src\main\java\com\azkar\app\ThemeMode.kt
+app\src\test\java\com\azkar\app\reminders\ReminderTimeTest.kt
+
+===== LAYOUTS =====
+app\src\main\res\layout\activity_main.xml
+app\src\main\res\layout\dialog_reminder.xml
+app\src\main\res\layout\fragment_add_zikr.xml
+app\src\main\res\layout\fragment_complete.xml
+app\src\main\res\layout\fragment_customize_home.xml
+app\src\main\res\layout\fragment_edit_folder.xml
+app\src\main\res\layout\fragment_edit_zikr.xml
+app\src\main\res\layout\fragment_folder_view.xml
+app\src\main\res\layout\fragment_home.xml
+app\src\main\res\layout\fragment_library.xml
+app\src\main\res\layout\fragment_my_azkar.xml
+app\src\main\res\layout\fragment_reader.xml
+app\src\main\res\layout\fragment_reminders.xml
+app\src\main\res\layout\item_customize_row.xml
+app\src\main\res\layout\item_folder_card.xml
+app\src\main\res\layout\item_folder_new.xml
+app\src\main\res\layout\item_folder_tile.xml
+app\src\main\res\layout\item_folder_zikr.xml
+app\src\main\res\layout\item_home_collection.xml
+app\src\main\res\layout\item_home_folder.xml
+app\src\main\res\layout\item_library.xml
+app\src\main\res\layout\item_library_zikr.xml
+app\src\main\res\layout\item_my_header.xml
+app\src\main\res\layout\item_radio.xml
+app\src\main\res\layout\item_reminder.xml
+app\src\main\res\layout\item_saved.xml
+app\src\main\res\layout\notification_reminder.xml
+app\src\main\res\layout\notification_reminder_oled.xml
+app\src\main\res\layout\view_hero.xml
+app\src\main\res\layout\view_nav.xml
+app\src\main\res\layout\widget_classic_large.xml
+app\src\main\res\layout\widget_plain.xml
+app\src\main\res\layout\widget_tasbih_large.xml
+
+===== VALUES / XML / FONTS / DRAWABLES =====
+app\src\main\res\font\amiri_bold.ttf
+app\src\main\res\font\amiri_regular.ttf
+app\src\main\res\font\dm_sans_bold.ttf
+app\src\main\res\font\dm_sans_medium.ttf
+app\src\main\res\font\dm_sans_regular.ttf
+app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml
+app\src\main\res\values\colors.xml
+app\src\main\res\values\strings.xml
+app\src\main\res\values\themes.xml
+app\src\main\res\values\widget_strings.xml
+app\src\main\res\values-ar\strings.xml
+app\src\main\res\values-night\colors.xml
+app\src\main\res\values-night\themes.xml
+app\src\main\res\xml\azkar_widget_info.xml
+app\src\main\res\xml\widget_large_info.xml
+app\src\main\res\xml\widget_medium_info.xml
+app\src\main\res\xml\widget_small_info.xml
+
+===== MANIFEST AND GRADLE FILES =====
+app\src\main\AndroidManifest.xml
+app\build.gradle.kts
+build.gradle.kts
+settings.gradle.kts
+gradle\libs.versions.toml
+
+===== TASK 1: NOTIFICATION / PERMISSION USAGE =====
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:4: import android.app.AlarmManager
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:5: import android.app.NotificationChannel
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:6: import android.app.NotificationManager
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:17: import androidx.core.app.NotificationManagerCompat
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:34: val ch = NotificationChannel(CHANNEL, "Daily reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:39: ctx.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:42: private fun alarms(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:45: fun canExact(ctx: Context) = Build.VERSION.SDK_INT < 31 || alarms(ctx).canScheduleExactAlarms()
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:75: if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:76: else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:87: ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+app\src\main\java\com\azkar\app\reminders\ReminderScheduler.kt:119: NotificationManagerCompat.from(ctx).notify(nid, n)
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:41: registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:46: registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:4: import android.app.AlarmManager
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:36: private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:42: requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:43: ) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:179: !(ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:4: import android.app.AlarmManager
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:97: val alarm = ctx.getSystemService(AlarmManager::class.java)
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:100: AlarmManager.RTC,
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:108: val alarm = ctx.getSystemService(AlarmManager::class.java)
+app\src\main\java\com\azkar\app\MainActivity.kt:31: private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+app\src\main\java\com\azkar\app\MainActivity.kt:43: checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+app\src\main\java\com\azkar\app\MainActivity.kt:44: ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+app\src\main\AndroidManifest.xml:4: <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+app\src\main\AndroidManifest.xml:5: <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+app\src\main\AndroidManifest.xml:6: <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+app\src\main\AndroidManifest.xml:14: android:supportsRtl="true"
+app\src\main\AndroidManifest.xml:28: <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
+app\src\main\AndroidManifest.xml:29: <receiver android:name=".reminders.BootReceiver" android:exported="true">
+app\src\main\AndroidManifest.xml:33: </receiver>
+app\src\main\AndroidManifest.xml:34: <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Azkar - Small">
+app\src\main\AndroidManifest.xml:45: </receiver>
+app\src\main\AndroidManifest.xml:46: <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Azkar - Wide">
+app\src\main\AndroidManifest.xml:57: </receiver>
+app\src\main\AndroidManifest.xml:58: <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Azkar - Large">
+app\src\main\AndroidManifest.xml:69: </receiver>
+app\src\main\AndroidManifest.xml:70: <receiver android:name=".widgets.WidgetRefreshReceiver" android:exported="false" />
+
+===== TASK 2: HARDCODED TEXT IN KOTLIN =====
+app\src\androidTest\java\com\azkar\app\data\ImportExportTest.kt:23: assertTrue(ImportJson.parse("{\"folders\":\"broken\"}") is ImportJson.Parsed.Error)
+app\src\androidTest\java\com\azkar\app\data\ImportExportTest.kt:32: assertTrue(ImportJson.parse(raw) is ImportJson.Parsed.Error)
+app\src\androidTest\java\com\azkar\app\data\RoomMigrationTest.kt:208: ): Unit = error("simulated Room failure")
+app\src\androidTest\java\com\azkar\app\data\StoreRollbackTest.kt:111: error("simulated Room write failure")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:22: data class Error(val message: String) : Parsed()
+app\src\main\java\com\azkar\app\data\ImportJson.kt:51: if (s.isEmpty()) return Parsed.Error("The file is empty.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:52: if (s.startsWith("[")) return Parsed.Error("The file is a bare list. It must be an object like { \"folders\": [ ... ] }.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:54: return Parsed.Error("This is not valid JSON. " + (e.message ?: "").take(90))
+app\src\main\java\com\azkar\app\data\ImportJson.kt:56: val arr = root.optJSONArray("folders") ?: return Parsed.Error(
+app\src\main\java\com\azkar\app\data\ImportJson.kt:62: val f = arr.optJSONObject(i) ?: return Parsed.Error("Folder ${i + 1}: expected an object.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:64: if (name.isEmpty()) return Parsed.Error("Folder ${i + 1}: missing \"name\".")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:65: val az = f.optJSONArray("azkar") ?: return Parsed.Error("Folder \"$name\": missing an \"azkar\" list.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:67: if (r is String) return Parsed.Error(r)
+app\src\main\java\com\azkar\app\data\ImportJson.kt:72: return Parsed.Error("Folder \"$name\": duplicate folder id \"$id\".")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:79: if (r is String) return Parsed.Error(r)
+app\src\main\java\com\azkar\app\data\ImportJson.kt:85: val o = ra.optJSONObject(i) ?: return Parsed.Error("Reminder ${i + 1}: expected an object.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:87: if (title.isEmpty()) return Parsed.Error("Reminder ${i + 1}: missing \"title\".")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:91: if (h !in 0..23 || mi !in 0..59) return Parsed.Error("Reminder \"$title\": \"time\" must look like 06:30.")
+app\src\main\java\com\azkar\app\data\ImportJson.kt:106: return Parsed.Error(if (folders.isEmpty()) "The \"folders\" list is empty." else "The file contains no azkar.")
+app\src\main\java\com\azkar\app\data\Store.kt:297: private fun reconcileFailedWrite(generation: Long, previous: AzkarContent, error: Throwable?) {
+app\src\main\java\com\azkar\app\data\Store.kt:299: android.util.Log.e("Azkar", "Discarded failed stale content write", error)
+app\src\main\java\com\azkar\app\data\Store.kt:305: android.util.Log.e("Azkar", "Content write failed; reverted in-memory snapshot", error)
+app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt:74: label.text = "Order · " + list.size + if (list.size == 1) " zikr" else " azkar"
+app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt:81: v.findViewById<TextView>(R.id.line).text = "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (Store.hiddenZikrs().contains(z.id)) " · Hidden" else "")
+app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt:114: .setTitle("Delete \"${Store.folderName(id)}\"?")
+app\src\main\java\com\azkar\app\ui\EditFolderFragment.kt:115: .setMessage("This folder has $n azkar. They are not lost: they stay saved under Anytime.")
+app\src\main\java\com\azkar\app\ui\FolderFragment.kt:54: else if (row.hidden) Toast.makeText(ctx, "Hidden azkar are skipped while reading. Tap Select, then Show.", Toast.LENGTH_SHORT).show()
+app\src\main\java\com\azkar\app\ui\FolderFragment.kt:71: selCount.text = "${selected.size} selected"
+app\src\main\java\com\azkar\app\ui\FolderUi.kt:37: dlg = AlertDialog.Builder(ctx).setTitle("Choose an icon").setView(scroll)
+app\src\main\java\com\azkar\app\ui\FolderUi.kt:92: val dlg = AlertDialog.Builder(ctx).setTitle("New folder").setView(ScrollView(ctx).apply { addView(box) })
+app\src\main\java\com\azkar\app\ui\FolderUi.kt:98: name.isEmpty() -> input.error = "Enter a name"
+app\src\main\java\com\azkar\app\ui\FolderUi.kt:99: Store.folders().any { it.name.equals(name, ignoreCase = true) } -> input.error = "A folder with this name already exists"
+app\src\main\java\com\azkar\app\ui\HomeFragment.kt:40: Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
+app\src\main\java\com\azkar\app\ui\HomeFragment.kt:79: val daily = section("Daily collections", collections.map { card(it) })
+app\src\main\java\com\azkar\app\ui\HomeFragment.kt:84: Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
+app\src\main\java\com\azkar\app\ui\Lists.kt:99: h.rep.text = "×${r.repeat}"
+app\src\main\java\com\azkar\app\ui\Lists.kt:104: h.chip.text = "Hidden"
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:184: .setTitle("Export complete")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:194: .setTitle("Export failed")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:195: .setMessage("The file could not be saved. " + (e.message ?: ""))
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:214: raw == null -> showError("The file could not be read.")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:217: showError("The file is too large (over 5 MB).")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:221: is ImportJson.Parsed.Error -> showError(p.message)
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:230: .setTitle("Import Format")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:243: private fun showError(msg: String) {
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:245: .setTitle("Can't import this file")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:256: .setTitle("Import from JSON")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:273: showError("No file picker is available on this device.")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:312: .setTitle("Import from JSON")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:320: .setTitle("Import complete")
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:329: showError("Import failed: " + (e.message ?: "database write failed"))
+app\src\main\java\com\azkar\app\ui\MyLists.kt:96: s.rep.text = "×${item.repeat}"
+app\src\main\java\com\azkar\app\ui\ReaderFragment.kt:75: else { lastBack = now; Toast.makeText(ctx, "Press back again to exit", Toast.LENGTH_SHORT).show() }
+app\src\main\java\com\azkar\app\ui\ReaderFragment.kt:99: pos.text = "${i + 1} of ${items.size}"
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:37: if (!granted) Toast.makeText(requireContext(), "Notifications are off for Azkar in system settings.", Toast.LENGTH_SHORT).show()
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:64: Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:82: sizeValue.text = "$sp sp"
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:153: if (!globalOn) "All reminders are paused" else "${all.count { it.enabled }} of ${all.size} reminders on"
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:208: AlertDialog.Builder(ctx).setTitle("Open folder")
+app\src\main\java\com\azkar\app\ui\RemindersFragment.kt:227: if (t.isEmpty()) { title.error = "Enter a title"; return@setOnClickListener }
+app\src\main\java\com\azkar\app\widgets\WidgetRenderer.kt:84: WidgetKind.SMALL -> error("Checklist does not support small widgets")
+app\src\main\java\com\azkar\app\MainActivity.kt:58: Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
+app\src\main\java\com\azkar\app\MainActivity.kt:69: Toast.makeText(this@MainActivity, "Azkar data could not be loaded.", Toast.LENGTH_LONG).show()
+
+===== TASK 2: HARDCODED TEXT IN LAYOUTS =====
+app\src\main\res\layout\dialog_reminder.xml:3: <TextView style="@style/TB" android:text="Title" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\dialog_reminder.xml:4: <EditText style="@style/T" android:id="@+id/r_title" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="e.g. Afternoon azkar" android:textColorHint="@color/hint"/>
+app\src\main\res\layout\dialog_reminder.xml:5: <TextView style="@style/TB" android:text="Message" android:textSize="14sp" android:textColor="@color/light" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\dialog_reminder.xml:6: <EditText style="@style/T" android:id="@+id/r_msg" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_in26" android:textColor="@color/text" android:textSize="16sp" android:inputType="textCapSentences" android:singleLine="true" android:hint="Time for your azkar · tap to read" android:textColorHint="@color/hint"/>
+app\src\main\res\layout\dialog_reminder.xml:7: <TextView style="@style/TB" android:text="Time" android:textSize="14sp" android:textColor="@color/light" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\dialog_reminder.xml:9: <TextView style="@style/TB" android:text="Open folder" android:textSize="14sp" android:textColor="@color/light" android:layout_marginTop="16dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:5: <FrameLayout android:id="@+id/btn_close" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Cancel" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_add_zikr.xml:8: <TextView style="@style/TB" android:text="Add zikr" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:12: <TextView style="@style/TB" android:text="Arabic text" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:13: <EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:hint="اكتب الذكر هنا" android:textColorHint="@color/hint"/>
+app\src\main\res\layout\fragment_add_zikr.xml:14: <TextView style="@style/T" android:text="Tip: add diacritics so it reads correctly." android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:19: <TextView style="@style/TB" android:text="Repeat" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:20: <TextView style="@style/T" android:text="Times to recite" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:23: <FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="Fewer repeats" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_add_zikr.xml:26: <EditText style="@style/TB" android:id="@+id/n" android:text="1" android:textSize="20sp" android:textColor="@color/text" android:gravity="center" android:inputType="number" android:maxLength="3" android:selectAllOnFocus="true" android:singleLine="true" android:imeOptions="actionDone" android:background="@null" android:padding="0dp" android:minWidth="56dp" android:layout_width="wrap_content" android:layout_height="match_parent"/>
+app\src\main\res\layout\fragment_add_zikr.xml:27: <FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="More repeats" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_add_zikr.xml:34: <TextView style="@style/TB" android:text="Save to folder" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:38: <TextView style="@style/TB" android:text="New folder name" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_add_zikr.xml:41: <EditText style="@style/T" android:id="@+id/newname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="e.g. Travel, Ramadan, Exams" android:textColorHint="@color/hint" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:padding="0dp"/>
+app\src\main\res\layout\fragment_add_zikr.xml:47: <TextView style="@style/TB" android:text="Save zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_complete.xml:6: <TextView style="@style/TB" android:text="Collection complete" android:textSize="28sp" android:textColor="@color/text" android:gravity="center" android:layout_marginTop="24dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_complete.xml:7: <TextView style="@style/T" android:text="You have finished this collection." android:textSize="15sp" android:textColor="@color/muted" android:gravity="center" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_complete.xml:8: <TextView style="@style/TB" android:id="@+id/folder" android:text="" android:textSize="16sp" android:textColor="@color/light" android:gravity="center" android:layout_marginTop="12dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_complete.xml:9: <TextView style="@style/TB" android:id="@+id/btn_home" android:text="Back to Home" android:textSize="17sp" android:textColor="@color/bg" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="40dp" android:layout_width="match_parent" android:layout_height="56dp"/>
+app\src\main\res\layout\fragment_customize_home.xml:5: <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back to Home" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_customize_home.xml:8: <TextView style="@style/TB" android:text="Customize" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:9: <TextView style="@style/TB" android:text="Done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:12: <TextView style="@style/Caps" android:text="Where should my folders appear?" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:19: <TextView style="@style/Caps" android:text="Library order" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:21: <TextView style="@style/Caps" android:text="The order of folders in the Library and My azkar." android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:26: <TextView style="@style/Caps" android:text="Order and visibility" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_customize_home.xml:31: <TextView style="@style/TB" android:text="Reset Home to default" android:textSize="15sp" android:textColor="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"/>
+app\src\main\res\layout\fragment_edit_folder.xml:32: android:contentDescription="Back"
+app\src\main\res\layout\fragment_edit_folder.xml:46: android:text="Edit folder"
+app\src\main\res\layout\fragment_edit_folder.xml:68: android:text="Folder name"
+app\src\main\res\layout\fragment_edit_folder.xml:97: android:hint="Folder name"
+app\src\main\res\layout\fragment_edit_folder.xml:121: android:text="Show on Home"
+app\src\main\res\layout\fragment_edit_folder.xml:132: android:contentDescription="Show on Home" />
+app\src\main\res\layout\fragment_edit_folder.xml:149: android:text="Icon"
+app\src\main\res\layout\fragment_edit_folder.xml:194: android:text="Remember last position"
+app\src\main\res\layout\fragment_edit_folder.xml:203: android:text=""
+app\src\main\res\layout\fragment_edit_folder.xml:215: android:contentDescription="Remember last position" />
+app\src\main\res\layout\fragment_edit_folder.xml:227: android:text="Order"
+app\src\main\res\layout\fragment_edit_folder.xml:243: android:text="No azkar in this folder yet. Add your first one below."
+app\src\main\res\layout\fragment_edit_folder.xml:283: android:text="Add zikr to this folder"
+app\src\main\res\layout\fragment_edit_folder.xml:294: android:text="Delete folder"
+app\src\main\res\layout\fragment_edit_zikr.xml:5: <FrameLayout android:id="@+id/btn_close" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Cancel" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_edit_zikr.xml:8: <TextView style="@style/TB" android:text="Edit zikr" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:12: <TextView style="@style/TB" android:text="Arabic text" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:18: <TextView style="@style/TB" android:text="Repeat" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:19: <TextView style="@style/T" android:text="Times to recite" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:22: <FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="Fewer repeats" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_edit_zikr.xml:25: <EditText style="@style/TB" android:id="@+id/n" android:text="1" android:textSize="20sp" android:textColor="@color/text" android:gravity="center" android:inputType="number" android:maxLength="3" android:selectAllOnFocus="true" android:singleLine="true" android:imeOptions="actionDone" android:background="@null" android:padding="0dp" android:minWidth="56dp" android:layout_width="wrap_content" android:layout_height="match_parent"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:26: <FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="More repeats" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_edit_zikr.xml:34: <TextView style="@style/TB" android:text="Hide from reading" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:35: <TextView style="@style/T" android:id="@+id/hide_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:37: <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_hide" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Hide from reading"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:40: <TextView style="@style/TB" android:text="Folder" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:46: <TextView style="@style/TB" android:text="Save changes" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_edit_zikr.xml:50: <TextView style="@style/TB" android:text="Delete zikr" android:textSize="16sp" android:textColor="@color/danger" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:4: <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back to Library" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_folder_view.xml:7: <TextView style="@style/TB" android:id="@+id/title" android:text="" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:8: <FrameLayout android:id="@+id/btn_edit" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Edit folder" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_folder_view.xml:13: <TextView style="@style/T" android:id="@+id/hidden_info" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:14: <TextView style="@style/TB" android:id="@+id/btn_select" android:text="Select" android:textSize="15sp" android:textColor="@color/gold" android:gravity="center" android:minHeight="44dp" android:paddingHorizontal="4dp" android:clickable="true" android:focusable="true" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:18: <TextView style="@style/T" android:id="@+id/empty" android:text="No azkar in this folder yet. Add one from My azkar." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:visibility="gone" android:layout_margin="24dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:21: <TextView style="@style/T" android:id="@+id/sel_count" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:22: <TextView style="@style/TB" android:id="@+id/btn_all" android:text="All" android:textSize="15sp" android:textColor="@color/text" android:gravity="center" android:paddingHorizontal="18dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:23: <TextView style="@style/TB" android:id="@+id/btn_hide" android:text="Hide" android:textSize="15sp" android:textColor="@color/text" android:gravity="center" android:paddingHorizontal="18dp" android:layout_marginStart="8dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
+app\src\main\res\layout\fragment_folder_view.xml:24: <TextView style="@style/TB" android:id="@+id/btn_show" android:text="Show" android:textSize="15sp" android:textColor="@color/bg" android:gravity="center" android:paddingHorizontal="18dp" android:layout_marginStart="8dp" android:layout_height="44dp" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
+app\src\main\res\layout\fragment_home.xml:6: <FrameLayout android:id="@+id/btn_notifications" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_card22" android:contentDescription="Settings" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_home.xml:11: <TextView style="@style/TB" android:text="Customize" android:textSize="14sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_library.xml:5: <TextView style="@style/TB" android:text="Library" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_library.xml:8: <EditText style="@style/T" android:id="@+id/search" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="Search folders" android:textColorHint="@color/hint" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:imeOptions="actionSearch" android:singleLine="true" android:padding="0dp" android:contentDescription="Search folders"/>
+app\src\main\res\layout\fragment_my_azkar.xml:5: <TextView style="@style/TB" android:text="My azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_my_azkar.xml:8: <TextView style="@style/TB" android:text="Add zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_my_azkar.xml:13: <TextView style="@style/TB" android:text="Import" android:textSize="15sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_my_azkar.xml:17: <TextView style="@style/TB" android:text="Export" android:textSize="15sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_my_azkar.xml:21: <TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_my_azkar.xml:22: <TextView style="@style/T" android:id="@+id/folder_count" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:4: <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_reader.xml:8: <TextView style="@style/TB" android:text="" android:textSize="17sp" android:textColor="@color/text" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:9: <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:id="@+id/pos" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:17: <TextView style="@style/Ar" android:text="" android:textSize="26sp" android:textColor="@color/arabic" android:lineHeight="48.1sp" android:gravity="center" android:textDirection="rtl" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:23: <com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="140dp" android:layout_height="140dp" android:clickable="true" android:focusable="true" android:contentDescription="Count one recitation">
+app\src\main\res\layout\fragment_reader.xml:25: <TextView style="@style/TB" android:text="0" android:textSize="44sp" android:textColor="@color/text" android:lineHeight="48sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:26: <TextView style="@style/T" android:text="of 1" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/sub" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reader.xml:30: <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:id="@+id/hint" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reminders.xml:5: <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\fragment_reminders.xml:14: <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/notif_sub" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reminders.xml:16: <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_all" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="All notifications"/>
+app\src\main\res\layout\fragment_reminders.xml:25: <TextView style="@style/T" android:id="@+id/rem_empty" android:text="No reminders yet. Add your first one below." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:gravity="center" android:paddingVertical="28dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_dashline20" android:layout_marginTop="10dp" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reminders.xml:40: <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_complete" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Completion screen"/>
+app\src\main\res\layout\fragment_reminders.xml:48: <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_tap" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Tap to advance"/>
+app\src\main\res\layout\fragment_reminders.xml:56: <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_awake" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="Keep screen on"/>
+app\src\main\res\layout\fragment_reminders.xml:63: <TextView style="@style/TB" android:id="@+id/size_value" android:text="" android:textSize="15sp" android:textColor="@color/gold" android:gravity="end" android:minWidth="52dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\fragment_reminders.xml:65: <TextView style="@style/Ar" android:id="@+id/size_preview" android:text="سُبْحَانَ اللَّهِ وَبِحَمْدِهِ" android:textColor="@color/arabic" android:textDirection="rtl" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_customize_row.xml:5: <TextView style="@style/TB" android:text="" android:textSize="15sp" android:textColor="@color/text" android:id="@+id/name" android:layout_weight="1" android:layout_width="0dp" android:layout_marginStart="10dp" android:singleLine="true" android:ellipsize="end" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_card.xml:52: android:text=""
+app\src\main\res\layout\item_folder_card.xml:64: android:text=""
+app\src\main\res\layout\item_folder_new.xml:5: <TextView style="@style/TB" android:text="New" android:textSize="15sp" android:textColor="@color/gold" android:lineHeight="20sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_new.xml:6: <TextView style="@style/T" android:text="folder" android:textSize="12sp" android:textColor="@color/gold" android:lineHeight="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_tile.xml:6: <TextView style="@style/TB" android:text="" android:textSize="15sp" android:textColor="@color/text" android:lineHeight="20sp" android:id="@+id/name" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_tile.xml:7: <TextView style="@style/T" android:text="" android:textSize="12sp" android:textColor="@color/muted" android:lineHeight="16sp" android:id="@+id/count" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_zikr.xml:4: <FrameLayout android:id="@+id/up" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="Move up" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_folder_zikr.xml:7: <FrameLayout android:id="@+id/down" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="Move down" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_folder_zikr.xml:12: <TextView style="@style/Ar" android:text="" android:textSize="21sp" android:textColor="@color/arabic" android:lineHeight="31.5sp" android:textDirection="rtl" android:id="@+id/ar" android:singleLine="true" android:ellipsize="end" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_zikr.xml:13: <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:id="@+id/line" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_folder_zikr.xml:15: <FrameLayout android:id="@+id/hide" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Hide or show while reading" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_folder_zikr.xml:19: <FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="Edit zikr" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_folder_zikr.xml:22: <FrameLayout android:id="@+id/remove" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="Remove zikr" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_home_collection.xml:8: <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_home_collection.xml:9: <TextView style="@style/Ar" android:text="" android:textSize="19sp" android:textColor="@color/muted" android:lineHeight="26.6sp" android:textDirection="rtl" android:gravity="left" android:id="@+id/sub_ar" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_home_folder.xml:8: <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_home_folder.xml:9: <TextView style="@style/T" android:text="Your folder" android:textSize="14sp" android:textColor="@color/muted" android:lineHeight="20sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library.xml:8: <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library.xml:9: <TextView style="@style/Ar" android:text="" android:textSize="18sp" android:textColor="@color/muted" android:lineHeight="25.2sp" android:textDirection="rtl" android:gravity="left" android:id="@+id/sub_ar" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library_zikr.xml:5: <TextView style="@style/TB" android:text="" android:textSize="12sp" android:textColor="@color/teal" android:id="@+id/chip" android:paddingVertical="3dp" android:paddingHorizontal="10dp" android:background="@drawable/bg_chipfill12" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library_zikr.xml:6: <TextView style="@style/TB" android:text="" android:textSize="12sp" android:textColor="@color/light" android:id="@+id/rep" android:paddingVertical="2dp" android:paddingHorizontal="10dp" android:background="@drawable/bg_chipline12" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library_zikr.xml:8: <TextView style="@style/Ar" android:text="" android:textSize="20sp" android:textColor="@color/arabic" android:lineHeight="30sp" android:textDirection="rtl" android:maxLines="2" android:ellipsize="end" android:id="@+id/ar" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library_zikr.xml:9: <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:maxLines="1" android:ellipsize="end" android:id="@+id/note" android:layout_marginTop="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library_zikr.xml:11: <FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Edit zikr" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\item_my_header.xml:3: <TextView style="@style/TB" android:text="My azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_my_header.xml:4: <TextView style="@style/T" android:text="Azkar and duas you added yourself." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_my_header.xml:7: <TextView style="@style/TB" android:text="Add zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_my_header.xml:11: <TextView style="@style/TB" android:text="Import from JSON" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_my_header.xml:15: <TextView style="@style/TB" android:text="Export to JSON" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_my_header.xml:17: <TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_radio.xml:6: <TextView style="@style/TB" android:text="" android:textSize="15sp" android:textColor="@color/text" android:id="@+id/label" android:layout_marginStart="10dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_reminder.xml:6: <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_reminder.xml:7: <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/time" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_saved.xml:5: <TextView style="@style/TB" android:text="" android:textSize="12sp" android:textColor="@color/teal" android:id="@+id/chip" android:paddingVertical="3dp" android:paddingHorizontal="10dp" android:background="@drawable/bg_chipfill12" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_saved.xml:6: <TextView style="@style/TB" android:text="" android:textSize="12sp" android:textColor="@color/light" android:id="@+id/rep" android:paddingVertical="2dp" android:paddingHorizontal="10dp" android:background="@drawable/bg_chipline12" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_saved.xml:8: <TextView style="@style/Ar" android:text="" android:textSize="22sp" android:textColor="@color/arabic" android:lineHeight="33sp" android:textDirection="rtl" android:id="@+id/ar" android:layout_marginTop="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_saved.xml:9: <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:id="@+id/note" android:layout_marginTop="6dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_saved.xml:11: <FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginStart="4dp" android:contentDescription="Edit zikr" android:clickable="true" android:focusable="true">
+app\src\main\res\layout\view_hero.xml:5: <TextView style="@style/TB" android:text="Right now" android:textSize="12sp" android:textColor="@color/gold" android:textAllCaps="true" android:letterSpacing="0.1" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_hero.xml:6: <TextView style="@style/TB" android:text="Morning azkar" android:textSize="24sp" android:textColor="@color/text" android:lineHeight="30sp" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_hero.xml:8: <TextView style="@style/Ar" android:text="أذكار الصباح" android:textSize="32sp" android:textColor="@color/gold" android:lineHeight="38.4sp" android:textDirection="rtl" android:layout_marginStart="8dp" android:id="@+id/hero_ar" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_hero.xml:11: <TextView style="@style/T" android:text="3 azkar · about 2 min" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/hero_sub" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_hero.xml:13: <TextView style="@style/TB" android:text="Start reading" android:textSize="15sp" android:textColor="@color/bg" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_nav.xml:7: <TextView style="@style/TM" android:text="Home" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_home_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_nav.xml:11: <TextView style="@style/TM" android:text="Library" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_library_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_nav.xml:15: <TextView style="@style/TM" android:text="My azkar" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_my_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+===== TASK 2: LEFT/RIGHT USAGE IN LAYOUTS (RTL ISSUES) =====
+app\src\main\res\layout\item_folder_card.xml:57: android:gravity="left"
+app\src\main\res\layout\item_home_collection.xml:9: <TextView style="@style/Ar" android:text="" android:textSize="19sp" android:textColor="@color/muted" android:lineHeight="26.6sp" android:textDirection="rtl" android:gravity="left" android:id="@+id/sub_ar" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\item_library.xml:9: <TextView style="@style/Ar" android:text="" android:textSize="18sp" android:textColor="@color/muted" android:lineHeight="25.2sp" android:textDirection="rtl" android:gravity="left" android:id="@+id/sub_ar" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\view_hero.xml:5: <TextView style="@style/TB" android:text="Right now" android:textSize="12sp" android:textColor="@color/gold" android:textAllCaps="true" android:letterSpacing="0.1" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+app\src\main\res\layout\widget_classic_large.xml:9: <!-- bottom row: 52dp tall, 19dp from the bottom/right edge, "+1" button is 56dp wide -->
+
+===== TASK 2: LANGUAGE / LOCALE CODE =====
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:26: import java.util.Locale
+app\src\main\java\com\azkar\app\ui\MyAzkarFragment.kt:69: SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) +
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:13: import java.util.Locale
+app\src\main\java\com\azkar\app\widgets\WidgetStore.kt:18: private fun today() = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+app\src\main\java\com\azkar\app\ThemeMode.kt:3: import androidx.appcompat.app.AppCompatDelegate
+app\src\main\java\com\azkar\app\ThemeMode.kt:11: fun apply(choice: Int) = AppCompatDelegate.setDefaultNightMode(
+app\src\main\java\com\azkar\app\ThemeMode.kt:12: if (choice == OLED) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+
+===== STRINGS.XML (EN) =====
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Azkar</string>
+    <string name="widget_done">Done</string>
+    <string name="widget_tasbih">Tasbih</string>
+    <string name="widget_reset">Reset</string>
+    <string name="widget_dhikr">DHIKR</string>
+    <string name="widget_no_azkar">No azkar in this folder</string>
+    <string name="widget_tap_to_open">Tap to open Azkar</string>
+    <string name="widget_of">of %1$d</string>
+    <string name="widget_round">Round %1$d of %2$d Â· %3$d total</string>
+    <string name="widget_azkar">%1$d azkar</string>
+    <string name="widget_count_of">%1$d of %2$d</string>
+    <string name="widget_action_open">Open Azkar</string>
+    <string name="widget_action_count">Count one recitation</string>
+    <string name="widget_action_reset">Reset count</string>
+    <string name="widget_no_azkar_description">Azkar widget, no azkar available</string>
+    <string name="widget_refresh_title">Refresh widget</string>
+    <string name="widget_refresh_on_change">When app data changes</string>
+    <string name="widget_refresh_hourly">Every hour</string>
+    <string name="widget_refresh_six_hours">Every 6 hours</string>
+    <string name="widget_refresh_daily">Once a day</string>
+    <string name="widget_tap_action_title">Main tap action</string>
+    <string name="widget_tap_open">Open this folder</string>
+    <string name="widget_tap_count">Count one recitation</string>
+    <string name="data_recovered">Some saved data was corrupted and could not be restored. Default azkar were loaded; please import a backup if you have one.</string>
+    <string name="exact_alarm_help">Exact timing is unavailable, so reminders may arrive late. Allow alarm access for precise times; some phones also require removing battery restrictions.</string>
+    <string name="allow">Allow</string>
+    <string name="test_notification">Send test notification</string>
+    <string name="test_notification_sent">Test notification sent.</string>
+    <string name="settings">Settings</string>
+    <string name="notifications">Notifications</string>
+    <string name="reminders">Reminders</string>
+    <string name="reading">Reading</string>
+    <string name="appearance">Appearance</string>
+    <string name="add_reminder">Add reminder</string>
+    <string name="no_reminders">No reminders yet. Add your first one below.</string>
+    <string name="completion_screen">Completion screen</string>
+    <string name="completion_screen_summary">Show a summary when a collection is finished</string>
+    <string name="tap_to_advance">Tap to advance</string>
+    <string name="tap_to_advance_summary">Tapping the card moves to the next dhikr</string>
+    <string name="keep_screen_on">Keep screen on</string>
+    <string name="keep_screen_on_summary">While you are reading</string>
+    <string name="arabic_text_size">Arabic text size</string>
+    <string name="theme">Theme</string>
+    <string name="back">Back</string>
+    <string name="all_notifications">All notifications</string>
+    <string name="completion_screen_description">Completion screen</string>
+</resources>
+
+===== STRINGS.XML (AR) =====
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_done">ØªÙ…</string>
+    <string name="widget_tasbih">ØªØ³Ø¨ÙŠØ­</string>
+    <string name="widget_reset">Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø·</string>
+    <string name="widget_dhikr">Ø°ÙƒØ±</string>
+    <string name="widget_no_azkar">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø°ÙƒØ§Ø± ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¬Ù„Ø¯</string>
+    <string name="widget_tap_to_open">Ø§Ø¶ØºØ· Ù„ÙØªØ­ Ø§Ù„Ø£Ø°ÙƒØ§Ø±</string>
+    <string name="widget_of">Ù…Ù† %1$d</string>
+    <string name="widget_round">Ø§Ù„Ø¬ÙˆÙ„Ø© %1$d Ù…Ù† %2$d Â· Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹ %3$d</string>
+    <string name="widget_azkar">%1$d Ø£Ø°ÙƒØ§Ø±</string>
+    <string name="widget_count_of">%1$d Ù…Ù† %2$d</string>
+    <string name="widget_action_open">ÙØªØ­ Ø§Ù„Ø£Ø°ÙƒØ§Ø±</string>
+    <string name="widget_action_count">Ø¹Ø¯ ØªØ³Ø¨ÙŠØ­Ø© ÙˆØ§Ø­Ø¯Ø©</string>
+    <string name="widget_action_reset">Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø· Ø§Ù„Ø¹Ø¯Ø§Ø¯</string>
+    <string name="widget_no_azkar_description">Ø£Ø¯Ø§Ø© Ø§Ù„Ø£Ø°ÙƒØ§Ø±ØŒ Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø°ÙƒØ§Ø±</string>
+</resources>

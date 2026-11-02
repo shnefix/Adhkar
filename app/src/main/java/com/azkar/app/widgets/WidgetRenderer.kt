@@ -28,12 +28,12 @@ import kotlin.math.sqrt
  * Draws the 14 widget designs using the app's selected theme. All coordinates are in dp
  * (the canvas is scaled), so the numbers below are the same numbers as in the design file.
  */
-class WidgetRenderer(ctx: Context, theme: Int? = null) {
+class WidgetRenderer(ctx: Context) {
     init {
         Store.init(ctx)
     }
 
-    private val palette = WidgetPalette.from(ctx, (theme ?: Store.theme()) == com.azkar.app.ThemeMode.OLED)
+    private val palette = WidgetPalette.from(ctx, Store.theme() == com.azkar.app.ThemeMode.OLED)
     private val strings = WidgetStrings(ctx)
     private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
     private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
