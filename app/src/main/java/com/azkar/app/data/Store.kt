@@ -5,8 +5,16 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+import com.azkar.app.widgets.WidgetUpdater
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
-/** Persistent local storage (SharedPreferences + JSON), cached in memory. All writes go through the save* functions. */
+/** Compatibility facade over Room content and lightweight SharedPreferences settings. */
 object Store {
     private lateinit var sp: SharedPreferences
     private lateinit var appCtx: Context
@@ -25,6 +33,7 @@ object Store {
     private const val K_REM = "reminder_"
     private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
+    private const val K_SCHEDULES_INITIALIZED = "schedules_initialized"
     private const val K_SP = "arabic_sp"
     private const val K_TAP = "tap_advance"
     private const val K_AWAKE = "keep_awake"
@@ -32,38 +41,135 @@ object Store {
     private const val K_POSC = "posc_"    // posc_<folderId> = its count
     private const val K_SCHEMA = "schema_version"
     private const val K_RECOVERED = "data_recovered"
+    private const val K_ROOM_MIGRATION_VERIFIED = "room_migration_verified"
+    private const val K_ROOM_MIGRATION_BACKUP = "room_migration_backup"
     private const val SCHEMA_VERSION = 1
 
-    // In-memory copies: the single source of truth for every screen.
+    // Compatibility snapshots; Room is the durable source of truth for content.
     private var zCache: List<Zikr> = emptyList()
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
     private var hzCache: Set<String> = emptySet()
+    private var cacheGeneration = 0L
+    private lateinit var repository: AzkarRepository
+    private val widgetRefreshPending = AtomicBoolean(false)
+    private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var initResult: CompletableDeferred<Result<Unit>>? = null
+    private val initStarted = AtomicBoolean(false)
 
     @Synchronized
     fun init(context: Context) {
         if (::sp.isInitialized) return
         appCtx = context.applicationContext
         sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
-        val recovered = try {
-            zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
-            fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
-            sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
-            hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
-            false
+        repository = AzkarRepository(AzkarDatabaseProvider.get(appCtx).azkarDao())
+        val result = CompletableDeferred<Result<Unit>>()
+        initResult = result
+        if (initStarted.compareAndSet(false, true)) {
+            initScope.launch {
+                try {
+                    initialize()
+                    result.complete(Result.success(Unit))
+                } catch (e: Exception) {
+                    android.util.Log.e("Azkar", "Database initialization failed", e)
+                    result.complete(Result.failure(e))
+                }
+            }
+        }
+    }
+
+    suspend fun awaitReady() {
+        check(::sp.isInitialized) { "Store.init(context) must be called first" }
+        initResult?.await()?.getOrThrow()
+    }
+
+    private suspend fun initialize() {
+        val loaded = repository.loadContent()
+        zCache = loaded.zikrs
+        fCache = loaded.folders
+        sCache = loaded.schedules
+        val legacy = try {
+            LegacyContent(
+                parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]"),
+                parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]"),
+                parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
+            )
         } catch (e: Exception) {
-            android.util.Log.e("Azkar", "Stored data was corrupt; starting with empty data", e)
+            android.util.Log.e("Azkar", "Stored content was corrupt; keeping it for recovery", e)
+            null
+        }
+        val roomEmpty = repository.folderCount() == 0 && repository.zikrCount() == 0 && repository.scheduleCount() == 0
+        val hasLegacy = sp.contains(K_ZIKRS) || sp.contains(K_FOLDERS) || sp.contains(K_SCHED)
+        val validLegacy = legacy?.takeIf { it.isValid() }
+        val migrated = if (roomEmpty && hasLegacy && validLegacy != null) {
+            migrateLegacy(validLegacy)
+        } else {
+            false
+        }
+        if (!roomEmpty && validLegacy != null && !sp.getBoolean(K_ROOM_MIGRATION_VERIFIED, false)) {
+            verifyRoomMigration(validLegacy)
+        }
+        if (legacy != null && sp.contains(K_SCHED)) {
+            sp.edit().putBoolean(K_SCHEDULES_INITIALIZED, true).apply()
+        }
+        val recovered = legacy == null || validLegacy == null
+        if (migrated || !roomEmpty) {
+            zCache = repository.zikrs()
+            fCache = repository.folders()
+            sCache = repository.schedules()
+        } else if (validLegacy != null) {
+            zCache = validLegacy.zikrs
+            fCache = validLegacy.folders
+            sCache = validLegacy.schedules
+        } else {
             zCache = emptyList()
             fCache = emptyList()
             sCache = emptyList()
-            hzCache = emptySet()
-            true
         }
-        if (recovered) sp.edit().clear().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
+        hzCache = try { parseIds(sp.getString(K_HZ, "[]") ?: "[]") } catch (_: Exception) { emptySet() }
+        if (recovered) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
         else migrateSchema()
         syncDefaults()
         migrateSchedules()
         sanitizeIcons()
+        repository.awaitPendingWrites()
+    }
+
+    private data class LegacyContent(
+        val zikrs: List<Zikr>,
+        val folders: List<Folder>,
+        val schedules: List<Schedule>
+    ) {
+        fun isValid(): Boolean =
+            zikrs.map { it.id }.all { it.isNotBlank() } &&
+                folders.map { it.id }.all { it.isNotBlank() } &&
+                schedules.map { it.id }.all { it.isNotBlank() } &&
+                zikrs.map { it.id }.distinct().size == zikrs.size &&
+                folders.map { it.id }.distinct().size == folders.size &&
+                schedules.map { it.id }.distinct().size == schedules.size
+    }
+
+    private suspend fun migrateLegacy(legacy: LegacyContent): Boolean {
+        val backup = JSONObject()
+            .put("folders", sp.getString(K_FOLDERS, "[]"))
+            .put("zikrs", sp.getString(K_ZIKRS, "[]"))
+            .put("schedules", sp.getString(K_SCHED, "[]"))
+        sp.edit().putString(K_ROOM_MIGRATION_BACKUP, backup.toString()).commit()
+        val verified = RoomMigration.importIfEmpty(
+            repository,
+            RoomMigration.LegacyData(legacy.folders, legacy.zikrs, legacy.schedules)
+        )
+        if (verified) sp.edit().putBoolean(K_ROOM_MIGRATION_VERIFIED, true).commit()
+        return verified
+    }
+
+    private fun verifyRoomMigration(legacy: LegacyContent) {
+        if (repository.folders() == legacy.folders &&
+            repository.zikrs() == legacy.zikrs &&
+            repository.schedules() == legacy.schedules
+        ) {
+            sp.edit().putBoolean(K_ROOM_MIGRATION_VERIFIED, true).commit()
+        }
     }
 
     private fun migrateSchema() {
@@ -103,8 +209,7 @@ object Store {
         val p = defaults() ?: return false
         val before = fCache.map { it.id }.toSet()
         val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
-        saveFolders(ns.folders)
-        saveZikrs(ns.zikrs)
+        saveContent(ns.folders, ns.zikrs, ns.schedules)
         val created = ns.folders.map { it.id }.filter { it !in before }.toSet()
         val hide = p.folders.filter { it.home != true }.mapNotNull { it.id }.filter { it in created }
         if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
@@ -113,7 +218,7 @@ object Store {
 
     /** One time: the three fixed reminders become editable schedules (same on/off state). */
     private fun migrateSchedules() {
-        if (sp.contains(K_SCHED)) return
+        if (sp.getBoolean(K_SCHEDULES_INITIALIZED, false)) return
         saveSchedules(
             listOf(
                 Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, reminderOn("m", true), "morning"),
@@ -157,37 +262,60 @@ object Store {
 
     @Synchronized
     private fun saveZikrs(list: List<Zikr>) {
-        zCache = list.toList()
-        val arr = JSONArray()
-        list.forEach {
-            arr.put(JSONObject().put("id", it.id).put("ar", it.arabic).put("note", it.note).put("n", it.repeat)
-                .put("f", it.folderId ?: JSONObject.NULL))
-        }
-        sp.edit().putString(K_ZIKRS, arr.toString()).apply()
+        saveContent(fCache, list, sCache)
     }
 
     @Synchronized
     private fun saveFolders(list: List<Folder>) {
-        fCache = list.toList()
-        val arr = JSONArray()
-        list.forEach { f ->
-            val o = JSONObject().put("id", f.id).put("name", f.name)
-            f.icon?.let { o.put("ic", it) }
-            if (f.remember) o.put("rm", true)
-            arr.put(o)
-        }
-        sp.edit().putString(K_FOLDERS, arr.toString()).apply()
+        saveContent(list, zCache, sCache)
     }
 
     @Synchronized
     private fun saveSchedules(list: List<Schedule>) {
-        sCache = list.toList()
-        val arr = JSONArray()
-        list.forEach {
-            arr.put(JSONObject().put("id", it.id).put("t", it.title).put("m", it.message).put("h", it.hour)
-                .put("mi", it.minute).put("on", it.enabled).put("open", it.open ?: JSONObject.NULL))
+        saveContent(fCache, zCache, list)
+        sp.edit().putBoolean(K_SCHEDULES_INITIALIZED, true).apply()
+    }
+
+    @Synchronized
+    private fun saveContent(folders: List<Folder>, zikrs: List<Zikr>, schedules: List<Schedule>) {
+        val next = AzkarContent(folders.toList(), zikrs.toList(), schedules.toList())
+        val generation = ++cacheGeneration
+        val previous = AzkarContent(fCache, zCache, sCache)
+        fCache = next.folders
+        zCache = next.zikrs
+        sCache = next.schedules
+        repository.replaceAll(next) { result ->
+            if (result.isSuccess) {
+                notifyWidgets()
+            } else {
+                reconcileFailedWrite(generation, previous, result.exceptionOrNull())
+            }
         }
-        sp.edit().putString(K_SCHED, arr.toString()).apply()
+    }
+
+    @Synchronized
+    private fun reconcileFailedWrite(generation: Long, previous: AzkarContent, error: Throwable?) {
+        if (generation != cacheGeneration) {
+            android.util.Log.e("Azkar", "Discarded failed stale content write", error)
+            return
+        }
+        fCache = previous.folders
+        zCache = previous.zikrs
+        sCache = previous.schedules
+        android.util.Log.e("Azkar", "Content write failed; reverted in-memory snapshot", error)
+        notifyWidgets()
+    }
+
+    private fun notifyWidgets() {
+        if (::appCtx.isInitialized && widgetRefreshPending.compareAndSet(false, true)) {
+            appCtx.mainExecutor.execute {
+                try {
+                    WidgetUpdater.updateAll(appCtx)
+                } finally {
+                    widgetRefreshPending.set(false)
+                }
+            }
+        }
     }
 
     // ---------- Azkar ----------
@@ -198,6 +326,7 @@ object Store {
     /** Number of azkar per folder id (null key = Anytime), computed in one pass. */
     fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
+    @Synchronized
     fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?): Zikr {
         zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
             val merged = it.copy(note = note.ifBlank { it.note }, repeat = repeat)
@@ -209,16 +338,20 @@ object Store {
         return z
     }
 
+    @Synchronized
     fun updateZikr(z: Zikr) = saveZikrs(zCache.map { if (it.id == z.id) z else it })
+    @Synchronized
     fun deleteZikr(id: String) {
         saveZikrs(zCache.filter { it.id != id })
         if (id in hzCache) setZikrsHidden(listOf(id), false)
     }
 
     /** Takes a zikr out of its folder (it stays saved as "Anytime"). */
+    @Synchronized
     fun unfile(id: String) = saveZikrs(zCache.map { if (it.id == id) it.copy(folderId = null) else it })
 
     /** Reorders the zikrs of one folder; other azkar keep their relative position. */
+    @Synchronized
     fun reorderFolder(folderId: String, orderedIds: List<String>) {
         val all = zCache
         val byId = all.associateBy { it.id }
@@ -230,13 +363,16 @@ object Store {
     fun folders(): List<Folder> = fCache
     fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
 
+    @Synchronized
     fun addFolder(name: String, icon: String? = null): Folder {
         val f = Folder(UUID.randomUUID().toString(), name, icon?.takeUnless { EmojiRules.isRestricted(it) })
         saveFolders(fCache + f)
         return f
     }
 
+    @Synchronized
     fun renameFolder(id: String, name: String) = saveFolders(fCache.map { if (it.id == id) it.copy(name = name) else it })
+    @Synchronized
     fun setFolderIcon(id: String, icon: String?) = saveFolders(
         fCache.map { if (it.id == id) it.copy(icon = icon?.takeUnless { e -> EmojiRules.isRestricted(e) }) else it }
     )
@@ -248,6 +384,7 @@ object Store {
         }
     }
 
+    @Synchronized
     fun moveFolder(id: String, d: Int) {
         val l = fCache.toMutableList()
         val i = l.indexOfFirst { it.id == id }
@@ -260,10 +397,12 @@ object Store {
     fun folderIndex(id: String) = fCache.indexOfFirst { it.id == id }
 
     /** Deletes the folder; its azkar stay saved as "Anytime" and reminders pointing at it just open the app. */
+    @Synchronized
     fun deleteFolder(id: String) {
-        saveFolders(fCache.filter { it.id != id })
-        saveZikrs(zCache.map { if (it.folderId == id) it.copy(folderId = null) else it })
-        if (sCache.any { it.open == id }) saveSchedules(sCache.map { if (it.open == id) it.copy(open = null) else it })
+        val nextFolders = fCache.filter { it.id != id }
+        val nextZikrs = zCache.map { if (it.folderId == id) it.copy(folderId = null) else it }
+        val nextSchedules = sCache.map { if (it.open == id) it.copy(open = null) else it }
+        saveContent(nextFolders, nextZikrs, nextSchedules)
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
         clearPosition(id)
@@ -277,16 +416,67 @@ object Store {
     fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
 
     // ---------- Import / export ----------
-    fun importAll(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
-        val (ns, sum) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
-        saveFolders(ns.folders); saveZikrs(ns.zikrs); saveSchedules(ns.schedules)
+    suspend fun importAllAsync(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
+        val (base, baseGeneration) = synchronized(this) {
+            Pair(ImportMerge.State(fCache, zCache, sCache), cacheGeneration)
+        }
+        repository.awaitPendingWrites()
+        val (ns, sum) = ImportMerge.apply(base, p) { UUID.randomUUID().toString() }
+        val next = AzkarContent(ns.folders, ns.zikrs, ns.schedules)
+        repository.replaceAllAsync(next)
+        val published = synchronized(this) {
+            if (cacheGeneration != baseGeneration) {
+                false
+            } else {
+                fCache = next.folders
+                zCache = next.zikrs
+                sCache = next.schedules
+                cacheGeneration++
+                true
+            }
+        }
+        if (published) notifyWidgets()
+        sp.edit().putBoolean(K_SCHEDULES_INITIALIZED, true).apply()
         val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
         sp2?.let { setArabicSp(it) }
         p.settings?.notificationsOn?.let { setNotificationsOn(it) }
         return sum
     }
 
-    fun exportJson(): String = ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn(), arabicSp())
+    /** Restores the retained pre-Room content only when Room is still completely empty. */
+    suspend fun recoverMigrationBackup(): Boolean {
+        if (repository.folderCount() != 0 || repository.zikrCount() != 0 || repository.scheduleCount() != 0) return false
+        val raw = sp.getString(K_ROOM_MIGRATION_BACKUP, null) ?: return false
+        val backup = try { JSONObject(raw) } catch (_: Exception) { return false }
+        val legacy = try {
+            LegacyContent(
+                parseZikrs(backup.optString("zikrs", "[]")),
+                parseFolders(backup.optString("folders", "[]")),
+                parseSchedules(backup.optString("schedules", "[]"))
+            )
+        } catch (_: Exception) {
+            return false
+        }
+        if (!legacy.isValid()) return false
+        val restored = RoomMigration.importIfEmpty(
+            repository,
+            RoomMigration.LegacyData(legacy.folders, legacy.zikrs, legacy.schedules)
+        )
+        if (restored) {
+            fCache = legacy.folders
+            zCache = legacy.zikrs
+            sCache = legacy.schedules
+            sp.edit()
+                .putBoolean(K_ROOM_MIGRATION_VERIFIED, true)
+                .putBoolean(K_SCHEDULES_INITIALIZED, true)
+                .commit()
+        }
+        return restored
+    }
+
+    suspend fun exportJsonAsync(): String = withContext(Dispatchers.Default) {
+        ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn(), arabicSp())
+    }
 
     // ---------- Home customisation ----------
     val defaultOrder: List<String> get() = fCache.map { it.id }
@@ -332,6 +522,7 @@ object Store {
     // ---------- Per-folder reading position ----------
     fun rememberPosition(folderId: String) = folder(folderId)?.remember == true
 
+    @Synchronized
     fun setFolderRemember(id: String, on: Boolean) {
         saveFolders(fCache.map { if (it.id == id) it.copy(remember = on) else it })
         if (!on) clearPosition(id)          // old progress must never leak back in
@@ -386,10 +577,12 @@ object Store {
     fun schedule(id: String): Schedule? = sCache.firstOrNull { it.id == id }
     fun newScheduleId(): String = UUID.randomUUID().toString()
 
+    @Synchronized
     fun upsertSchedule(s: Schedule) {
         saveSchedules(if (sCache.any { it.id == s.id }) sCache.map { if (it.id == s.id) s else it } else sCache + s)
     }
 
+    @Synchronized
     fun deleteSchedule(id: String) = saveSchedules(sCache.filter { it.id != id })
 
     // ---------- Reader content ----------

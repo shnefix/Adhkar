@@ -22,6 +22,9 @@ import com.azkar.app.ThemeMode
 import com.azkar.app.data.Builtins
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.Store
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 object ReminderScheduler {
     const val CHANNEL = "azkar_reminders_v2"
@@ -120,12 +123,20 @@ object ReminderScheduler {
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         Store.init(ctx)
-        ReminderScheduler.createChannel(ctx)
-        val id = intent.getStringExtra("id") ?: return          // ignores old-style alarms
-        val s = Store.schedule(id) ?: return                    // deleted schedule: nothing to show
-        if (!Store.notificationsOn() || !s.enabled) return
-        ReminderScheduler.notify(ctx, s)
-        ReminderScheduler.schedule(ctx, s)                      // next day
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                ReminderScheduler.createChannel(ctx)
+                val id = intent.getStringExtra("id") ?: return@launch
+                val s = Store.schedule(id) ?: return@launch
+                if (!Store.notificationsOn() || !s.enabled) return@launch
+                ReminderScheduler.notify(ctx, s)
+                ReminderScheduler.schedule(ctx, s)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 }
 
@@ -133,8 +144,16 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             Store.init(ctx)
-            ReminderScheduler.createChannel(ctx)
-            ReminderScheduler.rescheduleAll(ctx)
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    Store.awaitReady()
+                    ReminderScheduler.createChannel(ctx)
+                    ReminderScheduler.rescheduleAll(ctx)
+                } finally {
+                    pending.finish()
+                }
+            }
         }
     }
 }

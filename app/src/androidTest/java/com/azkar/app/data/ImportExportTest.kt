@@ -22,4 +22,13 @@ class ImportExportTest {
     fun malformedBackupIsRejected() {
         assertTrue(ImportJson.parse("{\"folders\":\"broken\"}") is ImportJson.Parsed.Error)
     }
+
+    @Test
+    fun duplicateFolderIdsAreRejected() {
+        val raw = """{"folders":[
+            {"id":"same","name":"One","azkar":[{"text":"First","count":1}]},
+            {"id":"same","name":"Two","azkar":[{"text":"Second","count":1}]}
+        ]}"""
+        assertTrue(ImportJson.parse(raw) is ImportJson.Parsed.Error)
+    }
 }

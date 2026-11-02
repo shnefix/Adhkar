@@ -6,13 +6,21 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
-import com.azkar.app.data.Store
+import com.azkar.app.data.AzkarContent
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class LibraryFragment : Fragment(R.layout.fragment_library) {
+    private val viewModel: AzkarContentViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
@@ -29,11 +37,11 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
         val teal = ctx.getColor(R.color.teal)
         val gold = ctx.getColor(R.color.gold)
 
-        fun build(q: String): List<Card> {
+        fun build(q: String, content: AzkarContent): List<Card> {
             val query = q.trim().lowercase()
-            val counts = Store.zikrCounts()          // one pass, from memory
+            val counts = content.zikrs.groupingBy { it.folderId }.eachCount()
             val out = ArrayList<Card>()
-            Store.folders().forEach { f ->
+            content.folders.forEach { f ->
                 if (query.isNotEmpty() && !f.name.lowercase().contains(query)) return@forEach
                 val b = Builtins.byKey(f.id)
                 out.add(Card(f.id, f.name, azkarCount(counts[f.id] ?: 0), f.icon, b?.icon ?: R.drawable.ic_folder_1p75,
@@ -47,17 +55,27 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             }
             if (query.isEmpty()) {
                 out.add(Card("new", "New folder", "", null, R.drawable.ic_plus_2, gold, true) {
-                    promptNewFolder { _ -> adapter.submitList(build(search.text.toString())) }
+                    promptNewFolder { _ ->
+                        viewModel.content.value?.let { adapter.submitList(build(search.text.toString(), it)) }
+                    }
                 })
             }
             return out
         }
 
-        adapter.submitList(build(""))
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    if (content != null) adapter.submitList(build(search.text.toString(), content))
+                }
+            }
+        }
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) { adapter.submitList(build(s?.toString() ?: "")) }
+            override fun afterTextChanged(s: Editable?) {
+                viewModel.content.value?.let { adapter.submitList(build(s?.toString() ?: "", it)) }
+            }
         })
     }
 }

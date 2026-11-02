@@ -9,18 +9,30 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Builtins
+import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+@AndroidEntryPoint
 class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
+    private val viewModel: AzkarContentViewModel by viewModels()
+    private var latestContent: AzkarContent? = null
 
     private var t0 = 0L
     private val cards = CardAdapter()
@@ -67,7 +79,14 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             itemAnimator = null
         }
 
-        refresh()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.content.collect { content ->
+                    latestContent = content
+                    if (content != null) refresh(content)
+                }
+            }
+        }
 
         view.viewTreeObserver.addOnPreDrawListener(
             object : ViewTreeObserver.OnPreDrawListener {
@@ -83,14 +102,15 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         )
     }
 
-    private fun refresh() {
+    private fun refresh(content: AzkarContent? = latestContent) {
+        val current = content ?: return
         val ctx = requireContext()
-        val counts = Store.zikrCounts()
+        val counts = current.zikrs.groupingBy { it.folderId }.eachCount()
         val teal = ctx.getColor(R.color.teal)
         val gold = ctx.getColor(R.color.gold)
         val list = ArrayList<Card>()
 
-        Store.folders().forEach { f ->
+        current.folders.forEach { f ->
             val b = Builtins.byKey(f.id)
 
             list.add(
@@ -136,46 +156,46 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                 gold,
                 true
             ) {
-                promptNewFolder { refresh() }
+                promptNewFolder { latestContent?.let(::refresh) }
             }
         )
 
         cards.submitList(list)
 
-        val n = Store.folders().size
+        val n = current.folders.size
         view?.findViewById<TextView>(R.id.folder_count)?.text =
             if (n == 1) "1 folder" else "$n folders"
     }
 
     private fun writeExport(uri: Uri) {
         val ctx = requireContext()
-
-        try {
-            val text = Store.exportJson()
-            check(ImportJson.parse(text) is ImportJson.Parsed.Ok) {
-                "Generated backup failed validation."
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val text = Store.exportJsonAsync()
+                check(withContext(Dispatchers.Default) { ImportJson.parse(text) is ImportJson.Parsed.Ok }) {
+                    "Generated backup failed validation."
+                }
+                withContext(Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(text.toByteArray(Charsets.UTF_8))
+                    } ?: throw java.io.IOException("Could not open the file for writing.")
+                }
+                AlertDialog.Builder(ctx)
+                    .setTitle("Export complete")
+                    .setMessage(
+                        "Saved ${latestContent?.folders?.size ?: 0} folders, " +
+                            "${latestContent?.zikrs?.size ?: 0} azkar and " +
+                            "${latestContent?.schedules?.size ?: 0} reminders."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                AlertDialog.Builder(ctx)
+                    .setTitle("Export failed")
+                    .setMessage("The file could not be saved. " + (e.message ?: ""))
+                    .setPositiveButton("OK", null)
+                    .show()
             }
-
-            ctx.contentResolver.openOutputStream(uri, "wt")?.use {
-                it.write(text.toByteArray(Charsets.UTF_8))
-            } ?: throw java.io.IOException("Could not open the file for writing.")
-
-            AlertDialog.Builder(ctx)
-                .setTitle("Export complete")
-                .setMessage(
-                    "Saved ${Store.folders().size} folders, " +
-                        "${Store.zikrs().size} azkar and " +
-                        "${Store.schedules().size} reminders."
-                )
-                .setPositiveButton("OK", null)
-                .show()
-
-        } catch (e: Exception) {
-            AlertDialog.Builder(ctx)
-                .setTitle("Export failed")
-                .setMessage("The file could not be saved. " + (e.message ?: ""))
-                .setPositiveButton("OK", null)
-                .show()
         }
     }
 
@@ -292,22 +312,23 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             .setTitle("Import from JSON")
             .setMessage(msg)
             .setPositiveButton("Import") { _, _ ->
-
-                val r = Store.importAll(p)
-
-                ReminderScheduler.rescheduleAll(requireContext())
-
-                refresh()
-
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Import complete")
-                    .setMessage(
-                        "${r.created} new folders, ${r.merged} merged, " +
-                            "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
-                            "${r.reminders} reminders added."
-                    )
-                    .setPositiveButton("OK", null)
-                    .show()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val r = Store.importAllAsync(p)
+                        ReminderScheduler.rescheduleAll(requireContext())
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Import complete")
+                            .setMessage(
+                                "${r.created} new folders, ${r.merged} merged, " +
+                                    "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
+                                    "${r.reminders} reminders added."
+                            )
+                            .setPositiveButton("OK", null)
+                            .show()
+                    } catch (e: Exception) {
+                        showError("Import failed: " + (e.message ?: "database write failed"))
+                    }
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()

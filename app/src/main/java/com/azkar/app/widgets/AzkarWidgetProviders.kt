@@ -13,6 +13,9 @@ import android.widget.RemoteViews
 import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
@@ -22,12 +25,28 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
 
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
         Store.init(ctx)
-        ids.forEach { WidgetUpdater.update(ctx, mgr, it, kind) }
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                ids.forEach { WidgetUpdater.update(ctx, mgr, it, kind) }
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     override fun onAppWidgetOptionsChanged(ctx: Context, mgr: AppWidgetManager, id: Int, newOptions: Bundle) {
         Store.init(ctx)
-        WidgetUpdater.update(ctx, mgr, id, kind)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                WidgetUpdater.update(ctx, mgr, id, kind)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     override fun onDeleted(ctx: Context, ids: IntArray) {
@@ -41,7 +60,7 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
             intent.action == Intent.ACTION_BOOT_COMPLETED
         ) {
             Store.init(ctx)
-            WidgetUpdater.updateAll(ctx)
+            dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
             return
         }
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
@@ -49,14 +68,28 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
             ACTION_COUNT, ACTION_RESET -> {
                 if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
                 Store.init(ctx)
-                if (intent.action == ACTION_COUNT) WidgetLogic.tap(ctx, id, kind) else WidgetLogic.reset(ctx, id)
-                WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
+                dispatch(ctx) {
+                    if (intent.action == ACTION_COUNT) WidgetLogic.tap(ctx, id, kind) else WidgetLogic.reset(ctx, id)
+                    WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
+                }
             }
             ACTION_REFRESH -> {
                 Store.init(ctx)
-                WidgetUpdater.updateAll(ctx)
+                dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
             }
             else -> super.onReceive(ctx, intent)
+        }
+    }
+
+    private fun dispatch(ctx: Context, block: suspend () -> Unit) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Store.awaitReady()
+                block()
+            } finally {
+                pending.finish()
+            }
         }
     }
 }
@@ -85,7 +118,6 @@ object WidgetUpdater {
 
     /** Re-draws every widget (call it when the app's data may have changed, e.g. MainActivity.onStop). */
     fun updateAll(ctx: Context) {
-        Store.init(ctx)
         val mgr = AppWidgetManager.getInstance(ctx)
         WidgetKind.values().forEach { k ->
             mgr.getAppWidgetIds(ComponentName(ctx, providerClass(k))).forEach { update(ctx, mgr, it, k) }

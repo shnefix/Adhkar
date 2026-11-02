@@ -6,9 +6,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.azkar.app.R
 import com.azkar.app.ThemeMode
 import com.azkar.app.data.Store
+import kotlinx.coroutines.launch
 
 /** Shown when a widget is added: pick the design, folder, and theme. */
 class WidgetConfigActivity : AppCompatActivity() {
@@ -20,7 +22,10 @@ class WidgetConfigActivity : AppCompatActivity() {
         val id = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
-        chooseStyle(id, WidgetUpdater.kindOf(this, id))
+        lifecycleScope.launch {
+            Store.awaitReady()
+            chooseStyle(id, WidgetUpdater.kindOf(this@WidgetConfigActivity, id))
+        }
     }
 
     private fun chooseStyle(id: Int, kind: WidgetKind) {

@@ -68,6 +68,9 @@ object ImportJson {
             val id = if (f.isNull("id")) null else (f.opt("id") as? String)?.trim()?.ifEmpty { null }
             val icon = (if (f.isNull("icon")) null else (f.opt("icon") as? String)?.trim()?.ifEmpty { null })
     ?.takeUnless { EmojiRules.isRestricted(it) }   // people/animal emojis are dropped
+            if (id != null && folders.any { it.id == id }) {
+                return Parsed.Error("Folder \"$name\": duplicate folder id \"$id\".")
+            }
             folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false), if (f.opt("home") is Boolean) f.getBoolean("home") else null))
         }
         var unfiled: List<Item> = emptyList()
