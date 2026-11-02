@@ -14,8 +14,42 @@ object WidgetStore {
 
     data class Config(
         val style: WidgetStyle,
-        val folder: String
+        val folder: String,
+        val appearance: Appearance = Appearance()
     )
+
+    data class Appearance(
+        val fontSizeSp: Float = 28f,
+        val lineHeight: Float = 1.5f,
+        val alignment: Int = 1,
+        val textColor: Int = 0,
+        val backgroundColor: Int = 0,
+        val cornerRadiusDp: Float = 22f,
+        val showCounter: Boolean = true,
+        val tapAction: TapAction = TapAction.INCREMENT,
+        val refreshMinutes: Int = 60
+    )
+
+    enum class TapAction { INCREMENT, OPEN_APP, OPEN_READER, NEXT_ZIKR }
+
+    fun savePendingPin(ctx: Context, kind: WidgetKind, style: WidgetStyle) {
+        sp(ctx).edit()
+            .putString("pending_pin_kind", kind.name)
+            .putString("pending_pin_style", style.name)
+            .commit()
+    }
+
+    fun consumePendingPin(ctx: Context): Pair<WidgetKind, WidgetStyle>? {
+        val prefs = sp(ctx)
+        val kind = runCatching { WidgetKind.valueOf(prefs.getString("pending_pin_kind", "") ?: "") }.getOrNull()
+        val style = runCatching { WidgetStyle.valueOf(prefs.getString("pending_pin_style", "") ?: "") }.getOrNull()
+        clearPendingPin(ctx)
+        return if (kind != null && style != null) kind to style else null
+    }
+
+    fun clearPendingPin(ctx: Context) {
+        sp(ctx).edit().remove("pending_pin_kind").remove("pending_pin_style").apply()
+    }
 
     fun config(ctx: Context, id: Int, kind: WidgetKind): Config {
         val s = sp(ctx)
@@ -28,21 +62,45 @@ object WidgetStore {
         }
             ?.takeIf { kind in it.kinds } ?: WidgetStyle.CLASSIC
         val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: "anytime"
-        return Config(style, folder)
+        return Config(style, folder, Appearance(
+            fontSizeSp = s.getFloat("font_size_$id", 28f),
+            lineHeight = s.getFloat("line_height_$id", 1.5f),
+            alignment = s.getInt("alignment_$id", 1),
+            textColor = s.getInt("text_color_$id", 0),
+            backgroundColor = s.getInt("background_color_$id", 0),
+            cornerRadiusDp = s.getFloat("corner_$id", 22f),
+            showCounter = s.getBoolean("counter_$id", true),
+            tapAction = runCatching { TapAction.valueOf(s.getString("tap_$id", TapAction.INCREMENT.name)!!) }
+                .getOrDefault(TapAction.INCREMENT),
+            refreshMinutes = s.getInt("refresh_$id", 60)
+        ))
     }
 
     fun setConfig(
         ctx: Context,
         id: Int,
         style: WidgetStyle,
-        folder: String
+        folder: String,
+        appearance: Appearance = config(ctx, id, kindFor(style)).appearance
     ) {
         val edit = sp(ctx).edit()
             .putString("style_$id", style.name)
             .putString("folder_$id", folder)
+            .putFloat("font_size_$id", appearance.fontSizeSp)
+            .putFloat("line_height_$id", appearance.lineHeight)
+            .putInt("alignment_$id", appearance.alignment)
+            .putInt("text_color_$id", appearance.textColor)
+            .putInt("background_color_$id", appearance.backgroundColor)
+            .putFloat("corner_$id", appearance.cornerRadiusDp)
+            .putBoolean("counter_$id", appearance.showCounter)
+            .putString("tap_$id", appearance.tapAction.name)
+            .putInt("refresh_$id", appearance.refreshMinutes)
         edit.commit()
         saveProgress(ctx, id, 0, 0)
     }
+
+    private fun kindFor(style: WidgetStyle): WidgetKind =
+        style.kinds.firstOrNull() ?: WidgetKind.SMALL
 
     /** (index, count) for today; (0, 0) if the saved progress is from a previous day. */
     fun progress(ctx: Context, id: Int): Pair<Int, Int> {
@@ -56,7 +114,11 @@ object WidgetStore {
     }
 
     fun clear(ctx: Context, id: Int) {
-        sp(ctx).edit().remove("style_$id").remove("folder_$id").remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
+        sp(ctx).edit().remove("style_$id").remove("folder_$id")
+            .remove("font_size_$id").remove("line_height_$id").remove("alignment_$id")
+            .remove("text_color_$id").remove("background_color_$id").remove("corner_$id")
+            .remove("counter_$id").remove("tap_$id").remove("refresh_$id")
+            .remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
     }
 }
 
@@ -78,4 +140,12 @@ object WidgetLogic {
     }
 
     fun reset(ctx: Context, id: Int) = WidgetStore.saveProgress(ctx, id, 0, 0)
+
+    fun next(ctx: Context, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        val items = Store.readerItems(cfg.folder)
+        if (items.isEmpty()) return
+        val (idx, _) = WidgetStore.progress(ctx, id)
+        WidgetStore.saveProgress(ctx, id, (idx + 1).coerceAtMost(items.size), 0)
+    }
 }

@@ -21,7 +21,7 @@ import com.azkar.app.ui.ReaderFragment
 import com.azkar.app.ui.Tab
 import com.azkar.app.widgets.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
-
+  
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private var currentTab: Tab = Tab.HOME

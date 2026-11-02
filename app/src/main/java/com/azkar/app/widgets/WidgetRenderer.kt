@@ -53,6 +53,7 @@ class WidgetRenderer(ctx: Context) {
     private val PANEL get() = palette.panel
     private val PANEL_BORDER get() = palette.panelBorder
     private val OUTLINE get() = palette.outline
+    private var appearance = WidgetStore.Appearance()
 
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
@@ -62,7 +63,16 @@ class WidgetRenderer(ctx: Context) {
 
     // ───────────────────────── entry point ─────────────────────────
 
-    fun render(style: WidgetStyle, kind: WidgetKind, m: WidgetModel, wDp: Float, hDp: Float, density: Float): Bitmap {
+    fun render(
+        style: WidgetStyle,
+        kind: WidgetKind,
+        m: WidgetModel,
+        wDp: Float,
+        hDp: Float,
+        density: Float,
+        appearance: WidgetStore.Appearance = WidgetStore.Appearance()
+    ): Bitmap {
+        this.appearance = appearance
         val widthDp = wDp.coerceAtLeast(1f)
         val heightDp = hDp.coerceAtLeast(1f)
         var s = density
@@ -98,7 +108,7 @@ class WidgetRenderer(ctx: Context) {
         moon(c, r - 16, t, 16f)
         val barTop = b - 23
         bar(c, l, barTop, r, 4f, m.shown / m.target.toFloat())
-        text(c, "${m.shown} / ${m.target}", r, b - 6.5f, 11f, TEXT, dmBold, Paint.Align.RIGHT)
+        counterText(c, "${m.shown} / ${m.target}", r, b - 6.5f, 11f, TEXT, dmBold, Paint.Align.RIGHT)
         arabic(c, m.cur!!.arabic, l, t + 22, r, barTop - 8, 27f, 1.5f, TEXT)
     }
 
@@ -112,8 +122,8 @@ class WidgetRenderer(ctx: Context) {
         val top = h / 2f - 48f
         val cy = top + 38f
         ring(c, cx, cy, 31f, 6f, m.shown / m.target.toFloat())
-        text(c, "${m.shown}", cx, cy - 6f, 20f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, if (m.finished) strings.done else strings.of(m.target), cx, cy + 11f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+        counterText(c, "${m.shown}", cx, cy - 6f, 20f, TEXT, dmBold, Paint.Align.CENTER)
+        counterText(c, if (m.finished) strings.done else strings.of(m.target), cx, cy + 11f, 10f, MUTED, dmReg, Paint.Align.CENTER)
     }
 
     private fun classicLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
@@ -128,7 +138,7 @@ class WidgetRenderer(ctx: Context) {
         arabic(c, m.cur!!.arabic, l + 14, pTop + 14, r - 14, pBot - 14, 24f, 1.7f, GOLD_SOFT)
         val cy = b - 26f
         ring(c, l + 26f, cy, 21f, 5f, m.shown / m.target.toFloat())
-        text(c, "${m.shown}", l + 26f, cy, 13f, TEXT, dmBold, Paint.Align.CENTER)
+        counterText(c, "${m.shown}", l + 26f, cy, 13f, TEXT, dmBold, Paint.Align.CENTER)
         button(c, RectF(r - 56f, cy - 22f, r, cy + 22f), if (m.finished) "↺" else "", true, 13f)
     }
 
@@ -144,7 +154,7 @@ class WidgetRenderer(ctx: Context) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 15f
         text(c, "${m.folderName.uppercase()} AZKAR", l, t + 9, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 50)
-        text(c, "${m.done} / ${m.n}", r, t + 9, 11f, MUTED, dmReg, Paint.Align.RIGHT)
+        counterText(c, "${m.done} / ${m.n}", r, t + 9, 11f, MUTED, dmReg, Paint.Align.RIGHT)
         val shown = min(3, m.n)
         val start = (m.curIdx - 1).coerceIn(0, m.n - shown)
         var y = t + 24f
@@ -161,7 +171,7 @@ class WidgetRenderer(ctx: Context) {
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
         text(c, m.folderName, l, t + 9, 15f, TEXT, dmBold, Paint.Align.LEFT, 0f, r - l - 60)
         text(c, strings.azkar(m.n), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 60)
-        text(c, "${m.done} / ${m.n}", r, t + 8, 11f, GOLD, dmBold, Paint.Align.RIGHT)
+        counterText(c, "${m.done} / ${m.n}", r, t + 8, 11f, GOLD, dmBold, Paint.Align.RIGHT)
         bar(c, l, t + 43f, r, 4f, m.done / m.n.toFloat())
         val listTop = t + 57f
         val maxRows = max(1, floor((b - listTop - 6f) / 40f).toInt())
@@ -193,7 +203,7 @@ class WidgetRenderer(ctx: Context) {
         }
         val tx = x0 + 28
         if (state == 1) {
-            text(c, "${m.count}/${m.items[i].target}", x1, cy, 12f, GOLD, dmBold, Paint.Align.RIGHT)
+            counterText(c, "${m.count}/${m.items[i].target}", x1, cy, 12f, GOLD, dmBold, Paint.Align.RIGHT)
             text(c, m.labels[i], tx, cy, 13f, TEXT, dmBold, Paint.Align.LEFT, 0f, x1 - 44f - tx)
         } else {
             val aw = min(120f, (x1 - tx) * 0.55f)
@@ -210,15 +220,15 @@ class WidgetRenderer(ctx: Context) {
         val s = (min(w, h) / 158f).coerceIn(0.8f, 1.4f)
         val cx = w / 2; val cy = h / 2
         beads(c, cx, cy, 50f * s, 6f * s, m.beadTotal, m.beadFilled)
-        text(c, "${m.beadFilled}", cx, cy - 5f, 30f, TEXT, dmBold, Paint.Align.CENTER)
-        text(c, strings.of(m.beadTotal), cx, cy + 19f, 10f, MUTED, dmReg, Paint.Align.CENTER)
+        counterText(c, "${m.beadFilled}", cx, cy - 5f, 30f, TEXT, dmBold, Paint.Align.CENTER)
+        counterText(c, strings.of(m.beadTotal), cx, cy + 19f, 10f, MUTED, dmReg, Paint.Align.CENTER)
     }
 
     private fun tasbihLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         card(c, w, h, CARD_BORDER)
         val l = 19f; val r = w - 19f; val t = 19f; val b = h - 19f
         text(c, strings.tasbih, l, t + 9, 15f, TEXT, dmBold)
-        text(c, strings.round(m.round, m.rounds, m.target), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
+        counterText(c, strings.round(m.round, m.rounds, m.target), l, t + 26.5f, 11f, MUTED, dmReg, Paint.Align.LEFT, 0f, r - l - 70)
         chip(c, "${m.shown} / ${m.target}", r, t)
         val btnTop = b - 44f
         val top = t + 43f
@@ -228,7 +238,7 @@ class WidgetRenderer(ctx: Context) {
         val cx = w / 2; val cy = (top + bot) / 2
         beads(c, cx, cy, 80f * s, 9f * s, m.beadTotal, m.beadFilled)
         arabic(c, m.cur!!.arabic, cx - 58f * s, cy - 28f * s, cx + 58f * s, cy + 11f * s, 28f * s, 1.4f, TEXT)
-        text(c, strings.countOf(m.beadFilled, m.beadTotal), cx, cy + 20.5f * s, 12f, MUTED, dmReg, Paint.Align.CENTER)
+        counterText(c, strings.countOf(m.beadFilled, m.beadTotal), cx, cy + 20.5f * s, 12f, MUTED, dmReg, Paint.Align.CENTER)
         button(c, RectF(l, btnTop, l + 72f, b), strings.reset, false, 13f)
         button(c, RectF(l + 82f, btnTop, r, b), "", true, 14f)
     }
@@ -239,7 +249,7 @@ class WidgetRenderer(ctx: Context) {
         card(c, w, h, CARD_BORDER)
         val l = 15f; val r = w - 15f; val t = 15f; val b = h - 15f
         text(c, strings.dhikr, w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f)
-        text(c, "${m.shown}", w / 2, b - 7.5f, 12f, MUTED, dmReg, Paint.Align.CENTER, 0f, r - l)
+        counterText(c, "${m.shown}", w / 2, b - 7.5f, 12f, MUTED, dmReg, Paint.Align.CENTER, 0f, r - l)
         arabic(c, m.cur!!.arabic, l, t + 18, r, b - 24, 34f, 1.4f, TEXT)
     }
 
@@ -268,8 +278,10 @@ class WidgetRenderer(ctx: Context) {
 
     private fun card(c: Canvas, w: Float, h: Float, border: Int) {
         val rect = RectF(.5f, .5f, w - .5f, h - .5f)
-        c.drawRoundRect(rect, 26f, 26f, fillP(BLACK))
-        c.drawRoundRect(rect, 26f, 26f, strokeP(border, 1f))
+        val fill = if (appearance.backgroundColor != 0) appearance.backgroundColor else BLACK
+        val radius = appearance.cornerRadiusDp.coerceIn(0f, min(w, h) / 2f)
+        c.drawRoundRect(rect, radius, radius, fillP(fill))
+        c.drawRoundRect(rect, radius, radius, strokeP(border, 1f))
     }
 
     private fun chip(c: Canvas, s: String, right: Float, top: Float) {
@@ -352,6 +364,13 @@ class WidgetRenderer(ctx: Context) {
         c.drawText(str, x, cy - (fm.ascent + fm.descent) / 2f, tp)
     }
 
+    private fun counterText(
+        c: Canvas, s: String, x: Float, cy: Float, size: Float, color: Int, tf: Typeface,
+        align: Paint.Align = Paint.Align.LEFT, spacing: Float = 0f, maxW: Float = 0f,
+    ) {
+        if (appearance.showCounter) text(c, s, x, cy, size, color, tf, align, spacing, maxW)
+    }
+
     private fun layout(s: String, w: Int, size: Float, lh: Float, color: Int, bold: Boolean, align: Layout.Alignment, maxLines: Int): StaticLayout {
         val t = arabicPaint
         t.reset()
@@ -373,9 +392,20 @@ class WidgetRenderer(ctx: Context) {
         bold: Boolean = true, align: Layout.Alignment = Layout.Alignment.ALIGN_CENTER, v: V = V.CENTER,
     ) {
         val w = max(1, (r - l).toInt())
-        var sz = size
-        var lay = layout(s, w, sz, lh, color, bold, align, 0)
-        while (lay.height > (b - t) && sz > size * 0.5f) { sz *= 0.93f; lay = layout(s, w, sz, lh, color, bold, align, 0) }
+        val configuredSize = appearance.fontSizeSp.takeIf { it > 0f } ?: size
+        val configuredLineHeight = appearance.lineHeight.takeIf { it > 0f } ?: lh
+        val configuredColor = appearance.textColor.takeIf { it != 0 } ?: color
+        val configuredAlign = when (appearance.alignment) {
+            0 -> Layout.Alignment.ALIGN_NORMAL
+            2 -> Layout.Alignment.ALIGN_OPPOSITE
+            else -> align
+        }
+        var sz = configuredSize
+        var lay = layout(s, w, sz, configuredLineHeight, configuredColor, bold, configuredAlign, 0)
+        while (lay.height > (b - t) && sz > configuredSize * 0.5f) {
+            sz *= 0.93f
+            lay = layout(s, w, sz, configuredLineHeight, configuredColor, bold, configuredAlign, 0)
+        }
         val y = when (v) { V.TOP -> t; V.CENTER -> t + ((b - t) - lay.height) / 2f; V.BOTTOM -> b - lay.height }
         c.save(); c.translate(l, y); lay.draw(c); c.restore()
     }

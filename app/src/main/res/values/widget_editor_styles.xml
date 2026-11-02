@@ -1,0 +1,41 @@
+<resources>
+    <style name="WidgetEditorLabel" parent="TB">
+        <item name="android:textColor">@color/widget_editor_muted</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.122</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="WidgetEditorBody" parent="T">
+        <item name="android:textColor">@color/widget_editor_text</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="WidgetEditorMedium" parent="TM">
+        <item name="android:textColor">@color/widget_editor_text</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="WidgetEditorButton" parent="Btn">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/dm_sans_medium</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+    <style name="WidgetEditorSwitch" parent="Widget.AppCompat.CompoundButton.Switch">
+        <item name="android:fontFamily">@font/dm_sans_regular</item>
+        <item name="android:textColor">@color/widget_editor_text</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:buttonTint">@color/widget_editor_switch_thumb</item>
+        <item name="android:trackTint">@color/widget_editor_switch_track</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+    <style name="WidgetEditorSeekBar" parent="Widget.AppCompat.SeekBar">
+        <item name="android:progressDrawable">@drawable/widget_editor_seekbar_track</item>
+        <item name="android:thumb">@drawable/widget_editor_seekbar_thumb</item>
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+    </style>
+</resources>
