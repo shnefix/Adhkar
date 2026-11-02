@@ -152,6 +152,9 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
         try {
             val text = Store.exportJson()
+            check(ImportJson.parse(text) is ImportJson.Parsed.Ok) {
+                "Generated backup failed validation."
+            }
 
             ctx.contentResolver.openOutputStream(uri, "wt")?.use {
                 it.write(text.toByteArray(Charsets.UTF_8))

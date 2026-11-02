@@ -30,6 +30,9 @@ object Store {
     private const val K_AWAKE = "keep_awake"
     private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
     private const val K_POSC = "posc_"    // posc_<folderId> = its count
+    private const val K_SCHEMA = "schema_version"
+    private const val K_RECOVERED = "data_recovered"
+    private const val SCHEMA_VERSION = 1
 
     // In-memory copies: the single source of truth for every screen.
     private var zCache: List<Zikr> = emptyList()
@@ -42,13 +45,36 @@ object Store {
         if (::sp.isInitialized) return
         appCtx = context.applicationContext
         sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
-        zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
-        fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
-        sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
-        hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
+        val recovered = try {
+            zCache = parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]")
+            fCache = parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]")
+            sCache = parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
+            hzCache = parseIds(sp.getString(K_HZ, "[]") ?: "[]")
+            false
+        } catch (e: Exception) {
+            android.util.Log.e("Azkar", "Stored data was corrupt; starting with empty data", e)
+            zCache = emptyList()
+            fCache = emptyList()
+            sCache = emptyList()
+            hzCache = emptySet()
+            true
+        }
+        if (recovered) sp.edit().clear().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
+        else migrateSchema()
         syncDefaults()
         migrateSchedules()
         sanitizeIcons()
+    }
+
+    private fun migrateSchema() {
+        val version = sp.getInt(K_SCHEMA, 0)
+        if (version < SCHEMA_VERSION) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).commit()
+    }
+
+    fun consumeRecoveryNotice(): Boolean {
+        val wasRecovered = sp.getBoolean(K_RECOVERED, false)
+        if (wasRecovered) sp.edit().remove(K_RECOVERED).apply()
+        return wasRecovered
     }
 
     // ---------- Default azkar (assets/default_folders.json) ----------

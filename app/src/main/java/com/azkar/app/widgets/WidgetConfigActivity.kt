@@ -63,14 +63,51 @@ class WidgetConfigActivity : AppCompatActivity() {
                     2 -> ThemeMode.OLED
                     else -> null
                 }
-                saveConfig(id, kind, style, folder, theme)
+                chooseRefresh(id, kind, style, folder, theme)
             }
             .setOnCancelListener { finish() }
             .show()
     }
 
-    private fun saveConfig(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String, theme: Int?) {
-        WidgetStore.setConfig(this, id, style, folder, theme)
+    private fun chooseRefresh(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String, theme: Int?) {
+        val values = WidgetStore.Refresh.values()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_refresh_title)
+            .setItems(values.map { getString(it.label) }.toTypedArray()) { _, i ->
+                chooseTapAction(id, kind, style, folder, theme, values[i])
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun chooseTapAction(
+        id: Int,
+        kind: WidgetKind,
+        style: WidgetStyle,
+        folder: String,
+        theme: Int?,
+        refresh: WidgetStore.Refresh
+    ) {
+        val values = WidgetStore.TapAction.values()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.widget_tap_action_title)
+            .setItems(values.map { getString(it.label) }.toTypedArray()) { _, i ->
+                saveConfig(id, kind, style, folder, theme, refresh, values[i])
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+
+    private fun saveConfig(
+        id: Int,
+        kind: WidgetKind,
+        style: WidgetStyle,
+        folder: String,
+        theme: Int?,
+        refresh: WidgetStore.Refresh,
+        tapAction: WidgetStore.TapAction
+    ) {
+        WidgetStore.setConfig(this, id, style, folder, theme, refresh, tapAction)
         WidgetUpdater.update(this, AppWidgetManager.getInstance(this), id, kind)
         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         finish()

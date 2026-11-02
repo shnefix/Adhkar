@@ -15,9 +15,28 @@ android {
         versionName = "1.0"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
+    val hasReleaseSigning = providers.gradleProperty("AZKAR_STORE_FILE").isPresent
+    signingConfigs {
+        create("release") {
+            val storeFilePath = providers.gradleProperty("AZKAR_STORE_FILE").orNull
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = providers.gradleProperty("AZKAR_STORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("AZKAR_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("AZKAR_KEY_PASSWORD").orNull
+            }
+        }
+        buildTypes {
+            release {
+                isMinifyEnabled = true
+                isShrinkResources = true
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+                // CI can verify the shrunk artifact without storing production credentials.
+                signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

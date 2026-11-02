@@ -107,7 +107,7 @@ class WidgetRenderer(ctx: Context, theme: Int? = null) {
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
         val leftR = r - 84f - 14f
         text(c, "${m.folderName.uppercase()} · ${m.position} OF ${m.n}", l, t + 6, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, leftR - l)
-        arabic(c, m.cur!!.arabic, l, t + 16, leftR, b, 24f, 1.6f, TEXT, true, Layout.Alignment.ALIGN_NORMAL, V.BOTTOM)
+        arabic(c, m.cur!!.arabic, l, t + 16, leftR, b, 24f, 1.6f, TEXT, true, Layout.Alignment.ALIGN_CENTER, V.BOTTOM)
         val cx = r - 42f
         val top = h / 2f - 48f
         val cy = top + 38f

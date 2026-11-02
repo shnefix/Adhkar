@@ -16,6 +16,7 @@ import com.azkar.app.data.Store
 
 const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
+const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
 
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
 
@@ -50,6 +51,10 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
                 Store.init(ctx)
                 if (intent.action == ACTION_COUNT) WidgetLogic.tap(ctx, id, kind) else WidgetLogic.reset(ctx, id)
                 WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
+            }
+            ACTION_REFRESH -> {
+                Store.init(ctx)
+                WidgetUpdater.updateAll(ctx)
             }
             else -> super.onReceive(ctx, intent)
         }
@@ -89,6 +94,7 @@ object WidgetUpdater {
 
     fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
+        WidgetStore.scheduleRefresh(ctx, id, cfg.refresh)
         val model = WidgetModel.load(ctx, id, cfg.folder)
 
         // Real size of this widget on the launcher grid, in dp.
@@ -117,7 +123,12 @@ object WidgetUpdater {
         rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
         rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
 
-        rv.setOnClickPendingIntent(R.id.hit_open, openApp(ctx, id, cfg.folder))
+        val primary = if (cfg.tapAction == WidgetStore.TapAction.COUNT) {
+            action(ctx, id, kind, ACTION_COUNT)
+        } else {
+            openApp(ctx, id, cfg.folder)
+        }
+        rv.setOnClickPendingIntent(R.id.hit_open, primary)
         val count = action(ctx, id, kind, ACTION_COUNT)
         rv.setOnClickPendingIntent(R.id.hit_count, count)
         if (layout == R.layout.widget_classic_large) {
@@ -126,12 +137,14 @@ object WidgetUpdater {
             rv.setOnClickPendingIntent(R.id.hit_count2, count)
             rv.setOnClickPendingIntent(R.id.btn_plus, count)
         }
+
         if (layout == R.layout.widget_tasbih_large) {
             rv.setContentDescription(R.id.btn_main, ctx.getString(R.string.widget_action_count))
             rv.setContentDescription(R.id.btn_reset, ctx.getString(R.string.widget_action_reset))
             rv.setOnClickPendingIntent(R.id.btn_main, count)
             rv.setOnClickPendingIntent(R.id.btn_reset, action(ctx, id, kind, ACTION_RESET))
         }
+
         mgr.updateAppWidget(id, rv)
     }
 

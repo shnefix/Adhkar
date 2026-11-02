@@ -71,38 +71,39 @@ class WidgetRendererTest {
             assertTrue(contrast(background, foreground) >= 4.5)
         }
 
-        @Test
-        fun rendersEmptyAndTinyWidgetsWithoutCrashing() {
-            Store.init(context)
-            val empty = WidgetModel("Empty", emptyList(), emptyList(), 0, 0, "")
-            for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
-                val bitmap = WidgetRenderer(context, theme).render(
-                    WidgetStyle.CLASSIC, WidgetKind.SMALL, empty, -10f, 0f, 1f
-                )
-                assertEquals(1, bitmap.width)
-                assertEquals(1, bitmap.height)
-                bitmap.recycle()
-            }
-        }
+    }
 
-        @Test
-        fun rendersLongArabicTextWithExplicitTheme() {
-            val longText = "اللَّهُمَّ ".repeat(120)
-            val model = WidgetModel(
-                "A folder with an unusually long name that must be clipped",
-                listOf(com.azkar.app.data.ReaderItem(longText, 100)),
-                emptyList(),
-                0,
-                0,
-                ""
+    @Test
+    fun rendersEmptyAndTinyWidgetsWithoutCrashing() {
+        Store.init(context)
+        val empty = WidgetModel("Empty", emptyList(), emptyList(), 0, 0, "")
+        for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
+            val bitmap = WidgetRenderer(context, theme).render(
+                WidgetStyle.CLASSIC, WidgetKind.SMALL, empty, -10f, 0f, 1f
             )
-            val bitmap = WidgetRenderer(context, ThemeMode.OLED).render(
-                WidgetStyle.CALLIGRAPHY, WidgetKind.MEDIUM, model, 338f, 158f, 1f
-            )
-            assertTrue(bitmap.width > 0)
-            assertTrue(bitmap.height > 0)
+            assertEquals(1, bitmap.width)
+            assertEquals(1, bitmap.height)
             bitmap.recycle()
         }
+    }
+
+    @Test
+    fun rendersLongArabicTextWithExplicitTheme() {
+        val longText = "اللَّهُمَّ ".repeat(120)
+        val model = WidgetModel(
+            "A folder with an unusually long name that must be clipped",
+            listOf(com.azkar.app.data.ReaderItem(longText, 100)),
+            emptyList(),
+            0,
+            0,
+            ""
+        )
+        val bitmap = WidgetRenderer(context, ThemeMode.OLED).render(
+            WidgetStyle.CALLIGRAPHY, WidgetKind.MEDIUM, model, 338f, 158f, 1f
+        )
+        assertTrue(bitmap.width > 0)
+        assertTrue(bitmap.height > 0)
+        bitmap.recycle()
     }
 
     private fun contrast(first: Int, second: Int): Double {

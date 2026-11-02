@@ -57,6 +57,13 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
         view.findViewById<View>(R.id.btn_add_rem).setOnClickListener { edit(null) }
+        view.findViewById<View>(R.id.btn_test_notification).setOnClickListener {
+            val sample = Store.schedules().firstOrNull()
+            if (sample != null) {
+                ReminderScheduler.notify(ctx, sample.copy(title = getString(R.string.test_notification)))
+                Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+            }
+        }
         view.findViewById<View>(R.id.exact_row).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
