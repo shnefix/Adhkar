@@ -7,12 +7,12 @@
 <TextView style="@style/TM" android:text="@string/widgets" android:textSize="14sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <View android:layout_width="8dp" android:layout_height="1dp"/>
-<FrameLayout android:id="@+id/btn_notifications" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_card22" android:contentDescription="Settings" android:clickable="true" android:focusable="true">
+<FrameLayout android:id="@+id/btn_notifications" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_card22" android:contentDescription="@string/settings" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_bell_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_customize" android:layout_width="wrap_content" android:layout_height="44dp" android:paddingStart="14dp" android:paddingEnd="16dp" android:gravity="center_vertical" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_sliders_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text"/>
-<TextView style="@style/TB" android:text="Customize" android:textSize="14sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/customize" android:textSize="14sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:id="@+id/sections" android:layout_marginTop="0dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

@@ -6,6 +6,6 @@
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="Your folder" android:textSize="14sp" android:textColor="@color/muted" android:lineHeight="20sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/your_folder" android:textSize="14sp" android:textColor="@color/muted" android:lineHeight="20sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>

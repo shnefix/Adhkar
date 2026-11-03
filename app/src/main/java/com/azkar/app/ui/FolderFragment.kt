@@ -56,7 +56,7 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
             onTap = { row ->
                 val state = current
                 if (viewModel.selecting) { if (!selected.remove(row.id)) selected.add(row.id); refresh() }
-                else if (row.hidden) Toast.makeText(ctx, "Hidden azkar are skipped while reading. Tap Select, then Show.", Toast.LENGTH_SHORT).show()
+                else if (row.hidden) Toast.makeText(ctx, R.string.hidden_skipped_toast, Toast.LENGTH_SHORT).show()
                 else if (state != null) nav().push(ReaderFragment.of(id, Visibility.readerIndex(state.zikrs, state.hidden, row.id).coerceAtLeast(0)))
             },
             onLong = { row -> if (!viewModel.selecting) { viewModel.selecting = true; selected.add(row.id); refresh() } },
@@ -72,11 +72,11 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
             val nHidden = list.count { it.id in hidden }
             title.text = state.name
             empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            info.text = when (nHidden) { 0 -> ""; 1 -> "1 hidden"; else -> "$nHidden hidden" }
-            btnSelect.text = if (selecting) "Cancel" else "Select"
+            info.text = if (nHidden == 0) "" else resources.getQuantityString(R.plurals.hidden_count, nHidden, nHidden)
+            btnSelect.text = getString(if (selecting) R.string.cancel else R.string.select)
             btnSelect.visibility = if (list.isEmpty()) View.INVISIBLE else View.VISIBLE
             bar.visibility = if (selecting) View.VISIBLE else View.GONE
-            selCount.text = "${selected.size} selected"
+            selCount.text = resources.getQuantityString(R.plurals.selected_count, selected.size, selected.size)
             btnHide.alpha = if (selected.isEmpty()) 0.4f else 1f
             btnShow.alpha = if (selected.isEmpty()) 0.4f else 1f
             backCb.isEnabled = selecting

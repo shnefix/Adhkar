@@ -16,11 +16,11 @@ private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LA
  * The four designs. [kinds] = sizes the renderer can draw (widgets already placed keep working);
  * [offered] = sizes the pickers still offer for new widgets.
  */
-enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>, val offered: Set<WidgetKind> = kinds) {
-    CLASSIC("Classic", ALL_KINDS, setOf(WidgetKind.SMALL)),
-    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE), setOf(WidgetKind.MEDIUM)),
-    TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
-    CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
+enum class WidgetStyle(@androidx.annotation.StringRes val label: Int, val kinds: Set<WidgetKind>, val offered: Set<WidgetKind> = kinds) {
+    CLASSIC(com.azkar.app.R.string.style_classic, ALL_KINDS, setOf(WidgetKind.SMALL)),
+    CHECKLIST(com.azkar.app.R.string.style_checklist, setOf(WidgetKind.MEDIUM, WidgetKind.LARGE), setOf(WidgetKind.MEDIUM)),
+    TASBIH(com.azkar.app.R.string.style_tasbih, setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
+    CALLIGRAPHY(com.azkar.app.R.string.style_calligraphy, setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
 }
 
 /** Everything a renderer needs for one widget, already read from [Store]. */

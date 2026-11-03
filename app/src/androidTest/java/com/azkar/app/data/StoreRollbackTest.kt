@@ -102,6 +102,24 @@ class StoreRollbackTest {
         }
         override suspend fun insertZikrs(zikrs: List<ZikrEntity>) = Unit
         override suspend fun insertSchedules(schedules: List<ScheduleEntity>) = Unit
+        override suspend fun upsertFolders(folders: List<FolderEntity>) {
+            val byId = folders.associateBy { it.id }
+            this.folders = (this.folders.filter { it.id !in byId } + folders).sortedBy { it.position }
+        }
+        override suspend fun upsertZikrs(zikrs: List<ZikrEntity>) = Unit
+        override suspend fun upsertSchedules(schedules: List<ScheduleEntity>) = Unit
+        override suspend fun deleteFoldersById(ids: List<String>) {
+            folders = folders.filter { it.id !in ids }
+        }
+        override suspend fun deleteZikrsById(ids: List<String>) = Unit
+        override suspend fun deleteSchedulesById(ids: List<String>) = Unit
+        override suspend fun applyChanges(c: ContentChanges) {
+            if (failNext) {
+                failNext = false
+                error("simulated Room write failure")
+            }
+            super.applyChanges(c)
+        }
         override suspend fun replaceAllAsync(
             folders: List<FolderEntity>,
             zikrs: List<ZikrEntity>,

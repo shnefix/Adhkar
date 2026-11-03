@@ -164,7 +164,7 @@ object ReminderScheduler {
             .setSmallIcon(R.drawable.ic_bell_1p75)
             .setColor(ctx.getColor(R.color.gold))
             .setContentTitle(title)
-            .setContentText(s.message)
+            .setContentText(s.message.ifBlank { ctx.getString(R.string.reminder_default_message) })
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -199,12 +199,20 @@ class ReminderReceiver : BroadcastReceiver() {
     }
 }
 
-/** Re-arms every reminder after a reboot, or as exact alarms once that permission is granted. */
+/** Re-arms every reminder after a reboot, an app update, a new exact-alarm grant, or a clock / time zone change. */
 class BootReceiver : BroadcastReceiver() {
+    private companion object {
+        val RESCHEDULE_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+        )
+    }
+
     override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
-            intent.action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
-        ) return
+        if (intent.action !in RESCHEDULE_ACTIONS) return
         launchWhenReady(ctx) {
             ReminderScheduler.createChannel(ctx)
             ReminderScheduler.rescheduleAll(ctx)

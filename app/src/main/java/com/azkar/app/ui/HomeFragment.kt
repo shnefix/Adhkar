@@ -19,7 +19,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class HomeFragment : Fragment(R.layout.fragment_home) {
+class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
     private val viewModel: HomeViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -37,7 +37,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 when {
                     Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
                     Store.readerItems(f.id).isEmpty() -> {
-                        Toast.makeText(ctx, "All azkar in this folder are hidden.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, R.string.all_hidden_toast, Toast.LENGTH_SHORT).show()
                         nav().push(FolderFragment.of(f.id))
                     }
                     else -> nav().push(ReaderFragment.of(f.id))
@@ -75,12 +75,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 return box
             }
 
-            val daily = section("Daily collections", collections.map { card(it) })
+            val daily = section(getString(R.string.daily_collections), collections.map { card(it) })
             val own = section(null, mine.map { card(it) })
             val parts: List<View?> = when (Store.placement()) {
                 Placement.TOP -> listOf(own, daily)
                 Placement.BOTTOM -> listOf(daily, own)
-                Placement.MIXED -> listOf(section("Daily collections", shown.map { card(it) }))
+                Placement.MIXED -> listOf(section(getString(R.string.daily_collections), shown.map { card(it) }))
             }
             parts.filterNotNull().forEachIndexed { i, v ->
                 sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx))

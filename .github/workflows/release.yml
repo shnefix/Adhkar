@@ -1,0 +1,64 @@
+name: Release
+
+# Push a tag like v1.1 (matching versionName in app/build.gradle.kts) to build the signed APK and publish it
+# as a GitHub release. Needs these repository secrets (Settings > Secrets and variables > Actions):
+#   RELEASE_KEYSTORE_BASE64  the release .jks, base64-encoded
+#   RELEASE_STORE_PASSWORD   its store password
+#   RELEASE_KEY_ALIAS        the key alias
+#   RELEASE_KEY_PASSWORD     the key password
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Tag must match versionName
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version"
+            exit 1
+          fi
+
+      - name: Write signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "::error::RELEASE_KEYSTORE_BASE64 is not set"; exit 1; fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+      - name: Test and build
+        run: ./gradlew testDebugUnitTest assembleRelease
+
+      # Only the signed release APK is published, never a debug or unsigned one.
+      - name: Verify signature
+        run: |
+          apk=$(ls app/build/outputs/apk/release/Adhkar-*.apk)
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$apksigner" verify --print-certs "$apk"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/Adhkar-*.apk --title "Adhkar ${GITHUB_REF_NAME#v}" --generate-notes
+
+      - name: Remove signing files
+        if: always()
+        run: rm -f release.jks keystore.properties

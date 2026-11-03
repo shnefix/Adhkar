@@ -31,13 +31,14 @@ many times to repeat it, and organise it into your own folders.
 - **Add your own azkar**: write any zikr or dua, set its repeat count, and put it in your own folders;
   edit, reorder or hide any folder, including the built-in ones
 - Morning, evening, before-sleep and other azkar collections built in
-- Focused Arabic reader with tap-to-advance, counters, adjustable text size and keep-screen-on
-- Reminders for morning, evening and before sleep; morning and evening can follow prayer times
-  for your approximate location (optional)
+- Focused Arabic reader with tap-to-advance, counters, notes, adjustable text size and keep-screen-on
+- Reminders for morning, evening and before sleep; they can follow prayer times for your approximate
+  location (optional), with a choice of calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more)
+  and the standard or Hanafi Asr time
 - Optional tracking of the days you finish your morning and evening azkar, with streaks
 - Home-screen widgets in many sizes and styles, including tap-to-count
 - Import and export your azkar as a JSON file
-- OLED black theme, Arabic (RTL) support, bundled Amiri and DM Sans fonts
+- Full Arabic interface on Arabic phones (RTL), OLED black theme, bundled Amiri and DM Sans fonts
 
 ## Install
 
@@ -76,12 +77,22 @@ copy `keystore.properties.example` to `keystore.properties` and fill in your own
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest          # unit tests (prayer sessions, reminder times, widget layout math)
+./gradlew testDebugUnitTest          # unit tests (prayer times, reminders, reader, import, tracking, widgets)
 ./gradlew lintDebug                  # Android lint
 ./gradlew connectedDebugAndroidTest  # instrumented tests on a device or emulator (database, import/export, widgets)
 ```
 
 Note: `connectedDebugAndroidTest` uninstalls the app from the device afterwards, which deletes its data.
+CI runs the unit tests and lint on every push, and the instrumented tests on an emulator.
+
+## Releasing
+
+1. Raise `versionCode` and set `versionName` in `app/build.gradle.kts`, then commit.
+2. Push a tag named after the version, for example `git tag v1.1 && git push origin v1.1`.
+
+The Release workflow builds the APK, checks it is signed with the release key, and publishes it as a
+GitHub release. It needs four repository secrets: `RELEASE_KEYSTORE_BASE64` (the `.jks` file,
+base64-encoded), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_PASSWORD`.
 
 ## Contributing
 

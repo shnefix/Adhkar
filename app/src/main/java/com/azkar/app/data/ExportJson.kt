@@ -17,7 +17,7 @@ object ExportJson {
     fun build(
         s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT,
         sessionDelays: Map<String, Int> = emptyMap(), nudgeOn: Boolean = true, nudgeMinutes: Int? = null,
-        tracking: JSONObject? = null
+        tracking: JSONObject? = null, calcMethod: String? = null, asrHanafi: Boolean = false
     ): String {
         val folders = JSONArray()
         s.folders.forEach { f ->
@@ -25,7 +25,7 @@ object ExportJson {
             s.zikrs.filter { it.folderId == f.id }.forEach { az.put(item(it)) }
             val o = JSONObject().put("id", f.id).put("name", f.name)
             f.icon?.let { o.put("icon", it) }
-if (f.remember) o.put("remember", true)
+            if (f.remember) o.put("remember", true)
             folders.put(o.put("azkar", az))
         }
         val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
@@ -35,7 +35,7 @@ if (f.remember) o.put("remember", true)
         val rems = JSONArray()
         s.schedules.forEach {
             val o = JSONObject().put("id", it.id).put("title", it.title).put("message", it.message)
-                .put("time", "%02d:%02d".format(it.hour, it.minute)).put("enabled", it.enabled)
+                .put("time", String.format(java.util.Locale.US, "%02d:%02d", it.hour, it.minute))   // ASCII digits on any phone.put("enabled", it.enabled)
             it.open?.let { f -> o.put("folder", f) }
             rems.put(o)
         }
@@ -43,6 +43,7 @@ if (f.remember) o.put("remember", true)
         val settings = JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn).put("arabicSp", arabicSp)
         if (sessionDelays.isNotEmpty()) settings.put("prayerDelays", JSONObject().apply { sessionDelays.forEach { (k, v) -> put(k, v) } })
         nudgeMinutes?.let { settings.put("nudgeEnabled", nudgeOn).put("nudgeMinutes", it) }
+        calcMethod?.let { settings.put("calcMethod", it).put("asrHanafi", asrHanafi) }
         root.put("settings", settings)
         tracking?.let { root.put("tracking", it) }
         return root.toString(2)

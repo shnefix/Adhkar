@@ -63,7 +63,7 @@ class MyAdapter(
                 Plain(v)
             }
             1 -> Plain(FrameLayout(ctx).apply { layoutParams = wide(); setPadding(0, (10 * d).toInt(), 0, 0) })
-            2 -> Plain(Ui.caps(ctx, "Saved").apply { layoutParams = wide(); setPadding(0, (20 * d).toInt(), 0, (2 * d).toInt()) })
+            2 -> Plain(Ui.caps(ctx, ctx.getString(R.string.saved_label)).apply { layoutParams = wide(); setPadding(0, (20 * d).toInt(), 0, (2 * d).toInt()) })
             else -> {
                 val v = LayoutInflater.from(ctx).inflate(R.layout.item_saved, parent, false)
                 (v.layoutParams as RecyclerView.LayoutParams).topMargin = (8 * d).toInt()
@@ -83,7 +83,7 @@ class MyAdapter(
                     inf.inflate(R.layout.item_folder_tile, null, false).apply {
                         Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), t.icon, R.drawable.ic_folder_1p75)
                         findViewById<TextView>(R.id.name).text = t.name
-                        findViewById<TextView>(R.id.count).text = if (t.count == 1) "1 zikr" else "${t.count} azkar"
+                        findViewById<TextView>(R.id.count).text = azkarCount(ctx, t.count)
                         setOnClickListener { onFolder(t.id) }
                     }
                 } + inf.inflate(R.layout.item_folder_new, null, false).apply { setOnClickListener { onNewFolder() } }

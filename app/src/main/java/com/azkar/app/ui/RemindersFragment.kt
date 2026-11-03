@@ -31,9 +31,25 @@ import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.WidgetUpdater
 
-fun timeLabel(ctx: Context, h: Int, m: Int): String =
-    if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
-    else "%d:%02d %s".format(if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
+/** [h]:[m] in the phone's own clock format (12 / 24 hour, localized AM / PM and digits). */
+fun timeLabel(ctx: Context, h: Int, m: Int): String {
+    val c = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, h); set(java.util.Calendar.MINUTE, m) }
+    return DateFormat.getTimeFormat(ctx).format(c.time)
+}
+
+/** Prayer-time methods offered in Settings: adhan CalculationMethod names and their labels. */
+private val CALC_METHODS = listOf(
+    "EGYPTIAN" to R.string.calc_egyptian,
+    "UMM_AL_QURA" to R.string.calc_umm_al_qura,
+    "MUSLIM_WORLD_LEAGUE" to R.string.calc_mwl,
+    "KARACHI" to R.string.calc_karachi,
+    "NORTH_AMERICA" to R.string.calc_isna,
+    "DUBAI" to R.string.calc_dubai,
+    "KUWAIT" to R.string.calc_kuwait,
+    "QATAR" to R.string.calc_qatar,
+    "SINGAPORE" to R.string.calc_singapore,
+    "MOON_SIGHTING_COMMITTEE" to R.string.calc_moonsighting
+)
 
 /** The prayer a reminder follows, with its labels and the delays offered after it. */
 private enum class PrayerAnchor(val atRes: Int, val afterRes: Int, val titleRes: Int, val delays: List<Int>) {
@@ -110,30 +126,30 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         view.findViewById<ToggleSwitch>(R.id.sw_all).apply {
             on = AppPrefs.notificationsOn() && hasNotificationPermission()
             onToggle = { v ->
-            if (!syncing) {
-                if (v) requestNotifications { granted ->
-                    if (granted) { AppPrefs.setNotificationsOn(true); ReminderScheduler.rescheduleAll(ctx) }
-                    renderList()
-                } else {
-                    AppPrefs.setNotificationsOn(false)
-                    ReminderScheduler.rescheduleAll(ctx)
-                    renderList()
+                if (!syncing) {
+                    if (v) requestNotifications { granted ->
+                        if (granted) { AppPrefs.setNotificationsOn(true); ReminderScheduler.rescheduleAll(ctx) }
+                        renderList()
+                    } else {
+                        AppPrefs.setNotificationsOn(false)
+                        ReminderScheduler.rescheduleAll(ctx)
+                        renderList()
+                    }
                 }
             }
         }
-        }
         view.findViewById<View>(R.id.btn_add_rem).setOnClickListener { edit(null) }
         view.findViewById<View>(R.id.btn_test_notification).setOnClickListener {
-    requestNotifications { granted ->
-        if (!granted) return@requestNotifications
-        val base = Store.schedules().firstOrNull() ?: Schedule("test", "", "", 8, 0, true, null)
-        ReminderScheduler.notify(ctx, base.copy(
-            title = getString(R.string.test_notification),
-            message = getString(R.string.test_notification_message)))
-        Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
-    }
-}
-            view.findViewById<View>(R.id.exact_row).setOnClickListener {
+            requestNotifications { granted ->
+                if (!granted) return@requestNotifications
+                val base = Store.schedules().firstOrNull() ?: Schedule("test", "", "", 8, 0, true, null)
+                ReminderScheduler.notify(ctx, base.copy(
+                    title = getString(R.string.test_notification),
+                    message = getString(R.string.test_notification_message)))
+                Toast.makeText(ctx, R.string.test_notification_sent, Toast.LENGTH_SHORT).show()
+            }
+        }
+        view.findViewById<View>(R.id.exact_row).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
                 // Some devices ship without this settings screen.
                 try {
@@ -142,6 +158,43 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                     android.util.Log.w("Azkar", "No exact alarm settings screen", e)
                 }
             }
+        }
+
+        // Prayer times: method and Asr school. A change moves the prayer-based reminders and the widgets' times.
+        val calcSub = view.findViewById<TextView>(R.id.calc_sub)
+        val asrSub = view.findViewById<TextView>(R.id.asr_sub)
+        fun renderPrayer() {
+            calcSub.text = getString(CALC_METHODS.firstOrNull { it.first == AppPrefs.calcMethod() }?.second ?: R.string.calc_egyptian)
+            asrSub.text = getString(if (AppPrefs.asrHanafi()) R.string.asr_hanafi else R.string.asr_standard)
+        }
+        fun prayerChanged() {
+            ReminderScheduler.rescheduleAll(ctx)
+            WidgetUpdater.updateAll(ctx)
+            renderPrayer()
+            renderList()
+        }
+        renderPrayer()
+        view.findViewById<View>(R.id.calc_row).setOnClickListener {
+            val current = CALC_METHODS.indexOfFirst { it.first == AppPrefs.calcMethod() }.coerceAtLeast(0)
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.calc_method)
+                .setSingleChoiceItems(CALC_METHODS.map { getString(it.second) }.toTypedArray(), current) { d, which ->
+                    AppPrefs.setCalcMethod(CALC_METHODS[which].first)
+                    prayerChanged()
+                    d.dismiss()
+                }
+                .show()
+        }
+        view.findViewById<View>(R.id.asr_row).setOnClickListener {
+            val names = arrayOf(getString(R.string.asr_standard), getString(R.string.asr_hanafi))
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.asr_time)
+                .setSingleChoiceItems(names, if (AppPrefs.asrHanafi()) 1 else 0) { d, which ->
+                    AppPrefs.setAsrHanafi(which == 1)
+                    prayerChanged()
+                    d.dismiss()
+                }
+                .show()
         }
 
         // Tracking: off by default; covers the morning and evening folders (other folders opt in from Edit folder).
@@ -181,7 +234,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 .show()
         }
 
-// Reading switches
+        // Reading switches
         view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = AppPrefs.completionScreen(); onToggle = { AppPrefs.setCompletionScreen(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
@@ -191,7 +244,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         val sizeValue = view.findViewById<TextView>(R.id.size_value)
         val preview = view.findViewById<TextView>(R.id.size_preview)
         fun showSize(sp: Int) {
-            sizeValue.text = "$sp sp"
+            sizeValue.text = getString(R.string.text_size_sp, sp)
             preview.textSize = sp.toFloat()
             val lh = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sp * 1.85f, resources.displayMetrics)
             androidx.core.widget.TextViewCompat.setLineHeight(preview, lh.toInt())   // same 1.85 line height as the reader
@@ -210,7 +263,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         })
         // Theme (same pill style as the Arabic text size selector)
         val themes = view.findViewById<LinearLayout>(R.id.themes)
-        val themeNames = arrayOf("Teal", "OLED black")
+        val themeNames = arrayOf(getString(R.string.theme_teal), getString(R.string.theme_oled))
         fun renderThemes() {
             themes.removeAllViews()
             val sel = AppPrefs.theme()
@@ -220,7 +273,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                     text = name
                     textSize = 15f
                     gravity = Gravity.CENTER
-                    contentDescription = name + " theme"
+                    contentDescription = getString(R.string.theme_description, name)
                     setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
                     val line = if (on) ctx.getColor(R.color.gold) else ctx.getColor(R.color.border2)
                     background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, line, 14f)
@@ -262,19 +315,19 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         list.visibility = if (all.isEmpty()) View.GONE else View.VISIBLE
         root.findViewById<View>(R.id.rem_empty).visibility = if (all.isEmpty()) View.VISIBLE else View.GONE
         root.findViewById<TextView>(R.id.notif_sub).text =
-            if (!globalOn) "All reminders are paused" else "${all.count { it.enabled }} of ${all.size} reminders on"
+            if (!globalOn) getString(R.string.reminders_paused) else getString(R.string.reminders_on_count, all.count { it.enabled }, all.size)
 
         all.forEachIndexed { idx, s ->
             val v = layoutInflater.inflate(R.layout.item_reminder, list, false)
             v.findViewById<View>(R.id.divider).setBackgroundColor(if (idx == 0) 0 else ctx.getColor(R.color.border))
             v.findViewById<TextView>(R.id.title).text = s.title
-            v.findViewById<TextView>(R.id.time).text = prayerTimeLabel(ctx, s) ?: (timeLabel(ctx, s.hour, s.minute) + " · Every day")
+            v.findViewById<TextView>(R.id.time).text = prayerTimeLabel(ctx, s) ?: getString(R.string.reminder_time_daily, timeLabel(ctx, s.hour, s.minute))
             v.findViewById<View>(R.id.row).apply {
                 alpha = if (globalOn) 1f else 0.5f
                 setOnClickListener { edit(s) }
             }
             v.findViewById<ToggleSwitch>(R.id.sw).apply {
-                contentDescription = s.title + " reminder"
+                contentDescription = getString(R.string.reminder_switch_description, s.title)
                 on = s.enabled
                 onToggle = { isOn ->
                     if (isOn) requestNotifications { granted ->
@@ -333,22 +386,22 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
         val folderTv = v.findViewById<TextView>(R.id.r_folder)
         fun folderLabel(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + f.name
-        fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: "Just open the app" }
+        fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: getString(R.string.just_open_app) }
         showFolder()
         folderTv.setOnClickListener {
             val fs = Store.folders()
-            val names = arrayOf("Just open the app") + fs.map { folderLabel(it) }
-            AlertDialog.Builder(ctx).setTitle("Open folder")
+            val names = arrayOf(getString(R.string.just_open_app)) + fs.map { folderLabel(it) }
+            AlertDialog.Builder(ctx).setTitle(R.string.open_folder)
                 .setItems(names) { _, which -> folder = if (which == 0) null else fs[which - 1].id; showFolder() }
                 .show()
         }
 
         val b = AlertDialog.Builder(ctx)
-            .setTitle(if (existing == null) "New reminder" else "Edit reminder")
+            .setTitle(if (existing == null) R.string.new_reminder else R.string.edit_reminder)
             .setView(v)
-            .setPositiveButton("Save", null)
-            .setNegativeButton("Cancel", null)
-        if (existing != null) b.setNeutralButton("Delete") { _, _ ->
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+        if (existing != null) b.setNeutralButton(R.string.delete) { _, _ ->
             ReminderScheduler.cancel(ctx, existing.id)   // cancel the alarm before forgetting it
             Store.deleteSchedule(existing.id)
             renderList()
@@ -357,8 +410,8 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         dlg.setOnShowListener {
             dlg.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
                 val t = title.text.toString().trim()
-                if (t.isEmpty()) { title.error = "Enter a title"; return@setOnClickListener }
-                val text = msg.text.toString().trim().ifEmpty { "Time for your azkar · tap to read" }
+                if (t.isEmpty()) { title.error = getString(R.string.enter_title); return@setOnClickListener }
+                val text = msg.text.toString().trim().ifEmpty { getString(R.string.reminder_default_message) }
                 val s = (existing ?: Schedule(Store.newScheduleId(), t, text, h, m, true, null))
                     .copy(title = t, message = text, hour = h, minute = m, open = folder)
                 if (anchor != null) {

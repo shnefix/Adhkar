@@ -3,9 +3,11 @@ package com.azkar.app
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -17,11 +19,13 @@ import kotlinx.coroutines.Dispatchers
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.LocationUpdater
+import com.azkar.app.ui.HandlesOwnInsets
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
 import com.azkar.app.ui.ReaderFragment
 import com.azkar.app.ui.Tab
+import com.azkar.app.ui.safeBottom
 import com.azkar.app.widgets.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
   
@@ -49,6 +53,7 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = false
         }
         setContentView(R.layout.activity_main)
+        keepClearOfSystemBars()
         var contentShown = false
         lifecycleScope.launch {
             try {
@@ -78,6 +83,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this@MainActivity, R.string.data_load_failed, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    /**
+     * Pads the fragment container so Android's navigation bar and the keyboard never cover a screen's
+     * buttons. Screens marked [HandlesOwnInsets] get no padding and place their own bars.
+     */
+    private fun keepClearOfSystemBars() {
+        val container = findViewById<View>(R.id.container)
+        ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            if (supportFragmentManager.findFragmentById(R.id.container) is HandlesOwnInsets) v.setPadding(0, 0, 0, 0)
+            else insets.safeBottom().let { v.setPadding(it.left, 0, it.right, it.bottom) }
+            insets
+        }
+        // Insets are only dispatched on change, so re-apply them whenever a different screen is shown.
+        supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                ViewCompat.requestApplyInsets(container)
+            }
+        }, false)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

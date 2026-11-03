@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="My azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="Azkar and duas you added yourself." android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/my_azkar" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/my_azkar_summary" android:textSize="15sp" android:textColor="@color/muted" android:lineHeight="22sp" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_add" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="16dp" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/bg"/>
-<TextView style="@style/TB" android:text="Add zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/add_zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_import" android:layout_height="52dp" android:gravity="center" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_marginTop="10dp" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold"/>
-<TextView style="@style/TB" android:text="Import from JSON" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/import_json" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_export" android:layout_height="52dp" android:gravity="center" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_marginTop="10dp" android:layout_width="match_parent">
 <ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold"/>
-<TextView style="@style/TB" android:text="Export to JSON" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/export_json" android:textSize="16sp" android:textColor="@color/text" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
-<TextView style="@style/Caps" android:text="My folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/my_folders" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="20dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>

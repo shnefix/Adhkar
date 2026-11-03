@@ -14,7 +14,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 
-fun azkarCount(n: Int) = if (n == 1) "1 zikr" else "$n azkar"
+/** "1 zikr" / "5 azkar", with Arabic's own plural forms on an Arabic phone. */
+fun azkarCount(ctx: android.content.Context, n: Int): String = ctx.resources.getQuantityString(R.plurals.azkar_count, n, n)
 
 /** One folder card (Library and My azkar). [isNew] draws the dashed "New folder" card. */
 data class Card(

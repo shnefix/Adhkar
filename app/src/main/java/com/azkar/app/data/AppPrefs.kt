@@ -28,6 +28,10 @@ object AppPrefs {
     const val NUDGE_LEAD_DEFAULT = 45        // "not finished yet": minutes before Dhuhr / Maghrib
     private const val K_NUDGE = "nudge_on"
     private const val K_NUDGE_LEAD = "nudge_lead"
+    private const val K_CALC = "calc_method"
+    private const val K_ASR_HANAFI = "asr_hanafi"
+    /** Prayer-time method used before it became a setting; stays the default so existing reminders don't move. */
+    const val CALC_METHOD_DEFAULT = "EGYPTIAN"
 
     /** Called by [Store.init]; shares the "azkar" preferences file so existing values carry over. */
     internal fun attach(prefs: SharedPreferences) {
@@ -104,6 +108,17 @@ object AppPrefs {
     fun setNudgeOn(v: Boolean) = sp.edit().putBoolean(K_NUDGE, v).apply()
     fun nudgeLeadMinutes() = sp.getInt(K_NUDGE_LEAD, NUDGE_LEAD_DEFAULT)
     fun setNudgeLeadMinutes(v: Int) = sp.edit().putInt(K_NUDGE_LEAD, v).apply()
+
+    /**
+     * Prayer-time calculation method, as an adhan CalculationMethod name. Like [sessionDelayMinutes], falls back to
+     * the default before [attach] so pure unit tests can call into PrayerSessions.
+     */
+    fun calcMethod(): String = if (::sp.isInitialized) sp.getString(K_CALC, null) ?: CALC_METHOD_DEFAULT else CALC_METHOD_DEFAULT
+    fun setCalcMethod(v: String) = sp.edit().putString(K_CALC, v).apply()
+
+    /** Asr by the Hanafi shadow length (twice the object) instead of the majority's (once). */
+    fun asrHanafi(): Boolean = ::sp.isInitialized && sp.getBoolean(K_ASR_HANAFI, false)
+    fun setAsrHanafi(v: Boolean) = sp.edit().putBoolean(K_ASR_HANAFI, v).apply()
 
     /** True once the app has asked for location permission (it asks only once). */
     fun locationAsked() = sp.getBoolean(K_LOC_ASKED, false)

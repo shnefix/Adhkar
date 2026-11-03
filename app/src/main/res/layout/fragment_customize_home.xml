@@ -2,33 +2,33 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-<FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Back to Home" android:clickable="true" android:focusable="true">
+<FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="@string/back_to_home" android:clickable="true" android:focusable="true">
 <ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
-<TextView style="@style/TB" android:text="Customize" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-<TextView style="@style/TB" android:text="Done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/customize" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Where should my folders appear?" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/folders_placement_question" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:layout_marginTop="10dp" android:gravity="top" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:id="@+id/preview" android:layout_width="132dp" android:layout_height="176dp" android:paddingHorizontal="8dp" android:paddingVertical="10dp" android:background="@drawable/bg_prev18" android:clipChildren="true"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/options" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Library order" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/library_order" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="The order of folders in the Library and My azkar." android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/library_order_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/lib_rows" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="Order and visibility" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/Caps" android:text="@string/order_and_visibility" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/rows" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="16dp"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_reset" android:layout_width="match_parent" android:layout_height="44dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_marginTop="20dp">
-<TextView style="@style/TB" android:text="Reset Home to default" android:textSize="15sp" android:textColor="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"/>
+<TextView style="@style/TB" android:text="@string/reset_home" android:textSize="15sp" android:textColor="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center"/>
 </LinearLayout>
 </LinearLayout>
 </ScrollView>

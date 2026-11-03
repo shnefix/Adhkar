@@ -29,4 +29,5 @@ fun Fragment.bindNav(view: View, active: Tab) {
         }
         view.findViewById<View>(t.root).setOnClickListener { nav().openTab(t) }
     }
+    bindNavInsets(view, view.findViewById(R.id.list) ?: view.findViewById(R.id.content))
 }

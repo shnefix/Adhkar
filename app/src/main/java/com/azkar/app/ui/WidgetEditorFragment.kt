@@ -115,7 +115,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         placed.forEach { item ->
             val chip = TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
                 text = item.family?.let { f -> FAMILY_LABELS[f] }?.let { getString(it) }
-                    ?: "${item.config.style.label} · ${item.kind.name.lowercase().replaceFirstChar { it.uppercase() }.first()}"
+                    ?: "${getString(item.config.style.label)} · ${widgetSizeName(requireContext(), item.kind)}"
                 setTextColor(requireContext().getColor(R.color.widget_editor_muted))
                 textSize = 13f
                 gravity = Gravity.CENTER
@@ -196,15 +196,15 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             column.addCard(card)
             return
         }
-        val folder = sectionCard(ctx, "Folder", "Which azkar folder this widget shows.")
+        val folder = sectionCard(ctx, getString(R.string.folder), getString(R.string.widget_folder_summary))
         folder.addSpaced(chipGroup(ctx, Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
         column.addCard(folder)
         // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
         if (item.family == null) {
-            val counter = sectionCard(ctx, "Counter")
-            counter.addSpaced(toggleRow(ctx, getString(R.string.show_counter), "Display progress on the widget",
+            val counter = sectionCard(ctx, getString(R.string.widget_counter))
+            counter.addSpaced(toggleRow(ctx, getString(R.string.show_counter), getString(R.string.widget_counter_summary),
                 item.config.appearance.showCounter) { on -> update(view) { it.copy(showCounter = on) } })
             column.addCard(counter)
         }
@@ -213,8 +213,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private fun styleCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
         val styles = WidgetStyle.values().filter { item.kind in it.offered }
-        val card = sectionCard(ctx, "Design", "How this ${widgetSizeName(ctx, item.kind).lowercase()} widget is laid out.")
-        card.addSpaced(chipGroup(ctx, styles.map { it to it.label }, item.config.style) { s ->
+        val card = sectionCard(ctx, getString(R.string.widget_design), getString(R.string.widget_design_summary, widgetSizeName(ctx, item.kind).lowercase()))
+        card.addSpaced(chipGroup(ctx, styles.map { it to getString(it.label) }, item.config.style) { s ->
             updateConfig(view) { cfg -> cfg.copy(style = s) }
         })
         column.addCard(card)
@@ -225,10 +225,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         val a = item.config.appearance
         val typography = sectionCard(ctx, getString(R.string.typography))
         typography.addSpaced(valueRow(ctx, getString(R.string.arabic_font), "Amiri"))
-        typography.addSpaced(sliderRow(ctx, "Font size", 14, 40, a.fontSizeSp.roundToInt().coerceIn(14, 40), { "$it sp" }) { v ->
+        typography.addSpaced(sliderRow(ctx, getString(R.string.font_size_label), 14, 40, a.fontSizeSp.roundToInt().coerceIn(14, 40), { getString(R.string.text_size_sp, it) }) { v ->
             update(view, rebuild = false) { it.copy(fontSizeSp = v.toFloat()) }
         })
-        typography.addSpaced(sliderRow(ctx, "Line height", 10, 20, (a.lineHeight * 10).roundToInt().coerceIn(10, 20),
+        typography.addSpaced(sliderRow(ctx, getString(R.string.line_height_label), 10, 20, (a.lineHeight * 10).roundToInt().coerceIn(10, 20),
             { String.format(Locale.US, "%.1f", it / 10f) }) { v ->
             update(view, rebuild = false) { it.copy(lineHeight = v / 10f) }
         })
@@ -238,26 +238,25 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }, 10f)
         column.addCard(typography)
 
-        val colors = sectionCard(ctx, "Colors")
+        val colors = sectionCard(ctx, getString(R.string.widget_colors))
         colors.addSpaced(colorRow(ctx, getString(R.string.text_color), EditorTextColors, a.textColor) { c ->
             update(view) { it.copy(textColor = c) }
         })
         colors.addSpaced(colorRow(ctx, getString(R.string.background_color), EditorBgColors, a.backgroundColor) { c ->
             update(view) { it.copy(backgroundColor = c) }
         })
-        colors.addSpaced(sliderRow(ctx, getString(R.string.corner_radius), 8, 32, a.cornerRadiusDp.roundToInt().coerceIn(8, 32), { "$it dp" }) { v ->
+        colors.addSpaced(sliderRow(ctx, getString(R.string.corner_radius), 8, 32, a.cornerRadiusDp.roundToInt().coerceIn(8, 32), { getString(R.string.dp_value, it) }) { v ->
             update(view, rebuild = false) { it.copy(cornerRadiusDp = v.toFloat()) }
         })
         column.addCard(colors)
     }
 
     private fun presetLabel(minutes: Int) = when (minutes) {
-        0 -> "Manual"
-        15 -> "15 min"
-        30 -> "30 min"
-        60 -> "Hourly"
-        360 -> "6 hours"
-        else -> "Daily"
+        0 -> getString(R.string.refresh_manual)
+        15, 30 -> getString(R.string.interval_min, minutes)
+        60 -> getString(R.string.refresh_hourly)
+        360 -> resources.getQuantityString(R.plurals.interval_hours, 6, 6)
+        else -> getString(R.string.daily)
     }
 
     private fun behaviorCards(view: View, item: PlacedWidget, column: LinearLayout) {
@@ -265,7 +264,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         val a = item.config.appearance
         // OLED designs: a tap always adds one, so the tap-action card only exists for the old widgets.
         if (item.family == null) {
-            val tap = sectionCard(ctx, "Tap action", "What happens when you tap the counter.")
+            val tap = sectionCard(ctx, getString(R.string.tap_action), getString(R.string.widget_tap_summary))
             tap.addSpaced(chipGroup(ctx, WidgetStore.TapAction.values().map { it to tapLabel(it) }, a.tapAction) { action ->
                 update(view) { it.copy(tapAction = action) }
             })
@@ -274,7 +273,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
 
         val presets = listOf(0, 15, 30, 60, 360, 1440)
         val minutes = a.refreshMinutes
-        val refresh = sectionCard(ctx, "Refresh", "How often the widget redraws. Shorter uses more battery.")
+        val refresh = sectionCard(ctx, getString(R.string.refresh), getString(R.string.widget_refresh_summary))
         refresh.addSpaced(chipGroup(ctx, presets.map { it to presetLabel(it) }, minutes.takeIf { it in presets }) { m ->
             // A preset decides its own unit; a unit left over from the custom box would show 15 min as "0 hours".
             customHours.remove(item.id)

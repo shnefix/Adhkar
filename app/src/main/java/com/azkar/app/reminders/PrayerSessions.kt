@@ -1,8 +1,11 @@
 package com.azkar.app.reminders
 
 import com.azkar.app.data.AppPrefs
+import com.azkar.app.data.DefaultFolders
 import com.batoulapps.adhan.CalculationMethod
+import com.batoulapps.adhan.CalculationParameters
 import com.batoulapps.adhan.Coordinates
+import com.batoulapps.adhan.Madhab
 import com.batoulapps.adhan.PrayerTimes
 import com.batoulapps.adhan.data.DateComponents
 import java.util.Calendar
@@ -10,7 +13,7 @@ import java.util.Date
 import java.util.TimeZone
 
 /**
- * Morning and evening azkar follow the prayer times (Egyptian General Authority method):
+ * Morning and evening azkar follow the prayer times (the method and Asr school chosen in Settings, Egyptian by default):
  * the reminder comes the user's chosen delay (default [DELAY_MS]) after Fajr / Asr, and the session
  * ends at Dhuhr / Maghrib. Everything returns null without a location, so callers fall back to the
  * fixed reminder time.
@@ -19,8 +22,8 @@ object PrayerSessions {
     const val DELAY_MS = AppPrefs.SESSION_DELAY_DEFAULT * 60_000L
 
     enum class Session(val scheduleId: String, val folderId: String) {
-        MORNING("m", "d_14"),
-        EVENING("e", "d_11")
+        MORNING("m", DefaultFolders.MORNING),
+        EVENING("e", DefaultFolders.EVENING)
     }
 
     fun forSchedule(id: String): Session? = Session.values().firstOrNull { it.scheduleId == id }
@@ -39,11 +42,22 @@ object PrayerSessions {
         return (start(s, t).time + delayMs) to end(s, t).time
     }
 
+    /** Calculation parameters from the user's method and Asr school; an unknown saved method falls back to Egyptian. */
+    fun parameters(
+        method: String = AppPrefs.calcMethod(), hanafi: Boolean = AppPrefs.asrHanafi()
+    ): CalculationParameters {
+        val m = CalculationMethod.values().firstOrNull { it.name == method } ?: CalculationMethod.EGYPTIAN
+        return m.parameters.also { it.madhab = if (hanafi) Madhab.HANAFI else Madhab.SHAFI }
+    }
+
     /** Prayer times for the local day containing [at]. */
-    fun timesOn(at: Long, lat: Double, lng: Double, zone: TimeZone = TimeZone.getDefault()): PrayerTimes {
+    fun timesOn(
+        at: Long, lat: Double, lng: Double, zone: TimeZone = TimeZone.getDefault(),
+        params: CalculationParameters = parameters()
+    ): PrayerTimes {
         val day = Calendar.getInstance(zone).apply { timeInMillis = at }
         val date = DateComponents(day.get(Calendar.YEAR), day.get(Calendar.MONTH) + 1, day.get(Calendar.DAY_OF_MONTH))
-        return PrayerTimes(Coordinates(lat, lng), date, CalculationMethod.EGYPTIAN.parameters)
+        return PrayerTimes(Coordinates(lat, lng), date, params)
     }
 
     /** Adhan's times are whole minutes plus milliseconds left over from the clock; drop those so results are stable. */
@@ -110,7 +124,7 @@ object PrayerSessions {
 
     // ---------- Before sleep: follows Isha ----------
     const val SLEEP_SCHEDULE = "s"
-    const val SLEEP_FOLDER = "d_13"
+    const val SLEEP_FOLDER = DefaultFolders.SLEEP
 
     /** Next before-sleep reminder: the chosen time after Isha, strictly after [now]; null without a location. */
     fun nextAfterIsha(

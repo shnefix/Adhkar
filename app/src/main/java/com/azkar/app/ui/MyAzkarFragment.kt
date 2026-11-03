@@ -29,7 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
-class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
+class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar), HandlesOwnInsets {
     private val viewModel: AzkarContentViewModel by viewModels()
     private var latestContent: AzkarContent? = null
 
@@ -116,7 +116,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                 Card(
                     f.id,
                     f.name,
-                    azkarCount(counts[f.id] ?: 0),
+                    azkarCount(ctx, counts[f.id] ?: 0),
                     f.icon,
                     if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
                     if (isDefault) teal else gold,
@@ -133,8 +133,8 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             list.add(
                 Card(
                     "anytime",
-                    "Anytime",
-                    azkarCount(anytime),
+                    getString(R.string.anytime),
+                    azkarCount(ctx, anytime),
                     null,
                     R.drawable.ic_folder_1p75,
                     gold,
@@ -148,7 +148,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         list.add(
             Card(
                 "new",
-                "New folder",
+                getString(R.string.new_folder),
                 "",
                 null,
                 R.drawable.ic_plus_2,
@@ -163,7 +163,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
         val n = current.folders.size
         view?.findViewById<TextView>(R.id.folder_count)?.text =
-            if (n == 1) "1 folder" else "$n folders"
+            resources.getQuantityString(R.plurals.folder_count, n, n)
     }
 
     private fun writeExport(uri: Uri) {
@@ -172,27 +172,30 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             try {
                 val text = Store.exportJsonAsync()
                 check(withContext(Dispatchers.Default) { ImportJson.parse(text) is ImportJson.Parsed.Ok }) {
-                    "Generated backup failed validation."
+                    getString(R.string.export_validation_failed)
                 }
                 withContext(Dispatchers.IO) {
                     ctx.contentResolver.openOutputStream(uri, "wt")?.use {
                         it.write(text.toByteArray(Charsets.UTF_8))
-                    } ?: throw java.io.IOException("Could not open the file for writing.")
+                    } ?: throw java.io.IOException(getString(R.string.export_open_failed))
                 }
                 AlertDialog.Builder(ctx)
-                    .setTitle("Export complete")
+                    .setTitle(R.string.export_complete_title)
                     .setMessage(
-                        "Saved ${latestContent?.folders?.size ?: 0} folders, " +
-                            "${latestContent?.zikrs?.size ?: 0} azkar and " +
-                            "${latestContent?.schedules?.size ?: 0} reminders."
+                        getString(
+                            R.string.export_complete_message,
+                            count(R.plurals.folder_count, latestContent?.folders?.size ?: 0),
+                            count(R.plurals.azkar_count, latestContent?.zikrs?.size ?: 0),
+                            count(R.plurals.reminder_count, latestContent?.schedules?.size ?: 0)
+                        )
                     )
-                    .setPositiveButton("OK", null)
+                    .setPositiveButton(android.R.string.ok, null)
                     .show()
             } catch (e: Exception) {
                 AlertDialog.Builder(ctx)
-                    .setTitle("Export failed")
-                    .setMessage("The file could not be saved. " + (e.message ?: ""))
-                    .setPositiveButton("OK", null)
+                    .setTitle(R.string.export_failed_title)
+                    .setMessage(getString(R.string.export_failed_message, e.message ?: ""))
+                    .setPositiveButton(android.R.string.ok, null)
                     .show()
             }
         }
@@ -210,41 +213,26 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         }
 
         when {
-            raw == null -> showError("The file could not be read.")
+            raw == null -> showError(getString(R.string.import_read_failed))
 
             raw.length > 5_000_000 ->
-                showError("The file is too large (over 5 MB).")
+                showError(getString(R.string.import_too_large))
 
             else -> {
                 when (val p = ImportJson.parse(raw)) {
-                    is ImportJson.Parsed.Error -> showError(p.message)
+                    is ImportJson.Parsed.Error -> showError(p.message(ctx))
                     is ImportJson.Parsed.Ok -> confirm(p)
                 }
             }
         }
     }
 
-    private fun showImportHelp() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Import Format")
-            .setMessage(
-                "The JSON file should contain a \"folders\" array. " +
-                    "Each folder needs a \"name\" and an \"azkar\" list.\n\n" +
-                    "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
-                    "• count: how many times, 1 to 999. Leave it out for 1.\n" +
-                    "• A folder with the same name gets the new azkar added to it. " +
-                    "Exact duplicates are skipped and nothing is overwritten."
-            )
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
     private fun showError(msg: String) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Can't import this file")
+            .setTitle(R.string.import_error_title)
             .setMessage(msg)
-            .setPositiveButton("OK", null)
-            .setNeutralButton("Show format") { _, _ ->
+            .setPositiveButton(android.R.string.ok, null)
+            .setNeutralButton(R.string.show_format) { _, _ ->
                 showFormatHelp()
             }
             .show()
@@ -252,16 +240,9 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
 
     private fun showFormatHelp() {
         AlertDialog.Builder(requireContext())
-            .setTitle("Import from JSON")
-            .setMessage(
-                "The JSON file should contain a \"folders\" list. " +
-                    "Each folder needs a \"name\" and an \"azkar\" list.\n\n" +
-                "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
-                "• count: how many times, 1 to 999. Leave it out for 1.\n" +
-                "• A folder with the same name gets the new azkar added to it. " +
-                "Exact duplicates are skipped and nothing is overwritten."
-            )
-            .setPositiveButton("OK", null)
+            .setTitle(R.string.import_json)
+            .setMessage(R.string.import_format_help)
+            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 
@@ -269,7 +250,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         try {
             importPicker.launch(arrayOf("*/*"))   // some file managers label .json as octet-stream
         } catch (e: Exception) {
-            showError("No file picker is available on this device.")
+            showError(getString(R.string.no_file_picker))
         }
     }
 
@@ -288,14 +269,14 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
             "• ${it.name}: ${it.items.size}"
         } + if (p.folders.size > 8) "\n…" else ""
 
-        var msg = "$nF folders and $nA azkar will be imported."
+        var msg = getString(R.string.import_confirm_summary, count(R.plurals.folder_count, nF), count(R.plurals.azkar_count, nA))
 
         if (p.reminders.isNotEmpty()) {
-            msg += " The file also has ${p.reminders.size} reminders."
+            msg += " " + getString(R.string.import_confirm_reminders, count(R.plurals.reminder_count, p.reminders.size))
         }
 
         if (p.settings != null) {
-            msg += " Your reading and notification settings will be restored."
+            msg += " " + getString(R.string.import_confirm_settings)
         }
 
         if (lines.isNotEmpty()) {
@@ -303,14 +284,13 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         }
 
         if (existing > 0) {
-            msg += "\n\n$existing folder(s) already exist. Their azkar will be " +
-                "added to them, and exact duplicates are skipped. Nothing is overwritten."
+            msg += "\n\n" + resources.getQuantityString(R.plurals.import_confirm_existing, existing, existing)
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Import from JSON")
+            .setTitle(R.string.import_json)
             .setMessage(msg)
-            .setPositiveButton("Import") { _, _ ->
+            .setPositiveButton(R.string.import_label) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         val r = Store.importAllAsync(p)
@@ -319,48 +299,18 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                         com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(requireContext())
                         com.azkar.app.widgets.WidgetUpdater.updateAll(requireContext())
                         AlertDialog.Builder(requireContext())
-                            .setTitle("Import complete")
-                            .setMessage(
-                                "${r.created} new folders, ${r.merged} merged, " +
-                                    "${r.added} azkar added, ${r.skipped} duplicates skipped, " +
-                                    "${r.reminders} reminders added."
-                            )
-                            .setPositiveButton("OK", null)
+                            .setTitle(R.string.import_complete_title)
+                            .setMessage(getString(R.string.import_complete_message, r.created, r.merged, r.added, r.skipped, r.reminders))
+                            .setPositiveButton(android.R.string.ok, null)
                             .show()
                     } catch (e: Exception) {
-                        showError("Import failed: " + (e.message ?: "database write failed"))
+                        showError(getString(R.string.import_failed, e.message ?: ""))
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private companion object {
-        const val EXAMPLE = """{
-  "folders": [
-    {
-      "name": "Morning",
-      "azkar": [
-        { "text": "Example zikr", "count": 33 },
-        { "text": "Another zikr", "count": 33 },
-        { "text": "A third zikr", "count": 34 }
-      ]
-    },
-    {
-      "name": "Duas",
-      "azkar": [
-        { "text": "Example dua", "count": 1 }
-      ]
-    }
-  ]
-}"""
-
-        const val NOTES =
-            "• folders: a list. Each folder needs a name and a list of azkar.\n" +
-                "• text: the Arabic dhikr. Diacritics are kept exactly as written.\n" +
-                "• count: how many times, 1 to 999. Leave it out for 1.\n" +
-                "• A folder with the same name gets the new azkar added to it. " +
-                "Exact duplicates are skipped and nothing is overwritten."
-    }
+    private fun count(plural: Int, n: Int) = resources.getQuantityString(plural, n, n)
 }

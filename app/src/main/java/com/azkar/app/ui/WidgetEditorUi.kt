@@ -301,12 +301,12 @@ private fun convertUnit(minutes: Int, toHours: Boolean): Int = when {
     else -> minutes.coerceAtLeast(MIN_INTERVAL_MINUTES)
 }
 
-private fun formatInterval(minutes: Int): String {
-    if (minutes < 60) return "$minutes min"
+private fun formatInterval(ctx: Context, minutes: Int): String {
+    if (minutes < 60) return ctx.getString(R.string.interval_min, minutes)
     val h = minutes / 60
     val r = minutes % 60
-    val hours = if (h == 1) "1 hour" else "$h hours"
-    return if (r == 0) hours else "$hours $r min"
+    val hours = ctx.resources.getQuantityString(R.plurals.interval_hours, h, h)
+    return if (r == 0) hours else ctx.getString(R.string.interval_hours_min, hours, ctx.getString(R.string.interval_min, r))
 }
 
 /**
@@ -331,10 +331,10 @@ internal fun customIntervalBox(
         setPadding(pad, pad, pad, pad)
     }
     val header = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    header.addView(editorText(ctx, "Custom interval", 15f, EditorColors.Text, bold = true),
+    header.addView(editorText(ctx, ctx.getString(R.string.custom_interval), 15f, EditorColors.Text, bold = true),
         LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
     if (active) {
-        header.addView(editorText(ctx, "Active", 12f, EditorColors.Bg, bold = true).apply {
+        header.addView(editorText(ctx, ctx.getString(R.string.active), 12f, EditorColors.Bg, bold = true).apply {
             background = editorShape(EditorColors.Gold, 10f, ctx)
             setPadding(Ui.pxi(ctx, 10f), Ui.pxi(ctx, 4f), Ui.pxi(ctx, 10f), Ui.pxi(ctx, 4f))
         })
@@ -354,7 +354,7 @@ internal fun customIntervalBox(
         setTypeface(typeface, Typeface.BOLD)
         background = editorShape(EditorColors.Tabs, 14f, ctx, EditorColors.ChipBorder)
         setPadding(0, 0, 0, 0)
-        contentDescription = "Custom interval"
+        contentDescription = ctx.getString(R.string.custom_interval)
         setSelectAllOnFocus(true)
         highlightColor = (EditorColors.Gold and 0x00FFFFFF) or 0x55000000
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -382,27 +382,30 @@ internal fun customIntervalBox(
         val (m, h) = stepInterval(minutes, hours, up)
         onChange(m, h)
     }
-    row.addView(stepperButton(ctx, "−", "Decrease interval", enabled = manual || minutes > MIN_INTERVAL_MINUTES) { step(false) },
+    row.addView(stepperButton(ctx, "−", ctx.getString(R.string.decrease_interval), enabled = manual || minutes > MIN_INTERVAL_MINUTES) { step(false) },
         LinearLayout.LayoutParams(Ui.pxi(ctx, 48f), Ui.pxi(ctx, 48f)))
     row.addView(input, LinearLayout.LayoutParams(0, Ui.pxi(ctx, 56f), 1f).also { it.marginStart = gap; it.marginEnd = gap })
-    row.addView(stepperButton(ctx, "+", "Increase interval", enabled = manual || minutes < MAX_INTERVAL_MINUTES) { step(true) },
+    row.addView(stepperButton(ctx, "+", ctx.getString(R.string.increase_interval), enabled = manual || minutes < MAX_INTERVAL_MINUTES) { step(true) },
         LinearLayout.LayoutParams(Ui.pxi(ctx, 48f), Ui.pxi(ctx, 48f)))
     box.addSpaced(row)
 
-    box.addSpaced(segmented(ctx, listOf("Minutes", "Hours"), if (hours) 1 else 0) { i ->
+    box.addSpaced(segmented(ctx, listOf(ctx.getString(R.string.minutes), ctx.getString(R.string.hours)), if (hours) 1 else 0) { i ->
         val toHours = i == 1
         if (toHours != hours || manual) onChange(convertUnit(minutes, toHours), toHours)
     })
 
     val caption = if (manual) {
-        SpannableStringBuilder("Manual refresh · tap + or − to set an interval")
+        SpannableStringBuilder(ctx.getString(R.string.manual_refresh_caption))
     } else {
-        SpannableStringBuilder("Refreshes every ").apply {
-            val start = length
-            append(formatInterval(minutes))
-            setSpan(ForegroundColorSpan(EditorColors.Gold), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(StyleSpan(Typeface.BOLD), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            append(" · minimum $MIN_INTERVAL_MINUTES min")
+        val every = formatInterval(ctx, minutes)
+        val text = ctx.getString(R.string.refreshes_every, every, ctx.getString(R.string.interval_min, MIN_INTERVAL_MINUTES))
+        SpannableStringBuilder(text).apply {
+            // The interval itself stands out in gold, wherever the language puts it.
+            val start = text.indexOf(every)
+            if (start >= 0) {
+                setSpan(ForegroundColorSpan(EditorColors.Gold), start, start + every.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(StyleSpan(Typeface.BOLD), start, start + every.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
     }
     box.addSpaced(editorText(ctx, caption, 13f, EditorColors.Muted).apply { gravity = Gravity.CENTER })

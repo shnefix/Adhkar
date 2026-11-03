@@ -18,7 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class LibraryFragment : Fragment(R.layout.fragment_library) {
+class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     private val viewModel: AzkarContentViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -43,17 +43,17 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             content.folders.forEach { f ->
                 if (query.isNotEmpty() && !f.name.lowercase().contains(query)) return@forEach
                 val isDefault = com.azkar.app.data.Store.isDefaultFolder(f.id)
-                out.add(Card(f.id, f.name, azkarCount(counts[f.id] ?: 0), f.icon, if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
+                out.add(Card(f.id, f.name, azkarCount(ctx, counts[f.id] ?: 0), f.icon, if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
                     if (isDefault) teal else gold, false) { nav().push(FolderFragment.of(f.id)) })
             }
             val anytime = counts[null] ?: 0
             if (anytime > 0 && (query.isEmpty() || "anytime".contains(query))) {
-                out.add(Card("anytime", "Anytime", azkarCount(anytime), null, R.drawable.ic_folder_1p75, gold, false) {
+                out.add(Card("anytime", ctx.getString(R.string.anytime), azkarCount(ctx, anytime), null, R.drawable.ic_folder_1p75, gold, false) {
                     nav().push(FolderFragment.of("anytime"))
                 })
             }
             if (query.isEmpty()) {
-                out.add(Card("new", "New folder", "", null, R.drawable.ic_plus_2, gold, true) {
+                out.add(Card("new", ctx.getString(R.string.new_folder), "", null, R.drawable.ic_plus_2, gold, true) {
                     promptNewFolder { _ ->
                         viewModel.content.value?.let { adapter.submitList(build(search.text.toString(), it)) }
                     }

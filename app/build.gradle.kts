@@ -87,6 +87,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.adhan)
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.test.core)

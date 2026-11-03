@@ -32,9 +32,9 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         val gold = c(R.color.gold)
 
         // ----- Preview -----
-        val grid = Block(62, c(R.color.card), c(R.color.border), false, c(R.color.muted), "Collections")
-        val mixed = Block(78, c(R.color.card), gold, true, gold, "Collections and my folders")
-        val folders = Block(30, null, gold, true, gold, "My folders")
+        val grid = Block(62, c(R.color.card), c(R.color.border), false, c(R.color.muted), getString(R.string.preview_collections))
+        val mixed = Block(78, c(R.color.card), gold, true, gold, getString(R.string.preview_mixed))
+        val folders = Block(30, null, gold, true, gold, getString(R.string.my_folders))
         val pos = Store.placement()
         val blocks = when (pos) {
             Placement.TOP -> listOf(folders, grid)
@@ -61,7 +61,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
             val on = p == pos
             val v = layoutInflater.inflate(R.layout.item_radio, options, false)
             v.findViewById<TextView>(R.id.label).apply {
-                text = p.label
+                setText(p.label)
                 typeface = Ui.font(ctx, if (on) R.font.dm_sans_bold else R.font.dm_sans_medium)
             }
             v.findViewById<View>(R.id.ring).background = GradientRing(ctx, if (on) gold else c(R.color.border2)).build()

@@ -105,4 +105,21 @@ class PrayerSessionsTest {
         assertNull(PrayerSessions.inSession(Session.MORNING, at(7), null, zone))
         assertFalse(PrayerSessions.positionExpired("d_14", at(7), at(20, day = 4), null, zone))
     }
+
+    @Test
+    fun hanafiAsrIsLaterThanTheStandardOne() {
+        val standard = PrayerSessions.timesOn(at(12), cairo.first, cairo.second, zone, PrayerSessions.parameters("EGYPTIAN", false))
+        val hanafi = PrayerSessions.timesOn(at(12), cairo.first, cairo.second, zone, PrayerSessions.parameters("EGYPTIAN", true))
+        assertTrue(hanafi.asr.after(standard.asr))
+        assertEquals(PrayerSessions.minute(standard.fajr), PrayerSessions.minute(hanafi.fajr))
+    }
+
+    @Test
+    fun methodChangesFajrAndUnknownMethodFallsBackToEgyptian() {
+        val egyptian = PrayerSessions.timesOn(at(12), cairo.first, cairo.second, zone, PrayerSessions.parameters("EGYPTIAN", false))
+        val ummAlQura = PrayerSessions.timesOn(at(12), cairo.first, cairo.second, zone, PrayerSessions.parameters("UMM_AL_QURA", false))
+        val unknown = PrayerSessions.timesOn(at(12), cairo.first, cairo.second, zone, PrayerSessions.parameters("NOT_A_METHOD", false))
+        assertTrue(ummAlQura.fajr.after(egyptian.fajr))   // 18.5° vs 19.5°: a later dawn
+        assertEquals(PrayerSessions.minute(egyptian.fajr), PrayerSessions.minute(unknown.fajr))
+    }
 }

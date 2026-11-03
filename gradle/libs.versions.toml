@@ -10,6 +10,7 @@ lifecycle = "2.8.7"
 room = "2.7.1"
 hilt = "2.57.2"
 junit = "4.13.2"
+orgJson = "20240303"
 adhan = "1.2.1"
 androidxTest = "1.6.1"
 androidxTestRules = "1.6.1"
@@ -29,6 +30,8 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 junit = { module = "junit:junit", version.ref = "junit" }
+# Android's own org.json is only a stub in local unit tests; this is the real one for ImportJson / Tracking tests.
+org-json = { module = "org.json:json", version.ref = "orgJson" }
 adhan = { module = "com.batoulapps.adhan:adhan", version.ref = "adhan" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }

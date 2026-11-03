@@ -6,6 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import com.azkar.app.R
 import com.azkar.app.widgets.WidgetUpdater
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -26,16 +27,12 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 6
-    private const val HOME_FOLDER_ID = "d_15"                   // الواجهة, added in defaults version 4
-    private const val ZAD_FOLDER_ID = "d_16"                    // زَادُ المَعَادِ, added in defaults version 6
-    private const val WAKE_FOLDER_ID = "d_9"
-    private const val MORNING_FOLDER_ID = "d_14"
-    private const val EVENING_FOLDER_ID = "d_11"
-    private const val WAKE_FOLDER_NAME = "أذكار الإستقاظ"
-    private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????")
-    /** Default folders shown first on Home, in this order. */
-    private val HOME_DEFAULTS = listOf(HOME_FOLDER_ID, "d_14", "d_11", WAKE_FOLDER_ID, "d_13", "d_1")
+    private const val DEFAULTS_VERSION = 7
+    private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
+    /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
+    private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
+    /** Before version 7 the before-sleep reminder pointed at "sleep", which is no folder id. */
+    private const val OLD_SLEEP_OPEN = "sleep"
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
@@ -56,6 +53,9 @@ object Store {
     private val hzState = MutableStateFlow<Set<String>>(emptySet())
     private val hzCache: Set<String> get() = hzState.value
     private var cacheGeneration = 0L
+    // Parsed once from SharedPreferences, then kept in step by their setters (Home renders read them often).
+    @Volatile private var savedOrderCache: List<String>? = null
+    @Volatile private var hiddenCache: Set<String>? = null
     private lateinit var repository: AzkarRepository
     private val widgetRefreshPending = AtomicBoolean(false)
     private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -198,20 +198,21 @@ object Store {
         val p = defaults() ?: return                          // asset unreadable: try again next start
         val fresh = from == 0 && !sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
         if (fresh) mergeDefaults(p)
-        else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == HOME_FOLDER_ID }))
-        if (!fresh && from < 6) mergeDefaults(p.copy(folders = p.folders.filter { it.id == ZAD_FOLDER_ID }))
+        else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == DefaultFolders.HOME }))
+        if (!fresh && from < 6) mergeDefaults(p.copy(folders = p.folders.filter { it.id == DefaultFolders.ZAD }))
         if (from < 4) applyHomeDefaults()
         if (from in 1 until 5) applySessionDefaults()
+        if (from < 7) fixWakeNameAndSleepReminder()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
     /**
      * Version 4: fixes the wake-up folder's name (it was saved as "?????" by an encoding bug) and puts
-     * the [HOME_DEFAULTS] folders first on Home. Folders the user renamed or deleted are left alone.
+     * the [DefaultFolders.HOME_ORDER] folders first on Home. Folders the user renamed or deleted are left alone.
      */
     private fun applyHomeDefaults() {
-        folder(WAKE_FOLDER_ID)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
-        val present = HOME_DEFAULTS.filter { folder(it) != null }
+        folder(DefaultFolders.WAKE)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
+        val present = DefaultFolders.HOME_ORDER.filter { folder(it) != null }
         setHidden(hidden() - present.toSet())
         setHomeOrder(present + homeOrder().filter { it !in present })
     }
@@ -221,10 +222,21 @@ object Store {
      * morning / evening remember their position, and their reminders open those folders.
      */
     private fun applySessionDefaults() {
-        listOf(MORNING_FOLDER_ID, EVENING_FOLDER_ID).filter { folder(it) != null }.forEach { setFolderRemember(it, true) }
-        mapOf("m" to MORNING_FOLDER_ID, "e" to EVENING_FOLDER_ID).forEach { (sid, fid) ->
+        listOf(DefaultFolders.MORNING, DefaultFolders.EVENING).filter { folder(it) != null }.forEach { setFolderRemember(it, true) }
+        mapOf("m" to DefaultFolders.MORNING, "e" to DefaultFolders.EVENING).forEach { (sid, fid) ->
             val s = schedule(sid) ?: return@forEach
             if (folder(fid) != null && (s.open == null || folder(s.open) == null)) upsertSchedule(s.copy(open = fid))
+        }
+    }
+
+    /**
+     * Version 7: spells the wake-up folder's name correctly (a user's own name is left alone), and the before-sleep
+     * reminder opens the sleep folder instead of the non-existent "sleep".
+     */
+    private fun fixWakeNameAndSleepReminder() {
+        folder(DefaultFolders.WAKE)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
+        sCache.filter { it.open == OLD_SLEEP_OPEN }.forEach {
+            upsertSchedule(it.copy(open = DefaultFolders.SLEEP.takeIf { id -> folder(id) != null }))
         }
     }
 
@@ -237,14 +249,16 @@ object Store {
         if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
     }
 
-    /** One time: the three fixed reminders become editable schedules (same on/off state). */
+    /** One time: the three fixed reminders become editable schedules (same on/off state), named in the phone's language. */
     private fun migrateSchedules() {
         if (sp.getBoolean(K_SCHEDULES_INITIALIZED, false)) return
+        fun s(id: String, title: Int, msg: Int, hour: Int, on: Boolean, open: String) =
+            Schedule(id, appCtx.getString(title), appCtx.getString(msg), hour, 0, AppPrefs.reminderOn(id, on), open)
         saveSchedules(
             listOf(
-                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, AppPrefs.reminderOn("m", true), MORNING_FOLDER_ID),
-                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, AppPrefs.reminderOn("e", true), EVENING_FOLDER_ID),
-                Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, AppPrefs.reminderOn("s", false), "sleep")
+                s("m", R.string.schedule_morning_title, R.string.schedule_morning_message, 6, true, DefaultFolders.MORNING),
+                s("e", R.string.schedule_evening_title, R.string.schedule_evening_message, 17, true, DefaultFolders.EVENING),
+                s("s", R.string.schedule_sleep_title, R.string.schedule_sleep_message, 22, false, DefaultFolders.SLEEP)
             )
         )
     }
@@ -402,10 +416,8 @@ object Store {
         Tracking.setTracked(id, false)
     }
 
-    fun folderName(key: String?): String {
-        if (key == null) return "Anytime"
-        return folder(key)?.name ?: "Anytime"
-    }
+    fun folderName(key: String?): String =
+        key?.let { folder(it)?.name } ?: appCtx.getString(R.string.anytime)
 
     fun isDefaultFolder(key: String?) = key != null && key in defaultFolderIds
 
@@ -437,6 +449,8 @@ object Store {
         p.settings?.prayerDelays?.forEach { (id, minutes) -> AppPrefs.setSessionDelayMinutes(id, minutes) }
         p.settings?.nudgeOn?.let { AppPrefs.setNudgeOn(it) }
         p.settings?.nudgeMinutes?.let { AppPrefs.setNudgeLeadMinutes(it) }
+        p.settings?.calcMethod?.let { AppPrefs.setCalcMethod(it) }
+        p.settings?.asrHanafi?.let { AppPrefs.setAsrHanafi(it) }
         // Tracked folders follow their folder: same id if it kept it, else the id the merge gave it.
         p.tracking?.let { t ->
             Tracking.restore(t.folders, t.history) { fileId -> (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null } }
@@ -480,33 +494,40 @@ object Store {
             ImportMerge.State(fCache, zCache, sCache), AppPrefs.arabicSize(), AppPrefs.notificationsOn(), AppPrefs.arabicSp(),
             sessionDelays = listOf("m", "e", "s").associateWith { AppPrefs.sessionDelayMinutes(it) },
             nudgeOn = AppPrefs.nudgeOn(), nudgeMinutes = AppPrefs.nudgeLeadMinutes(),
-            tracking = Tracking.toJson()
+            tracking = Tracking.toJson(),
+            calcMethod = AppPrefs.calcMethod(), asrHanafi = AppPrefs.asrHanafi()
         )
     }
 
     // ---------- Home customisation ----------
     val defaultOrder: List<String> get() = fCache.map { it.id }
 
+    private fun savedOrder(): List<String> = savedOrderCache ?: run {
+        val raw: String? = sp.getString(K_ORDER, null)
+        (if (raw == null) emptyList() else LegacyJson.parseIds(raw).toList()).also { savedOrderCache = it }
+    }
+
     fun homeOrder(): List<String> {
         val valid = defaultOrder
-        val raw: String? = sp.getString(K_ORDER, null)
-        val saved: List<String> = if (raw == null) emptyList() else {
-            val arr = JSONArray(raw)
-            (0 until arr.length()).map { arr.getString(it) }
-        }
-        return saved.filter { it in valid }.distinct().let { kept -> kept + valid.filter { it !in kept } }
+        val validSet = valid.toHashSet()
+        val kept = savedOrder().filter { it in validSet }.distinct()
+        val keptSet = kept.toHashSet()
+        return kept + valid.filter { it !in keptSet }
     }
 
     fun setHomeOrder(order: List<String>) {
+        savedOrderCache = order.toList()
         sp.edit().putString(K_ORDER, JSONArray(order).toString()).apply()
     }
 
-    fun hidden(): Set<String> {
-        val arr = JSONArray(sp.getString(K_HIDDEN, "[]"))
-        return (0 until arr.length()).map { arr.getString(it) }.toSet()
-    }
+    fun hidden(): Set<String> = hiddenCache ?: try {
+        LegacyJson.parseIds(sp.getString(K_HIDDEN, "[]") ?: "[]")
+    } catch (_: Exception) {
+        emptySet()
+    }.also { hiddenCache = it }
 
     fun setHidden(set: Set<String>) {
+        hiddenCache = set.toSet()
         sp.edit().putString(K_HIDDEN, JSONArray(set.toList()).toString()).apply()
     }
 
@@ -516,6 +537,8 @@ object Store {
     /** Resets order/placement; default folders that are not meant for Home (no "home": true) are hidden again. */
     fun resetHome() {
         sp.edit().remove(K_ORDER).remove(K_HIDDEN).remove(K_PLACE).apply()
+        savedOrderCache = null
+        hiddenCache = null
         val hide = defaults()?.folders?.filter { it.home != true }?.mapNotNull { it.id }.orEmpty()
         setHidden(hide.filter { folder(it) != null }.toSet())
     }
@@ -557,10 +580,10 @@ object Store {
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
         if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow)) } ?: emptyList()
+            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow, it.note)) } ?: emptyList()
         }
         val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow) }
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow, it.note) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"

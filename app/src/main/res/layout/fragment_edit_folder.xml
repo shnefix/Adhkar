@@ -29,7 +29,7 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:background="@drawable/bg_card22"
-                android:contentDescription="Back"
+                android:contentDescription="@string/back"
                 android:clickable="true"
                 android:focusable="true">
 
@@ -43,7 +43,7 @@
 
             <TextView
                 style="@style/TB"
-                android:text="Edit folder"
+                android:text="@string/edit_folder"
                 android:textSize="18sp"
                 android:textColor="@color/text"
                 android:gravity="center"
@@ -65,7 +65,7 @@
 
             <TextView
                 style="@style/TB"
-                android:text="Folder name"
+                android:text="@string/folder_name"
                 android:textSize="14sp"
                 android:textColor="@color/light"
                 android:layout_width="wrap_content"
@@ -94,7 +94,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginStart="10dp"
                     android:background="@null"
-                    android:hint="Folder name"
+                    android:hint="@string/folder_name"
                     android:textColorHint="@color/hint"
                     android:textColor="@color/text"
                     android:textSize="16sp"
@@ -118,7 +118,7 @@
 
             <TextView
                 style="@style/TB"
-                android:text="Show on Home"
+                android:text="@string/show_on_home"
                 android:textSize="16sp"
                 android:textColor="@color/text"
                 android:layout_weight="1"
@@ -129,7 +129,7 @@
                 android:id="@+id/sw_home"
                 android:layout_width="56dp"
                 android:layout_height="44dp"
-                android:contentDescription="Show on Home" />
+                android:contentDescription="@string/show_on_home" />
         </LinearLayout>
 
         <!-- Folder icon -->
@@ -146,7 +146,7 @@
 
             <TextView
                 style="@style/TB"
-                android:text="Icon"
+                android:text="@string/icon"
                 android:textSize="16sp"
                 android:textColor="@color/text"
                 android:layout_weight="1"
@@ -191,7 +191,7 @@
 
                 <TextView
                     style="@style/TB"
-                    android:text="Remember last position"
+                    android:text="@string/remember_position"
                     android:textSize="16sp"
                     android:textColor="@color/text"
                     android:layout_width="wrap_content"
@@ -212,7 +212,7 @@
                 android:id="@+id/sw_remember"
                 android:layout_width="56dp"
                 android:layout_height="44dp"
-                android:contentDescription="Remember last position" />
+                android:contentDescription="@string/remember_position" />
         </LinearLayout>
 
         <!-- Track this folder (off by default) -->
@@ -270,7 +270,7 @@
 
             <TextView
                 style="@style/Caps"
-                android:text="Order"
+                android:text="@string/order"
                 android:textSize="13sp"
                 android:textColor="@color/muted"
                 android:id="@+id/order_label"
@@ -286,7 +286,7 @@
 
             <TextView
                 style="@style/T"
-                android:text="No azkar in this folder yet. Add your first one below."
+                android:text="@string/folder_empty_add_below"
                 android:textSize="15sp"
                 android:textColor="@color/muted"
                 android:lineHeight="22sp"
@@ -326,7 +326,7 @@
 
             <TextView
                 style="@style/TB"
-                android:text="Add zikr to this folder"
+                android:text="@string/add_zikr_to_folder"
                 android:textSize="17sp"
                 android:textColor="@color/bg"
                 android:layout_marginStart="8dp"
@@ -337,7 +337,7 @@
         <!-- Delete folder -->
         <TextView
             style="@style/TB"
-            android:text="Delete folder"
+            android:text="@string/delete_folder"
             android:textSize="15sp"
             android:textColor="@color/danger"
             android:id="@+id/btn_delete"

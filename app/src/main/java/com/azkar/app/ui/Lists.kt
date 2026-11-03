@@ -101,7 +101,7 @@ class ZikrAdapter(
         h.note.visibility = if (r.note.isBlank()) View.GONE else View.VISIBLE
         // Hidden: dimmed, with a "Hidden" tag
         h.chip.visibility = if (r.hidden) View.VISIBLE else View.GONE
-        h.chip.text = "Hidden"
+        h.chip.setText(R.string.hidden_label)
         h.chip.setTextColor(ctx.getColor(R.color.muted))
         (h.rep.layoutParams as ViewGroup.MarginLayoutParams).marginStart = if (r.hidden) (8 * d).toInt() else 0
         h.rep.requestLayout()

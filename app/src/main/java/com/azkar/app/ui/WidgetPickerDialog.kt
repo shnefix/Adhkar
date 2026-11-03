@@ -184,7 +184,7 @@ internal class WidgetPickerDialog(
     }
 
     private fun addLabel(item: PickerItem): String {
-        val name = item.family?.let { FAMILY_LABELS[it] }?.let { context.getString(it) } ?: item.style.label
+        val name = item.family?.let { FAMILY_LABELS[it] }?.let { context.getString(it) } ?: context.getString(item.style.label)
         return context.getString(R.string.add_style_to_home, name, widgetSizeName(context, item.kind))
     }
 

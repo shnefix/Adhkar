@@ -24,7 +24,7 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
 
         val swHide = view.findViewById<ToggleSwitch>(R.id.sw_hide)
         val hideSub = view.findViewById<TextView>(R.id.hide_sub)
-        fun renderHide() { hideSub.text = if (swHide.on) "Skipped while reading. Still saved here." else "Shown when you read this folder" }
+        fun renderHide() { hideSub.text = getString(if (swHide.on) R.string.hide_on else R.string.hide_off) }
         swHide.on = viewModel.isHidden(z.id)
         renderHide()
         swHide.onToggle = { on -> viewModel.setHidden(z.id, on); renderHide() }

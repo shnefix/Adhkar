@@ -21,7 +21,7 @@ import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
 
-class ReaderFragment : Fragment(R.layout.fragment_reader) {
+class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     private lateinit var rn: ReaderNav
     private var lastBack = 0L
 
@@ -37,25 +37,24 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
         view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
 
-        val key = requireArguments().getString("key") ?: "morning"
-        val items = Store.readerItems(key)
-        if (items.isEmpty()) { nav().pop(); return }
+        val key = requireArguments().getString("key")
+        val items = key?.let { Store.readerItems(it) }.orEmpty()
+        if (key == null || items.isEmpty()) { nav().pop(); return }
         val explicit = requireArguments().getInt("start", -1)
-val remember = Store.rememberPosition(key)
-val (startIdx, startCount) = when {
-    savedInstanceState != null -> savedInstanceState.getInt("i") to savedInstanceState.getInt("count")
-    explicit >= 0 -> explicit to 0
-    remember -> {
-        // Morning / evening positions only last until Dhuhr / Maghrib; after that, start from the first zikr.
-        if (PrayerSessions.positionExpired(key, AppPrefs.savedPositionTime(key))) AppPrefs.clearPosition(key)
-        val sv = AppPrefs.savedPosition(key)
-        ReaderResume.start(items.map { it.id }, items.map { it.target }, sv?.first, sv?.second ?: 0)
-    }
-    else -> 0 to 0
-}
-rn = ReaderNav(items.map { it.target }, startIdx, startCount)
+        val remember = Store.rememberPosition(key)
+        val (startIdx, startCount) = when {
+            savedInstanceState != null -> savedInstanceState.getInt("i") to savedInstanceState.getInt("count")
+            explicit >= 0 -> explicit to 0
+            remember -> {
+                // Morning / evening positions only last until Dhuhr / Maghrib; after that, start from the first zikr.
+                if (PrayerSessions.positionExpired(key, AppPrefs.savedPositionTime(key))) AppPrefs.clearPosition(key)
+                val sv = AppPrefs.savedPosition(key)
+                ReaderResume.start(items.map { it.id }, items.map { it.target }, sv?.first, sv?.second ?: 0)
+            }
+            else -> 0 to 0
+        }
+        rn = ReaderNav(items.map { it.target }, startIdx, startCount)
         val folderTitle = Store.folderName(key)
-        val title = if (Store.isDefaultFolder(key)) "$folderTitle azkar" else folderTitle
         val sizeSp = AppPrefs.arabicSp()
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)
@@ -75,12 +74,12 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             override fun handleOnBackPressed() {
                 val now = SystemClock.uptimeMillis()
                 if (now - lastBack < 2000) nav().pop()
-                else { lastBack = now; Toast.makeText(ctx, "Press back again to exit", Toast.LENGTH_SHORT).show() }
+                else { lastBack = now; Toast.makeText(ctx, R.string.reader_back_again, Toast.LENGTH_SHORT).show() }
             }
         })
 
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
-        view.findViewById<TextView>(R.id.title).text = title
+        view.findViewById<TextView>(R.id.title).text = folderTitle
         val ar = view.findViewById<TextView>(R.id.ar).apply {
             textSize = sizeSp.toFloat()
             val lhPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sizeSp * 1.85f, resources.displayMetrics)
@@ -88,6 +87,7 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
         }
         val titleAbove = view.findViewById<TextView>(R.id.title_above)
         val titleBelow = view.findViewById<TextView>(R.id.title_below)
+        val note = view.findViewById<TextView>(R.id.note)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
         val segs = view.findViewById<LinearLayout>(R.id.segs)
         val ring = view.findViewById<RingView>(R.id.ring)
@@ -106,7 +106,9 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             titleBelow.text = cur.title
             titleAbove.visibility = if (hasTitle && !cur.titleBelow) View.VISIBLE else View.GONE
             titleBelow.visibility = if (hasTitle && cur.titleBelow) View.VISIBLE else View.GONE
-            pos.text = "${i + 1} of ${items.size}"
+            note.text = cur.note
+            note.visibility = if (cur.note.isNotBlank()) View.VISIBLE else View.GONE
+            pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.removeAllViews()
             items.indices.forEach { k ->
                 val c = if (k < i) teal else if (k == i) gold else track
@@ -116,11 +118,11 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
                 segs.addView(seg, p)
             }
             countTv.text = rn.count.toString()
-            sub.text = if (done) "Done" else "of ${cur.target}"
+            sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             hint.text = if (rn.isLast && cur.target > 1)
-                (if (done) "You have finished this collection" else "Tap the circle to count") else ""
+                getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
             if (remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
             // Azkar behind the current one are read; the current one counts once its repeats are done.
             Tracking.record(key, i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0, items.size)

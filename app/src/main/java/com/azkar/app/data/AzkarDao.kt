@@ -4,7 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+
+/** Ids per DELETE ... IN (...) statement, safely under SQLite's limit of 999 bound variables. */
+private const val DELETE_CHUNK = 500
 
 @Dao
 interface AzkarDao {
@@ -43,6 +47,35 @@ interface AzkarDao {
 
     @Insert
     suspend fun insertSchedules(schedules: List<ScheduleEntity>)
+
+    @Upsert
+    suspend fun upsertFolders(folders: List<FolderEntity>)
+
+    @Upsert
+    suspend fun upsertZikrs(zikrs: List<ZikrEntity>)
+
+    @Upsert
+    suspend fun upsertSchedules(schedules: List<ScheduleEntity>)
+
+    @Query("DELETE FROM folders WHERE id IN (:ids)")
+    suspend fun deleteFoldersById(ids: List<String>)
+
+    @Query("DELETE FROM zikrs WHERE id IN (:ids)")
+    suspend fun deleteZikrsById(ids: List<String>)
+
+    @Query("DELETE FROM schedules WHERE id IN (:ids)")
+    suspend fun deleteSchedulesById(ids: List<String>)
+
+    /** Writes only the rows that changed, in one transaction. Deletes go in chunks under SQLite's variable limit. */
+    @Transaction
+    suspend fun applyChanges(c: ContentChanges) {
+        c.deletedFolders.chunked(DELETE_CHUNK).forEach { deleteFoldersById(it) }
+        c.deletedZikrs.chunked(DELETE_CHUNK).forEach { deleteZikrsById(it) }
+        c.deletedSchedules.chunked(DELETE_CHUNK).forEach { deleteSchedulesById(it) }
+        if (c.folders.isNotEmpty()) upsertFolders(c.folders)
+        if (c.zikrs.isNotEmpty()) upsertZikrs(c.zikrs)
+        if (c.schedules.isNotEmpty()) upsertSchedules(c.schedules)
+    }
 
     @Transaction
     suspend fun replaceAllAsync(

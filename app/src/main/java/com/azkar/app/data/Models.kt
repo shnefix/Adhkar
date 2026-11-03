@@ -14,16 +14,16 @@ data class Zikr(
 /** A folder the user created or one loaded from the default asset. */
 data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false)
 
-/** One recitation inside the reader. */
+/** One recitation inside the reader. [note] is the zikr's note (blank = none), shown under the text. */
 data class ReaderItem(
     val arabic: String, val target: Int, val id: String = "",
-    val title: String = "", val titleBelow: Boolean = false
+    val title: String = "", val titleBelow: Boolean = false, val note: String = ""
 )
 
-enum class Placement(val key: String, val label: String) {
-    TOP("top", "Top of Home"),
-    MIXED("mixed", "Mixed with collections"),
-    BOTTOM("bottom", "Bottom of Home");
+enum class Placement(val key: String, @androidx.annotation.StringRes val label: Int) {
+    TOP("top", com.azkar.app.R.string.placement_top),
+    MIXED("mixed", com.azkar.app.R.string.placement_mixed),
+    BOTTOM("bottom", com.azkar.app.R.string.placement_bottom);
 
     companion object {
         fun from(key: String?) = values().firstOrNull { it.key == key } ?: MIXED

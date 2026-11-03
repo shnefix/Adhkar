@@ -201,6 +201,13 @@ class RoomMigrationTest {
         override suspend fun insertFolders(folders: List<FolderEntity>) = Unit
         override suspend fun insertZikrs(zikrs: List<ZikrEntity>) = Unit
         override suspend fun insertSchedules(schedules: List<ScheduleEntity>) = Unit
+        override suspend fun upsertFolders(folders: List<FolderEntity>) = Unit
+        override suspend fun upsertZikrs(zikrs: List<ZikrEntity>) = Unit
+        override suspend fun upsertSchedules(schedules: List<ScheduleEntity>) = Unit
+        override suspend fun deleteFoldersById(ids: List<String>) = Unit
+        override suspend fun deleteZikrsById(ids: List<String>) = Unit
+        override suspend fun deleteSchedulesById(ids: List<String>) = Unit
+        override suspend fun applyChanges(c: ContentChanges): Unit = error("simulated Room failure")
         override suspend fun replaceAllAsync(
             folders: List<FolderEntity>,
             zikrs: List<ZikrEntity>,

@@ -8,7 +8,7 @@
 <TextView style="@style/Ar" android:text="" android:textSize="20sp" android:textColor="@color/arabic" android:lineHeight="30sp" android:textDirection="rtl" android:maxLines="2" android:ellipsize="end" android:id="@+id/ar" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/light" android:lineHeight="20sp" android:maxLines="1" android:ellipsize="end" android:id="@+id/note" android:layout_marginTop="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
-<FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="Edit zikr" android:clickable="true" android:focusable="true">
+<FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/edit_zikr" android:clickable="true" android:focusable="true">
 <ImageView android:id="@+id/edit_ic" android:src="@drawable/ic_pencil_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/muted" android:layout_gravity="center"/>
 </FrameLayout>
 </LinearLayout>

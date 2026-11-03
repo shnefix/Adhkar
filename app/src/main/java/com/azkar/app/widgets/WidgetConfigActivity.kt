@@ -34,7 +34,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         val styles = WidgetStyle.values().filter { kind in it.offered }
         dialog = AlertDialog.Builder(this)
             .setTitle(R.string.widget_style_title)
-            .setItems(styles.map { it.label }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }
+            .setItems(styles.map { getString(it.label) }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }
             .setOnCancelListener { finish() }
             .show()
     }

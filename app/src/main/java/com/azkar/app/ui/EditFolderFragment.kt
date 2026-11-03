@@ -54,7 +54,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
 
         val iconBtn = view.findViewById<TextView>(R.id.icon_btn)
         fun renderIcon(icon: String?) {
-            iconBtn.text = icon ?: "Default"
+            iconBtn.text = icon ?: getString(R.string.default_label)
             iconBtn.textSize = if (icon == null) 14f else 24f
         }
         iconBtn.setOnClickListener {
@@ -65,7 +65,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         val swRem = view.findViewById<ToggleSwitch>(R.id.sw_remember)
         val remSub = view.findViewById<TextView>(R.id.remember_sub)
         fun renderRem() {
-            remSub.text = if (swRem.on) "Resumes where you stopped in this folder" else "This folder always starts from the beginning"
+            remSub.text = getString(if (swRem.on) R.string.remember_on else R.string.remember_off)
         }
         swRem.on = viewModel.remembersPosition()
         renderRem()
@@ -86,7 +86,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
 
         fun renderRows(state: FolderState) {
             val list = state.zikrs
-            label.text = "Order · " + list.size + if (list.size == 1) " zikr" else " azkar"
+            label.text = getString(R.string.order_count, azkarCount(requireContext(), list.size))
             empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
             rows.removeAllViews()
             val last = list.size - 1
@@ -95,7 +95,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
                 val v = layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
                 v.findViewById<TextView>(R.id.ar).text = z.arabic
                 v.findViewById<TextView>(R.id.line).text =
-                    "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · Hidden" else "")
+                    "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · " + getString(R.string.hidden_label) else "")
                 v.findViewById<ImageView>(R.id.hide_ic).apply {
                     setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
                     imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
@@ -120,10 +120,10 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
             val doDelete = { viewModel.delete(); nav().pop() }
             if (n == 0) doDelete()
             else AlertDialog.Builder(ctx)
-                .setTitle("Delete \"${Store.folderName(viewModel.id)}\"?")
-                .setMessage("This folder has $n azkar. They are not lost: they stay saved under Anytime.")
-                .setPositiveButton("Delete") { _, _ -> doDelete() }
-                .setNegativeButton("Cancel", null)
+                .setTitle(getString(R.string.delete_folder_title, Store.folderName(viewModel.id)))
+                .setMessage(getString(R.string.delete_folder_message, azkarCount(ctx, n)))
+                .setPositiveButton(R.string.delete) { _, _ -> doDelete() }
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 

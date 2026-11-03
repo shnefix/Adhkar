@@ -21,7 +21,7 @@ data class FolderState(
     val zikrs: List<Zikr>,
     val hidden: Set<String>
 ) {
-    val name: String get() = folder?.name ?: "Anytime"
+    val name: String get() = folder?.name ?: Store.folderName(null)
 
     /** False once a real folder has been deleted (e.g. from the editor while this screen was open). */
     val exists: Boolean get() = id == ANYTIME || folder != null || Store.folder(id) != null

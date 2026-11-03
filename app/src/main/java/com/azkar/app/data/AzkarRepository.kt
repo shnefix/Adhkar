@@ -31,6 +31,13 @@ class AzkarRepository @Inject constructor(
     @Volatile
     private var snapshot = AzkarContent(emptyList(), emptyList(), emptyList())
 
+    /**
+     * True once [snapshot] mirrors Room (after [loadContent] or any successful write). Until then a write replaces
+     * every table; afterwards it writes only the rows that differ from the snapshot.
+     */
+    @Volatile
+    private var snapshotIsRoom = false
+
     val content: Flow<AzkarContent> = combine(
         dao.observeFolders(),
         dao.observeZikrs(),
@@ -52,7 +59,7 @@ class AzkarRepository @Inject constructor(
             schedules = dao.getSchedulesOnce().map {
                 Schedule(it.id, it.title, it.message, it.hour, it.minute, it.enabled, it.open)
             }
-        ).also { snapshot = it }
+        ).also { snapshot = it; snapshotIsRoom = true }
     }
 
     suspend fun replaceAllAsync(content: AzkarContent) {
@@ -83,9 +90,20 @@ class AzkarRepository @Inject constructor(
             previous?.await()
             val result = runCatching {
                 writeMutex.withLock {
-                    dao.replaceAllAsync(next.toFolders(), next.toZikrs(), next.toSchedules())
+                    if (snapshotIsRoom) {
+                        // Writes are serialized and the snapshot only moves on success, so it is what Room holds now.
+                        val old = snapshot
+                        val changes = ContentChanges.between(
+                            old.toFolders(), next.toFolders(), old.toZikrs(), next.toZikrs(),
+                            old.toSchedules(), next.toSchedules()
+                        )
+                        if (!changes.isEmpty) dao.applyChanges(changes)
+                    } else {
+                        dao.replaceAllAsync(next.toFolders(), next.toZikrs(), next.toSchedules())
+                    }
                 }
                 snapshot = next
+                snapshotIsRoom = true
                 next
             }
             result.exceptionOrNull()?.let { android.util.Log.e("Azkar", "Asynchronous content write failed", it) }

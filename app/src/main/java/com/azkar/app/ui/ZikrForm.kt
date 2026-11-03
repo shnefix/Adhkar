@@ -173,7 +173,7 @@ class ZikrForm(
 
         if (allowNew) {
             chips.addView(
-                Ui.chip(ctx, "+ New folder", sel == "new", true) {
+                Ui.chip(ctx, ctx.getString(R.string.new_folder_chip), sel == "new", true) {
                     sel = "new"
                 }
             )
