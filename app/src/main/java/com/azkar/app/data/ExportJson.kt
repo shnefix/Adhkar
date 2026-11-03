@@ -5,7 +5,10 @@ import org.json.JSONObject
 
 /** Builds a backup file that ImportJson reads back. Read-only: never touches stored data. */
 object ExportJson {
-    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also { if (z.note.isNotBlank()) it.put("note", z.note) }
+    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
+        if (z.note.isNotBlank()) it.put("note", z.note)
+        if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", if (z.titleBelow) "below" else "above")
+    }
 
     fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT): String {
         val folders = JSONArray()

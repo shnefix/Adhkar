@@ -41,6 +41,17 @@ class PrayerSessionsTest {
     }
 
     @Test
+    fun chosenDelayMovesTheStart() {
+        val delay = 45 * 60_000L
+        assertEquals(PrayerSessions.minute(today.fajr) + delay, PrayerSessions.nextReminder(Session.MORNING, at(1), cairo, zone, delay))
+        assertEquals(PrayerSessions.minute(today.asr), PrayerSessions.nextReminder(Session.EVENING, at(12), cairo, zone, 0L))
+        assertEquals(
+            (PrayerSessions.minute(today.asr) + delay) to PrayerSessions.minute(today.maghrib),
+            PrayerSessions.window(Session.EVENING, at(12), cairo, zone, delay)
+        )
+    }
+
+    @Test
     fun sessionsEndAtDhuhrAndMaghrib() {
         assertEquals(PrayerSessions.minute(today.dhuhr), PrayerSessions.endAfter(Session.MORNING, at(7), cairo, zone))
         assertEquals(PrayerSessions.minute(today.maghrib), PrayerSessions.endAfter(Session.EVENING, at(15, 30), cairo, zone))

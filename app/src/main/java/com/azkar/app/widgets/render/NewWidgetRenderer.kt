@@ -17,6 +17,8 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.PathParser
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
+import com.azkar.app.reminders.PrayerSessions
 import java.util.Calendar
 import kotlin.math.max
 import kotlin.math.min
@@ -31,13 +33,20 @@ object WidgetRenderMath {
         (bottom - top) * fraction.coerceIn(0f, 1f)
 }
 
+/** Which of morning / evening is current: the prayer-time windows when a location is known, else the reminder times. */
 object AzkarSessionClock {
-    fun activeSession(context: Context, now: Calendar = Calendar.getInstance()): String {
-        val schedules = Store.schedules()
-        val morning = schedules.firstOrNull { it.open == "morning" }?.hour ?: 6
-        val evening = schedules.firstOrNull { it.open == "evening" }?.hour ?: 17
-        val hour = now.get(Calendar.HOUR_OF_DAY)
-        return if (hour >= morning && hour < evening) "MORNING" else "EVENING"
+    fun morningActive(now: Long = System.currentTimeMillis()): Boolean {
+        val morning = PrayerSessions.Session.MORNING
+        val evening = PrayerSessions.Session.EVENING
+        PrayerSessions.window(morning, now)?.let { m ->
+            val e = PrayerSessions.window(evening, now) ?: return now < m.second
+            return now < e.first           // from midnight until the evening window opens
+        }
+        val minute = Calendar.getInstance().apply { timeInMillis = now }.let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+        fun at(s: PrayerSessions.Session) = Store.schedule(s.scheduleId)?.let { it.hour * 60 + it.minute }
+        val m = at(morning) ?: return true
+        val e = at(evening) ?: return true
+        return minute in m until e
     }
 }
 
@@ -45,11 +54,13 @@ object AzkarSessionClock {
 object AzkarWidgetSizes {
     fun design(f: AzkarWidgetFamily): Pair<Float, Float> = when (f) {
         AzkarWidgetFamily.H_SMALL,
-        AzkarWidgetFamily.D_SMALL, AzkarWidgetFamily.B_SMALL -> 158f to 158f
+        AzkarWidgetFamily.D_SMALL, AzkarWidgetFamily.B_SMALL,
+        AzkarWidgetFamily.C_STREAK_SMALL, AzkarWidgetFamily.G_COUNTDOWN_SMALL, AzkarWidgetFamily.F_BENTO_SMALL -> 158f to 158f
         AzkarWidgetFamily.H_MEDIUM,
-        AzkarWidgetFamily.D_MEDIUM, AzkarWidgetFamily.B_MEDIUM -> 338f to 158f
+        AzkarWidgetFamily.D_MEDIUM, AzkarWidgetFamily.B_MEDIUM,
+        AzkarWidgetFamily.C_STREAK_MEDIUM, AzkarWidgetFamily.T_TODAY_MEDIUM -> 338f to 158f
         AzkarWidgetFamily.H_LARGE,
-        AzkarWidgetFamily.D_LARGE -> 338f to 354f
+        AzkarWidgetFamily.D_LARGE, AzkarWidgetFamily.C_STREAK_LARGE -> 338f to 354f
         AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS,
         AzkarWidgetFamily.J_TALL_RING, AzkarWidgetFamily.J_TALL_TIMELINE -> 158f to 354f
     }
@@ -73,6 +84,8 @@ class NewWidgetRenderer(private val ctx: Context) {
     private val outline = ctx.getColor(R.color.azkar_widget_outline)
     private val chipC = ctx.getColor(R.color.azkar_widget_chip)
     private val beadOff = ctx.getColor(R.color.azkar_widget_bead_off)
+    private val goldMid = ctx.getColor(R.color.azkar_widget_gold_mid)
+    private val missedC = ctx.getColor(R.color.azkar_widget_missed)
 
     private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
     private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
@@ -90,7 +103,8 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── entry ─────────────────────────
 
-    fun render(family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float): Bitmap {
+    /** [tracking] feeds the tracking families; previews may leave it null to show every tracked folder. */
+    fun render(family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float, tracking: TrackingModel? = null): Bitmap {
         val w = widthDp.coerceAtLeast(1f)
         val h = heightDp.coerceAtLeast(1f)
         var s = ctx.resources.displayMetrics.density
@@ -100,6 +114,19 @@ class NewWidgetRenderer(private val ctx: Context) {
         val c = Canvas(bmp)
         c.scale(s, s)
         card(c, w, h)
+        if (family.tracking) {
+            val t = tracking ?: TrackingModel.load(ctx, null)
+            if (!t.hasFolders) { trackingOff(c, w, h); return bmp }
+            when (family) {
+                AzkarWidgetFamily.C_STREAK_SMALL -> streakSmall(c, w, h, t)
+                AzkarWidgetFamily.C_STREAK_MEDIUM -> streakMedium(c, w, h, t)
+                AzkarWidgetFamily.C_STREAK_LARGE -> streakLarge(c, w, h, t)
+                AzkarWidgetFamily.G_COUNTDOWN_SMALL -> countdownSmall(c, w, h, t)
+                AzkarWidgetFamily.F_BENTO_SMALL -> bentoSmall(c, w, h, t)
+                else -> todayMedium(c, w, h, t)
+            }
+            return bmp
+        }
         if (m.n == 0) { empty(c, w, h); return bmp }
         when (family) {
             AzkarWidgetFamily.B_SMALL -> discSmall(c, w, h, m)
@@ -114,6 +141,7 @@ class NewWidgetRenderer(private val ctx: Context) {
             AzkarWidgetFamily.J_STRIP_PROGRESS -> stripProgress(c, w, h, m)
             AzkarWidgetFamily.J_TALL_RING -> tallRing(c, w, h, m)
             AzkarWidgetFamily.J_TALL_TIMELINE -> tallTimeline(c, w, h, m)
+            else -> empty(c, w, h)   // tracking families are drawn above
         }
         return bmp
     }
@@ -154,14 +182,13 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── D · morning & evening ─────────────────────────
 
-    private fun sessionModel(m: WidgetModel, keys: List<String>): WidgetModel {
-        val f = Store.folders().firstOrNull { f -> keys.any { f.name.contains(it, ignoreCase = true) } } ?: return m
+    /** The morning / evening folder by id (names can be renamed or translated); the widget's own folder if it's gone. */
+    private fun sessionModel(m: WidgetModel, session: PrayerSessions.Session): WidgetModel {
+        val f = Store.folder(session.folderId) ?: return m
         return if (f.name == m.folderName) m else WidgetModel.load(ctx, AppWidgetManager.INVALID_APPWIDGET_ID, f.id)
     }
 
-    private val morningKeys = listOf("morning", "صباح")
-    private val eveningKeys = listOf("evening", "مساء")
-    private fun morningActive() = AzkarSessionClock.activeSession(ctx) == "MORNING"
+    private fun morningActive() = AzkarSessionClock.morningActive()
 
     private fun sessionsSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         val k = min(w, h) / 158f
@@ -169,8 +196,8 @@ class NewWidgetRenderer(private val ctx: Context) {
         val total = 56f * k * 2 + 18f * k
         val left = (w - total) / 2
         val ringCy = h / 2 - 3f * k
-        val morning = sessionModel(m, morningKeys)
-        val evening = sessionModel(m, eveningKeys)
+        val morning = sessionModel(m, PrayerSessions.Session.MORNING)
+        val evening = sessionModel(m, PrayerSessions.Session.EVENING)
         smallSession(c, left + 28f * k, ringCy, k, morning, str(R.string.widget_morning))
         smallSession(c, left + 56f * k + 18f * k + 28f * k, ringCy, k, evening, str(R.string.widget_evening))
     }
@@ -185,8 +212,8 @@ class NewWidgetRenderer(private val ctx: Context) {
     private fun sessionsMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         val pad = 12f
         val cw = (w - pad * 2 - 10f) / 2
-        val morning = sessionModel(m, morningKeys)
-        val evening = sessionModel(m, eveningKeys)
+        val morning = sessionModel(m, PrayerSessions.Session.MORNING)
+        val evening = sessionModel(m, PrayerSessions.Session.EVENING)
         val am = morningActive()
         miniCard(c, RectF(pad, pad, pad + cw, h - pad), str(R.string.widget_morning), morning, am)
         miniCard(c, RectF(pad + cw + 10f, pad, w - pad, h - pad), str(R.string.widget_evening), evening, !am)
@@ -208,8 +235,8 @@ class NewWidgetRenderer(private val ctx: Context) {
         val pad = 16f
         val ch = (h - pad * 2 - 10f) / 2
         val am = morningActive()
-        bigCard(c, RectF(pad, pad, w - pad, pad + ch), str(R.string.widget_morning_azkar), sessionModel(m, morningKeys), am)
-        bigCard(c, RectF(pad, pad + ch + 10f, w - pad, h - pad), str(R.string.widget_evening_azkar), sessionModel(m, eveningKeys), !am)
+        bigCard(c, RectF(pad, pad, w - pad, pad + ch), str(R.string.widget_morning_azkar), sessionModel(m, PrayerSessions.Session.MORNING), am)
+        bigCard(c, RectF(pad, pad + ch + 10f, w - pad, h - pad), str(R.string.widget_evening_azkar), sessionModel(m, PrayerSessions.Session.EVENING), !am)
     }
 
     private fun bigCard(c: Canvas, r: RectF, title: String, s: WidgetModel, active: Boolean) {
@@ -365,6 +392,205 @@ class NewWidgetRenderer(private val ctx: Context) {
                 Layout.Alignment.ALIGN_OPPOSITE
             )
         }
+    }
+
+    // ───────────────────────── tracking (C streak · G countdown · F bento · today) ─────────────────────────
+
+    private fun trackingOff(c: Canvas, w: Float, h: Float) {
+        text(c, str(R.string.widget_tracking_off), w / 2, h / 2 - 8, 13f, cream, dmBold, Paint.Align.CENTER, 0f, w - 30)
+        text(c, str(R.string.widget_tracking_off_hint), w / 2, h / 2 + 10, 11f, muted, dmReg, Paint.Align.CENTER, 0f, w - 30)
+    }
+
+    private fun streakSmall(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val k = min(w, h) / 158f
+        val pad = 14f
+        eyebrow(c, str(R.string.widget_streak), pad, pad + 5f, Paint.Align.LEFT, maxW = w - pad * 2)
+        val big = "${t.streak}"
+        val size = 56f * k
+        val cy = h / 2 + 2f * k
+        text(c, big, pad, cy, size, cream, dmBold, Paint.Align.LEFT)
+        caption(c, str(R.string.widget_days), pad + measure(big, size, dmBold) + 6f * k, cy + size * 0.24f, Paint.Align.LEFT, 12f * k)
+        // Last seven days; today is a ring until it is finished.
+        val d = 12f * k
+        val y = h - pad - d / 2
+        val step = (w - pad * 2 - d) / (t.week.size - 1)
+        t.week.forEachIndexed { i, day ->
+            val cx = pad + d / 2 + i * step
+            when {
+                day.complete -> c.drawCircle(cx, y, d / 2, fill(gold))
+                day.isToday -> c.drawCircle(cx, y, d / 2 - 1f, stroke(gold, 2f))
+                else -> c.drawCircle(cx, y, d / 2, fill(beadOff))
+            }
+        }
+    }
+
+    private fun streakMedium(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val pad = 16f
+        eyebrow(c, str(R.string.widget_streak_days, t.streak), pad, pad + 5f, Paint.Align.LEFT, maxW = w - pad * 2 - 64f)
+        caption(c, str(R.string.widget_best, t.best), w - pad, pad + 5f, Paint.Align.RIGHT)
+        val k = (h / 158f).coerceIn(0.7f, 1.2f)
+        val d = min(30f * k, (w - pad * 2) / 7f - 6f)
+        val step = (w - pad * 2 - d) / (t.week.size - 1)
+        val cy = h - pad - d / 2
+        t.week.forEachIndexed { i, day ->
+            val cx = pad + d / 2 + i * step
+            text(c, day.initial, cx, cy - d / 2 - 12f, 10f, if (day.isToday) gold else muted, if (day.isToday) dmBold else dmReg, Paint.Align.CENTER)
+            when {
+                day.complete -> { c.drawCircle(cx, cy, d / 2, fill(gold)); check(c, cx, cy, d * 0.47f, ink) }
+                day.isToday -> { c.drawCircle(cx, cy, d / 2 - 1f, stroke(gold, 2f)); c.drawCircle(cx, cy, 4f * k, fill(gold)) }
+                else -> c.drawCircle(cx, cy, d / 2 - .75f, stroke(outline, 1.5f))
+            }
+        }
+    }
+
+    private fun levelColor(l: Tracking.Level) = when (l) {
+        Tracking.Level.FULL -> gold
+        Tracking.Level.MID -> goldMid
+        Tracking.Level.LOW -> haloC
+        else -> missedC
+    }
+
+    private fun streakLarge(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val pad = 18f
+        val l = pad; val r = w - pad
+        header(c, str(R.string.widget_streak), t.rangeLabel, str(R.string.widget_n_days, t.streak), l, r, pad)
+
+        // Legend: best streak on the left, less → more swatches on the right.
+        val legendY = h - pad - 6f
+        caption(c, str(R.string.widget_best_streak, t.best), l, legendY, Paint.Align.LEFT, maxW = (r - l) / 2f)
+        var x = r
+        text(c, str(R.string.widget_more), x, legendY, 10f, muted, dmReg, Paint.Align.RIGHT)
+        x -= measure(str(R.string.widget_more), 10f, dmReg) + 6f
+        listOf(gold, goldMid, haloC, missedC).forEach { col ->
+            c.drawRoundRect(RectF(x - 12f, legendY - 6f, x, legendY + 6f), 3f, 3f, fill(col))
+            x -= 16f
+        }
+        text(c, str(R.string.widget_less), x + 2f, legendY, 10f, muted, dmReg, Paint.Align.RIGHT)
+
+        // Calendar: weekday header and five weeks.
+        val gap = 6f
+        val cellW = (r - l - gap * 6) / 7
+        val headCy = pad + 48f
+        t.gridHeader.forEachIndexed { i, s -> text(c, s, l + i * (cellW + gap) + cellW / 2, headCy, 10f, muted, dmReg, Paint.Align.CENTER) }
+        val top = headCy + 6f + gap
+        val rows = t.grid.size / 7
+        val cellH = min(34f * (h / 354f).coerceAtLeast(0.6f), ((legendY - 14f) - top - gap * (rows - 1)) / rows)
+        val rad = min(8f, cellH / 4f)
+        t.grid.forEachIndexed { i, day ->
+            val cx = l + (i % 7) * (cellW + gap)
+            val cy = top + (i / 7) * (cellH + gap)
+            val rect = RectF(cx, cy, cx + cellW, cy + cellH)
+            when {
+                day.future -> c.drawRoundRect(RectF(rect.left + .5f, rect.top + .5f, rect.right - .5f, rect.bottom - .5f), rad, rad, stroke(innerBorder, 1f))
+                day.isToday -> {
+                    c.drawRoundRect(rect, rad, rad, fill(if (day.level == Tracking.Level.MISSED) haloC else levelColor(day.level)))
+                    c.drawRoundRect(RectF(rect.left + 1f, rect.top + 1f, rect.right - 1f, rect.bottom - 1f), rad, rad, stroke(gold, 2f))
+                }
+                else -> c.drawRoundRect(rect, rad, rad, fill(levelColor(day.level)))
+            }
+        }
+    }
+
+    /** "2h 20m", "45m" */
+    private fun duration(ms: Long): String {
+        val mins = ((ms + 59_999L) / 60_000L).toInt()
+        val hh = mins / 60; val mm = mins % 60
+        return when {
+            hh == 0 -> str(R.string.widget_duration_m, mm)
+            mm == 0 -> str(R.string.widget_duration_h, hh)
+            else -> str(R.string.widget_duration_hm, hh, mm)
+        }
+    }
+
+    private fun countdownSmall(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val k = min(w, h) / 158f
+        val pad = 14f
+        val f = t.focus
+        if (f == null) { trackingOff(c, w, h); return }
+        val running = t.focusRunning
+        eyebrow(c, if (running) "${f.label} · ${str(R.string.widget_now)}" else str(R.string.widget_next_azkar), pad, pad + 5f, Paint.Align.LEFT, maxW = w - pad * 2)
+        val mins = ((t.focusDelta + 59_999L) / 60_000L).toInt()
+        val clock = String.format(java.util.Locale.getDefault(), "%d:%02d", mins / 60, mins % 60)
+        text(c, clock, pad, h / 2 - 4f * k, 48f * k, cream, dmBold, Paint.Align.LEFT, 0f, w - pad * 2)
+        caption(c, str(if (running) R.string.widget_hours_minutes_left else R.string.widget_hours_minutes), pad, h / 2 + 26f * k, Paint.Align.LEFT, 11f, maxW = w - pad * 2)
+        val footer = if (running) str(R.string.widget_ends_at, f.label, TrackingModel.timeLabel(ctx, f.end!!))
+        else "${f.label} · ${TrackingModel.timeLabel(ctx, f.nextStart)}"
+        caption(c, footer, pad, h - pad - 5f, Paint.Align.LEFT, maxW = w - pad * 2)
+    }
+
+    private fun bentoSmall(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val k = min(w, h) / 158f
+        val pad = 10f; val gap = 6f
+        val tw = (w - pad * 2 - gap) / 2; val th = (h - pad * 2 - gap) / 2
+        val primary = t.primaryFolder
+        val primaryProgress = primary?.let { p -> t.sessions.firstOrNull { it.folderId == p }?.progress }
+            ?: primary?.let { Tracking.progress(listOf(it), java.util.Calendar.getInstance()) }
+        val primaryLabel = primary?.let { p -> t.sessions.firstOrNull { it.folderId == p }?.label ?: Store.folderName(p) } ?: ""
+        val f = t.focus
+        val tiles = listOf(
+            Triple("${(t.today.fraction * 100).roundToInt()}%", str(R.string.widget_today_lower), true),
+            Triple(primaryProgress?.let { "${it.done}/${it.total}" } ?: "–", primaryLabel.lowercase(), false),
+            Triple("${t.streak}", str(R.string.widget_day_streak), false),
+            if (f != null) Triple(shortDuration(t.focusDelta), if (t.focusRunning) str(R.string.widget_left_in, f.label.lowercase()) else str(R.string.widget_to_session, f.label.lowercase()), false)
+            else Triple("${t.best}", str(R.string.widget_best_lower), false),
+        )
+        tiles.forEachIndexed { i, (value, cap, hi) ->
+            val x = pad + (i % 2) * (tw + gap); val y = pad + (i / 2) * (th + gap)
+            val rect = RectF(x, y, x + tw, y + th)
+            if (hi) c.drawRoundRect(rect, 14f, 14f, fill(gold))
+            else {
+                c.drawRoundRect(rect, 14f, 14f, fill(inner))
+                c.drawRoundRect(RectF(x + .5f, y + .5f, x + tw - .5f, y + th - .5f), 14f, 14f, stroke(innerBorder, 1f))
+            }
+            text(c, value, x + 10f, rect.centerY() - 6f * k, 24f * k, if (hi) ink else cream, dmBold, Paint.Align.LEFT, 0f, tw - 16f)
+            text(c, cap, x + 10f, rect.centerY() + 14f * k, 9f * k, if (hi) ink else muted, dmReg, Paint.Align.LEFT, 0f, tw - 16f)
+        }
+    }
+
+    /** "2h", "35m": the biggest unit only, for the small bento tile. */
+    private fun shortDuration(ms: Long): String {
+        val mins = ((ms + 59_999L) / 60_000L).toInt()
+        return if (mins >= 60) str(R.string.widget_duration_h, mins / 60) else str(R.string.widget_duration_m, mins)
+    }
+
+    private fun todayMedium(c: Canvas, w: Float, h: Float, t: TrackingModel) {
+        val l = 20f; val r = w - 20f; val top = 18f
+        eyebrow(c, str(R.string.widget_today), l, top + 6f, Paint.Align.LEFT, maxW = (r - l) / 2)
+        caption(c, t.dateLabel, r, top + 6f, Paint.Align.RIGHT, 13f, maxW = (r - l) / 2)
+
+        // The day from midnight to midnight: dim windows for each session, gold up to now.
+        val span = (t.dayEnd - t.dayStart).toFloat().coerceAtLeast(1f)
+        fun xAt(ms: Long) = l + (r - l) * ((ms - t.dayStart) / span).coerceIn(0f, 1f)
+        val barH = 8f
+        val barCy = h * 0.42f
+        val bt = barCy - barH / 2
+        c.drawRoundRect(RectF(l, bt, r, bt + barH), barH / 2, barH / 2, fill(track))
+        t.sessions.forEach { s -> s.end?.let { e -> c.drawRoundRect(RectF(xAt(s.start), bt, xAt(e), bt + barH), barH / 2, barH / 2, fill(haloC)) } }
+        val nowX = xAt(t.now)
+        if (nowX > l) c.drawRoundRect(RectF(l, bt, nowX, bt + barH), barH / 2, barH / 2, fill(gold))
+        c.drawCircle(nowX, barCy, 7f, fill(gold))
+
+        // Session start labels under the bar, kept inside the card and apart from each other.
+        var minX = l
+        t.sessions.sortedBy { it.start }.forEach { s ->
+            val label = "${s.label} · ${TrackingModel.timeLabel(ctx, s.start)}"
+            val lw = measure(label, 12f, dmReg)
+            val x = xAt(s.start).coerceAtLeast(minX).coerceAtMost(r - lw)
+            caption(c, label, x, barCy + 7f + 16f, Paint.Align.LEFT, 12f)
+            minX = x + lw + 12f
+        }
+
+        // Footer: the zikr to read and how long its session has left (or until it starts).
+        val f = t.focus
+        val status = when {
+            f == null -> ""
+            t.focusRunning -> str(R.string.widget_time_left, duration(t.focusDelta))
+            else -> str(R.string.widget_starts_in, f.label, duration(t.focusDelta))
+        }
+        val footY = h - 18f - 14f
+        text(c, status, r, footY, 14f, gold, dmBold, Paint.Align.RIGHT, 0f, (r - l) / 2)
+        val sw = if (status.isEmpty()) 0f else measure(status, 14f, dmBold) + 14f
+        t.dhikr?.let { arabicLine(c, it, l, r - sw, footY, 22f, cream, Layout.Alignment.ALIGN_OPPOSITE) }
     }
 
     // ───────────────────────── shared pieces ─────────────────────────

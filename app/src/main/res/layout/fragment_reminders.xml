@@ -30,6 +30,17 @@
 <TextView android:id="@+id/btn_test_notification" style="@style/TB" android:text="@string/test_notification" android:textColor="@color/gold" android:gravity="center" android:minHeight="48dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="@string/tracking" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="10dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/track_sessions" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/track_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_track" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/track_sessions"/>
+</LinearLayout>
+<TextView style="@style/T" android:text="@string/tracking_hint" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="@string/reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">

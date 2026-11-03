@@ -24,7 +24,7 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
-            viewModel.add(text, form.n, form.sel, newName.text.toString())
+            viewModel.add(text, form.n, form.sel, newName.text.toString(), form.title, form.titleBelow)
             nav().pop()
         }
     }

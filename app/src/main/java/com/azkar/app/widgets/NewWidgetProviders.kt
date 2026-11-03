@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
 import android.widget.RemoteViews
@@ -14,7 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKind) {
+/** [tracking] families draw [TrackingModel] and are only offered while a folder is tracked. */
+enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKind, val tracking: Boolean = false) {
     H_SMALL(R.layout.azkar_widget_h_small, R.xml.azkar_widget_h_small_info, WidgetKind.SMALL),
     H_MEDIUM(R.layout.azkar_widget_h_medium, R.xml.azkar_widget_h_medium_info, WidgetKind.MEDIUM),
     H_LARGE(R.layout.azkar_widget_h_large, R.xml.azkar_widget_h_large_info, WidgetKind.LARGE),
@@ -26,7 +28,13 @@ enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKin
     D_MEDIUM(R.layout.azkar_widget_d_medium, R.xml.azkar_widget_d_medium_info, WidgetKind.MEDIUM),
     D_LARGE(R.layout.azkar_widget_d_large, R.xml.azkar_widget_d_large_info, WidgetKind.LARGE),
     B_SMALL(R.layout.azkar_widget_b_small, R.xml.azkar_widget_b_small_info, WidgetKind.SMALL),
-    B_MEDIUM(R.layout.azkar_widget_b_medium, R.xml.azkar_widget_b_medium_info, WidgetKind.MEDIUM)
+    B_MEDIUM(R.layout.azkar_widget_b_medium, R.xml.azkar_widget_b_medium_info, WidgetKind.MEDIUM),
+    C_STREAK_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_c_streak_small_info, WidgetKind.SMALL, true),
+    C_STREAK_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_c_streak_medium_info, WidgetKind.MEDIUM, true),
+    C_STREAK_LARGE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_c_streak_large_info, WidgetKind.LARGE, true),
+    G_COUNTDOWN_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_countdown_small_info, WidgetKind.SMALL, true),
+    F_BENTO_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_f_bento_small_info, WidgetKind.SMALL, true),
+    T_TODAY_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_t_today_medium_info, WidgetKind.MEDIUM, true)
 }
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
@@ -64,7 +72,7 @@ abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : 
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-        if (intent.action == ACTION_REFRESH && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+        if (intent.action in setOf(ACTION_REFRESH, ACTION_BOUNDARY) && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
             NewWidgetUpdater.update(context, AppWidgetManager.getInstance(context), family, id)
         } else if (intent.action in setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO) &&
             id != AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -103,10 +111,31 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.D_MEDIUM to DMediumWidgetProvider::class.java,
         AzkarWidgetFamily.D_LARGE to DLargeWidgetProvider::class.java,
         AzkarWidgetFamily.B_SMALL to BSmallWidgetProvider::class.java,
-        AzkarWidgetFamily.B_MEDIUM to BMediumWidgetProvider::class.java
+        AzkarWidgetFamily.B_MEDIUM to BMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.C_STREAK_SMALL to CStreakSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.C_STREAK_MEDIUM to CStreakMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.C_STREAK_LARGE to CStreakLargeWidgetProvider::class.java,
+        AzkarWidgetFamily.G_COUNTDOWN_SMALL to GCountdownSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.F_BENTO_SMALL to FBentoSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.T_TODAY_MEDIUM to TTodayMediumWidgetProvider::class.java
     )
 
     fun providerClass(family: AzkarWidgetFamily): Class<*> = providers.getValue(family)
+
+    /**
+     * Tracking widgets are only listed by the launcher while tracking is on: their providers start disabled
+     * in the manifest and are enabled here once a folder is tracked (disabling removes placed ones).
+     */
+    fun syncTrackingProviders(context: Context) {
+        val state = if (com.azkar.app.data.Tracking.anyTracked()) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        AzkarWidgetFamily.values().filter { it.tracking }.forEach { family ->
+            val component = ComponentName(context, providers.getValue(family))
+            if (context.packageManager.getComponentEnabledSetting(component) != state) {
+                context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+            }
+        }
+    }
 
     fun updateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -135,18 +164,44 @@ object NewWidgetUpdater {
             .takeIf { it > 0 }?.toFloat() ?: def.second
 
         val rv = RemoteViews(context.packageName, family.layout)
-        rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height))
-        rv.setContentDescription(
-            R.id.azkar_widget_image,
-            if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
-            else "${model.folderName}: ${model.shown} of ${model.target}"
-        )
-        rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
-        if (family == AzkarWidgetFamily.H_LARGE) {
-            rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
+        if (family.tracking) {
+            val t = TrackingModel.load(context, config.folder)
+            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, t))
+            rv.setContentDescription(R.id.azkar_widget_image, context.getString(R.string.widget_tracking_description, t.title, t.streak, t.best))
+            // A tracking widget has nothing to count: a tap opens the session it shows (or the app).
+            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, t.primaryFolder))
+            scheduleBoundary(context, family, id, t)
+        } else {
+            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height))
+            rv.setContentDescription(
+                R.id.azkar_widget_image,
+                if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
+                else "${model.folderName}: ${model.shown} of ${model.target}"
+            )
+            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
+            if (family == AzkarWidgetFamily.H_LARGE) {
+                rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
+            }
         }
         scheduleRefresh(context, family, id)
         manager.updateAppWidget(id, rv)
+    }
+
+    private fun openApp(context: Context, family: AzkarWidgetFamily, id: Int, folder: String?): PendingIntent {
+        val intent = Intent(context, com.azkar.app.MainActivity::class.java)
+            .setData(Uri.parse("azkar://new-widget/${family.name}/$id/open"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .apply { folder?.let { putExtra("open", it) } }
+        return PendingIntent.getActivity(context, id * 1000 + family.ordinal * 10 + 9, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    /** Redraws a tracking widget when a session starts or ends, so "now" / "next" flip on time. */
+    private fun scheduleBoundary(context: Context, family: AzkarWidgetFamily, id: Int, t: TrackingModel) {
+        val next = t.sessions.flatMap { listOfNotNull(it.start, it.end, it.nextStart) }.filter { it > t.now }.minOrNull()
+            ?: return
+        val alarm = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        alarm.set(android.app.AlarmManager.RTC, next + 1_000L, action(context, family, id, ACTION_BOUNDARY))
     }
 
     private fun action(context: Context, family: AzkarWidgetFamily, id: Int, action: String): PendingIntent {
@@ -175,5 +230,6 @@ object NewWidgetUpdater {
     fun cancelRefresh(context: Context, family: AzkarWidgetFamily, id: Int) {
         val alarm = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
         alarm.cancel(action(context, family, id, ACTION_REFRESH))
+        if (family.tracking) alarm.cancel(action(context, family, id, ACTION_BOUNDARY))
     }
 }

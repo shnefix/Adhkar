@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
                     if (Store.consumeRecoveryNotice()) {
                         Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
                     }
+                    com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(this@MainActivity)
                     setContentView(R.layout.activity_main)
                     if (savedInstanceState == null) {
                         showRoot(HomeFragment())

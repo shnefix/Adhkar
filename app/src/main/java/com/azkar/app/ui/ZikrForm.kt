@@ -44,7 +44,54 @@ class ZikrForm(
     val arabic: EditText = view.findViewById(R.id.ar)
     private val box: EditText = view.findViewById(R.id.n)
 
+    // Optional title, off by default: a line shown above (or below) the zikr in the reader.
+    private val titleSwitch: ToggleSwitch = view.findViewById(R.id.sw_title)
+    private val titleBox: View = view.findViewById(R.id.title_box)
+    private val titleInput: EditText = view.findViewById(R.id.zikr_title)
+    private var below = false
+
+    /** The title to save: blank while the switch is off. */
+    val title: String get() = if (titleSwitch.on) titleInput.text.toString().trim() else ""
+    val titleBelow: Boolean get() = title.isNotEmpty() && below
+
+    /** Fills the title controls; the switch starts on only when there is a title. */
+    fun setTitle(text: String, isBelow: Boolean) {
+        titleInput.setText(text)
+        below = isBelow
+        titleSwitch.on = text.isNotBlank()
+        renderTitle()
+    }
+
+    private fun renderTitle() {
+        titleBox.visibility = if (titleSwitch.on) View.VISIBLE else View.GONE
+        val ctx = view.context
+        val row = view.findViewById<android.widget.LinearLayout>(R.id.title_pos)
+        row.removeAllViews()
+        listOf(false to R.string.zikr_title_above, true to R.string.zikr_title_below).forEachIndexed { i, (isBelow, label) ->
+            val on = below == isBelow
+            val b = android.widget.TextView(ctx, null, 0, R.style.TB).apply {
+                setText(label)
+                textSize = 15f
+                gravity = android.view.Gravity.CENTER
+                setTextColor(ctx.getColor(if (on) R.color.bg else R.color.text))
+                background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, ctx.getColor(if (on) R.color.gold else R.color.border2), 14f)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { below = isBelow; renderTitle() }
+            }
+            val p = android.widget.LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
+            if (i > 0) p.marginStart = Ui.pxi(ctx, 8f)
+            row.addView(b, p)
+        }
+    }
+
     init {
+        titleSwitch.onToggle = { on ->
+            renderTitle()
+            if (on) titleInput.requestFocus()
+        }
+        renderTitle()
+
         view.findViewById<View>(R.id.btn_dec).setOnClickListener {
             n = n - 1
         }

@@ -2,6 +2,7 @@ package com.azkar.app.widgets
 
 import android.content.Context
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -141,6 +142,7 @@ object WidgetLogic {
             if (cnt >= items[idx].target) { idx++; cnt = 0 }
         }
         WidgetStore.saveProgress(ctx, id, idx, cnt)
+        Tracking.record(cfg.folder, idx, items.size)   // no-op unless the folder is tracked
     }
 
     fun reset(ctx: Context, id: Int) = WidgetStore.saveProgress(ctx, id, 0, 0)

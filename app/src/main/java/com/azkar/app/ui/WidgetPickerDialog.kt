@@ -77,7 +77,7 @@ internal class WidgetPickerDialog(
         })
         val catalog = WidgetKind.values().flatMap { kind ->
             WidgetStyle.values().filter { kind in it.offered }.map { style -> PickerItem(kind, style) } +
-                AzkarWidgetFamily.values().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
+                offeredFamilies().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
         }
         var selectedItem = catalog.first()
         val title = horizontal()

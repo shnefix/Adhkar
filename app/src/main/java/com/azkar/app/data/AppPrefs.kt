@@ -19,6 +19,10 @@ object AppPrefs {
     private const val K_LAT = "loc_lat"
     private const val K_LNG = "loc_lng"
     private const val K_LOC_ASKED = "loc_asked"
+    private const val K_DELAY = "session_delay_"   // session_delay_<scheduleId> = minutes after Fajr / Asr
+
+    const val SESSION_DELAY_DEFAULT = 10
+    const val SESSION_DELAY_MAX = 180
 
     /** Called by [Store.init]; shares the "azkar" preferences file so existing values carry over. */
     internal fun attach(prefs: SharedPreferences) {
@@ -74,6 +78,17 @@ object AppPrefs {
 
     fun setLocation(lat: Double, lng: Double) =
         sp.edit().putString(K_LAT, lat.toString()).putString(K_LNG, lng.toString()).apply()
+
+    /**
+     * Minutes after Fajr (morning, "m") or Asr (evening, "e") when that session's azkar start.
+     * Falls back to the default before [attach], so pure unit tests can call into PrayerSessions.
+     */
+    fun sessionDelayMinutes(scheduleId: String): Int =
+        if (::sp.isInitialized) sp.getInt(K_DELAY + scheduleId, SESSION_DELAY_DEFAULT).coerceIn(0, SESSION_DELAY_MAX)
+        else SESSION_DELAY_DEFAULT
+
+    fun setSessionDelayMinutes(scheduleId: String, minutes: Int) =
+        sp.edit().putInt(K_DELAY + scheduleId, minutes.coerceIn(0, SESSION_DELAY_MAX)).apply()
 
     /** True once the app has asked for location permission (it asks only once). */
     fun locationAsked() = sp.getBoolean(K_LOC_ASKED, false)

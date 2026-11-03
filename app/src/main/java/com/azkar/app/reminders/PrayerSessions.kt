@@ -11,11 +11,12 @@ import java.util.TimeZone
 
 /**
  * Morning and evening azkar follow the prayer times (Egyptian General Authority method):
- * the reminder comes [DELAY_MS] after Fajr / Asr, and the session ends at Dhuhr / Maghrib.
- * Everything returns null without a location, so callers fall back to the fixed reminder time.
+ * the reminder comes the user's chosen delay (default [DELAY_MS]) after Fajr / Asr, and the session
+ * ends at Dhuhr / Maghrib. Everything returns null without a location, so callers fall back to the
+ * fixed reminder time.
  */
 object PrayerSessions {
-    const val DELAY_MS = 10 * 60_000L
+    const val DELAY_MS = AppPrefs.SESSION_DELAY_DEFAULT * 60_000L
 
     enum class Session(val scheduleId: String, val folderId: String) {
         MORNING("m", "d_14"),
@@ -24,6 +25,19 @@ object PrayerSessions {
 
     fun forSchedule(id: String): Session? = Session.values().firstOrNull { it.scheduleId == id }
     fun forFolder(id: String): Session? = Session.values().firstOrNull { it.folderId == id }
+
+    /** How long after Fajr / Asr this session's azkar start, as set in the reminder. */
+    fun delayMs(s: Session): Long = AppPrefs.sessionDelayMinutes(s.scheduleId) * 60_000L
+
+    /** Start (prayer + delay) and end (Dhuhr / Maghrib) of [s] on the local day containing [day]; null without a location. */
+    fun window(
+        s: Session, day: Long, loc: Pair<Double, Double>? = AppPrefs.location(),
+        zone: TimeZone = TimeZone.getDefault(), delayMs: Long = delayMs(s)
+    ): Pair<Long, Long>? {
+        val (lat, lng) = loc ?: return null
+        val t = timesOn(day, lat, lng, zone)
+        return (start(s, t).time + delayMs) to end(s, t).time
+    }
 
     /** Prayer times for the local day containing [at]. */
     fun timesOn(at: Long, lat: Double, lng: Double, zone: TimeZone = TimeZone.getDefault()): PrayerTimes {
@@ -41,14 +55,14 @@ object PrayerSessions {
     private fun dayShift(at: Long, days: Int, zone: TimeZone) =
         Calendar.getInstance(zone).apply { timeInMillis = at; add(Calendar.DAY_OF_YEAR, days) }.timeInMillis
 
-    /** Next reminder time (start + 10 min) strictly after [now]: today's if still ahead, else tomorrow's. */
+    /** Next reminder time (start + delay) strictly after [now]: today's if still ahead, else tomorrow's. */
     fun nextReminder(
         s: Session, now: Long, loc: Pair<Double, Double>? = AppPrefs.location(),
-        zone: TimeZone = TimeZone.getDefault()
+        zone: TimeZone = TimeZone.getDefault(), delayMs: Long = delayMs(s)
     ): Long? {
         val (lat, lng) = loc ?: return null
         for (d in 0..1) {
-            val at = start(s, timesOn(dayShift(now, d, zone), lat, lng, zone)).time + DELAY_MS
+            val at = start(s, timesOn(dayShift(now, d, zone), lat, lng, zone)).time + delayMs
             if (at > now) return at
         }
         return null

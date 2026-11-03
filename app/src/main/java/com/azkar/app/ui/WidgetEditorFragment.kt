@@ -19,6 +19,8 @@ import com.azkar.app.R
 import com.azkar.app.data.Store
 import com.azkar.app.widgets.AzkarWidgetSizes
 import com.azkar.app.widgets.NewWidgetRenderer
+import com.azkar.app.widgets.TrackingModel
+import com.azkar.app.data.Tracking
 import com.azkar.app.widgets.WidgetKind
 import com.azkar.app.widgets.WidgetModel
 import com.azkar.app.widgets.WidgetStore
@@ -183,6 +185,17 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
 
     private fun contentCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
+        if (item.family?.tracking == true) {
+            // Tracking widgets follow every tracked folder together, or one of them.
+            val tracked = Tracking.tracked()
+            val selectedFolder = item.config.folder.takeIf { it in tracked } ?: Tracking.ALL
+            val card = sectionCard(ctx, getString(R.string.tracking), getString(R.string.tracking_widget_folders))
+            card.addSpaced(chipGroup(ctx, listOf(Tracking.ALL to getString(R.string.widget_all_tracked)) + tracked.map { it to Store.folderName(it) }, selectedFolder) { id ->
+                updateConfig(view) { cfg -> cfg.copy(folder = id) }
+            })
+            column.addCard(card)
+            return
+        }
         val folder = sectionCard(ctx, "Folder", "Which azkar folder this widget shows.")
         folder.addSpaced(chipGroup(ctx, Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
@@ -320,7 +333,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }
         val (dw, dh) = AzkarWidgetSizes.design(family)
         val bitmap = try {
-            NewWidgetRenderer(ctx).render(family, model, dw, dh)
+            NewWidgetRenderer(ctx).render(family, model, dw, dh, if (family.tracking) TrackingModel.load(ctx, item.config.folder) else null)
         } catch (e: Exception) {
             Log.e("WidgetEditor", "preview failed for $family", e)
             null

@@ -19,6 +19,7 @@ import com.azkar.app.data.ReaderResume
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
 
 class ReaderFragment : Fragment(R.layout.fragment_reader) {
     private lateinit var rn: ReaderNav
@@ -85,6 +86,8 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             val lhPx = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, sizeSp * 1.85f, resources.displayMetrics)
             androidx.core.widget.TextViewCompat.setLineHeight(this, lhPx.toInt())
         }
+        val titleAbove = view.findViewById<TextView>(R.id.title_above)
+        val titleBelow = view.findViewById<TextView>(R.id.title_below)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
         val segs = view.findViewById<LinearLayout>(R.id.segs)
         val ring = view.findViewById<RingView>(R.id.ring)
@@ -98,6 +101,11 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             val cur = items[i]
             val done = rn.isDone
             ar.text = cur.arabic
+            val hasTitle = cur.title.isNotBlank()
+            titleAbove.text = cur.title
+            titleBelow.text = cur.title
+            titleAbove.visibility = if (hasTitle && !cur.titleBelow) View.VISIBLE else View.GONE
+            titleBelow.visibility = if (hasTitle && cur.titleBelow) View.VISIBLE else View.GONE
             pos.text = "${i + 1} of ${items.size}"
             segs.removeAllViews()
             items.indices.forEach { k ->
@@ -114,6 +122,8 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             hint.text = if (rn.isLast && cur.target > 1)
                 (if (done) "You have finished this collection" else "Tap the circle to count") else ""
             if (remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
+            // Azkar behind the current one are read; the current one counts once its repeats are done.
+            Tracking.record(key, i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0, items.size)
         }
 
         ring.setOnClickListener {
@@ -126,6 +136,7 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
             onFinish = {
+                Tracking.record(key, items.size, items.size)
                 AppPrefs.clearPosition(key)
                 nav().finishReading()
             }

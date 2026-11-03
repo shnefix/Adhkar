@@ -1,19 +1,24 @@
 package com.azkar.app.data
 
-/** A zikr the user added. */
+/** A zikr the user added. [title] is optional (blank = none), shown above it, or below when [titleBelow]. */
 data class Zikr(
     val id: String,
     val arabic: String,
     val note: String,
     val repeat: Int,
-    val folderId: String?
+    val folderId: String?,
+    val title: String = "",
+    val titleBelow: Boolean = false
 )
 
 /** A folder the user created or one loaded from the default asset. */
 data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false)
 
 /** One recitation inside the reader. */
-data class ReaderItem(val arabic: String, val target: Int, val id: String = "")
+data class ReaderItem(
+    val arabic: String, val target: Int, val id: String = "",
+    val title: String = "", val titleBelow: Boolean = false
+)
 
 enum class Placement(val key: String, val label: String) {
     TOP("top", "Top of Home"),

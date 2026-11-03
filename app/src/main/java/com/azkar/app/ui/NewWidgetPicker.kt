@@ -38,7 +38,17 @@ internal val FAMILY_LABELS = linkedMapOf(
     AzkarWidgetFamily.J_STRIP_PROGRESS to R.string.azkar_widget_j_strip_progress_label,
     AzkarWidgetFamily.J_TALL_RING to R.string.azkar_widget_j_tall_ring_label,
     AzkarWidgetFamily.J_TALL_TIMELINE to R.string.azkar_widget_j_tall_timeline_label,
+    AzkarWidgetFamily.C_STREAK_SMALL to R.string.azkar_widget_c_streak_small_label,
+    AzkarWidgetFamily.C_STREAK_MEDIUM to R.string.azkar_widget_c_streak_medium_label,
+    AzkarWidgetFamily.C_STREAK_LARGE to R.string.azkar_widget_c_streak_large_label,
+    AzkarWidgetFamily.G_COUNTDOWN_SMALL to R.string.azkar_widget_g_countdown_small_label,
+    AzkarWidgetFamily.F_BENTO_SMALL to R.string.azkar_widget_f_bento_small_label,
+    AzkarWidgetFamily.T_TODAY_MEDIUM to R.string.azkar_widget_t_today_medium_label,
 )
+
+/** Families the pickers offer: tracking widgets only while at least one folder is tracked. */
+internal fun offeredFamilies(): List<AzkarWidgetFamily> =
+    AzkarWidgetFamily.values().filter { !it.tracking || com.azkar.app.data.Tracking.anyTracked() }
 
 /** Full-screen list of the new widget designs with live previews. Tap one to pin it to the home screen. */
 fun showNewWidgetPicker(context: Context) {
@@ -88,7 +98,7 @@ fun showNewWidgetPicker(context: Context) {
     val renderer = NewWidgetRenderer(context)
     val maxPx = context.resources.displayMetrics.widthPixels - dp(40f + 24f + 24f)
 
-    FAMILY_LABELS.forEach { (family, labelRes) ->
+    FAMILY_LABELS.filterKeys { it in offeredFamilies() }.forEach { (family, labelRes) ->
         val (dw, dh) = AzkarWidgetSizes.design(family)
         var wPx = dp(dw)
         var hPx = dp(dh)

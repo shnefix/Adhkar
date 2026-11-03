@@ -215,6 +215,52 @@
                 android:contentDescription="Remember last position" />
         </LinearLayout>
 
+        <!-- Track this folder (off by default) -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:minHeight="64dp"
+            android:layout_marginTop="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="18dp"
+            android:paddingEnd="14dp"
+            android:background="@drawable/bg_card22"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    style="@style/TB"
+                    android:text="@string/track_folder"
+                    android:textSize="16sp"
+                    android:textColor="@color/text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    style="@style/T"
+                    android:id="@+id/track_sub"
+                    android:text=""
+                    android:textSize="14sp"
+                    android:textColor="@color/muted"
+                    android:layout_marginTop="2dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <com.azkar.app.ui.ToggleSwitch
+                android:id="@+id/sw_track"
+                android:layout_width="56dp"
+                android:layout_height="44dp"
+                android:contentDescription="@string/track_folder" />
+        </LinearLayout>
+
         <!-- Zikr order -->
         <LinearLayout
             android:orientation="vertical"

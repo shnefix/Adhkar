@@ -26,6 +26,7 @@ import com.azkar.app.R
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
 import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.WidgetUpdater
@@ -34,19 +35,30 @@ fun timeLabel(ctx: Context, h: Int, m: Int): String =
     if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
     else "%d:%02d %s".format(if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
 
+/** "10 min after Fajr", or "At Fajr" for no delay. */
+fun sessionDelayLabel(ctx: Context, session: PrayerSessions.Session, minutes: Int): String {
+    val morning = session == PrayerSessions.Session.MORNING
+    return if (minutes == 0) ctx.getString(if (morning) R.string.reminder_at_fajr else R.string.reminder_at_asr)
+    else ctx.getString(if (morning) R.string.reminder_after_fajr else R.string.reminder_after_asr, minutes)
+}
+
 /**
  * "10 min after Fajr · 4:52 AM" for a reminder that follows prayer times, or null when it uses its
- * fixed time (not a morning / evening reminder, or no location yet).
+ * fixed time (not a morning / evening reminder, or no location yet). [delayMinutes] previews an unsaved choice.
  */
-fun prayerTimeLabel(ctx: Context, s: Schedule): String? {
+fun prayerTimeLabel(
+    ctx: Context, s: Schedule,
+    delayMinutes: Int = AppPrefs.sessionDelayMinutes(s.id)
+): String? {
     val session = PrayerSessions.forSchedule(s.id) ?: return null
-    val at = PrayerSessions.nextReminder(session, System.currentTimeMillis()) ?: return null
+    val at = PrayerSessions.nextReminder(session, System.currentTimeMillis(), delayMs = delayMinutes * 60_000L) ?: return null
     val c = java.util.Calendar.getInstance().apply { timeInMillis = at }
-    val after = ctx.getString(
-        if (session == PrayerSessions.Session.MORNING) R.string.reminder_after_fajr else R.string.reminder_after_asr
-    )
-    return "$after · " + timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+    return sessionDelayLabel(ctx, session, delayMinutes) + " · " +
+        timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
 }
+
+/** Delays offered for morning / evening azkar, in minutes after Fajr / Asr. */
+private val SESSION_DELAYS = listOf(0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180)
 
 class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
@@ -113,6 +125,17 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
             }
         }
+
+        // Tracking: off by default; covers the morning and evening folders (other folders opt in from Edit folder).
+        val swTrack = view.findViewById<ToggleSwitch>(R.id.sw_track)
+        val trackSub = view.findViewById<TextView>(R.id.track_sub)
+        fun renderTracking() {
+            val folders = sessionFolders()
+            swTrack.on = folders.isNotEmpty() && folders.all { Tracking.isTracked(it) }
+            trackSub.text = trackingSummary(ctx, folders, swTrack.on)
+        }
+        renderTracking()
+        swTrack.onToggle = { on -> setTracking(ctx, sessionFolders(), on); renderTracking() }
 
 // Reading switches
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
@@ -241,13 +264,25 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         var m = existing?.minute ?: 0
         title.setText(existing?.title ?: "")
         msg.setText(existing?.message ?: "")
-        // Morning / evening follow the prayer times while a location is known, so their time isn't editable.
-        val prayerLabel = existing?.let { prayerTimeLabel(ctx, it) }
-        fun showTime() { timeTv.text = prayerLabel ?: timeLabel(ctx, h, m) }
+        // Morning / evening follow the prayer times while a location is known: instead of a clock time,
+        // the user picks how many minutes after Fajr / Asr they start (saved with the reminder).
+        val session = existing?.let { PrayerSessions.forSchedule(it.id) }
+        var delay = existing?.let { AppPrefs.sessionDelayMinutes(it.id) } ?: AppPrefs.SESSION_DELAY_DEFAULT
+        fun prayerLabel() = existing?.let { prayerTimeLabel(ctx, it, delay) }
+        fun showTime() { timeTv.text = prayerLabel() ?: timeLabel(ctx, h, m) }
         showTime()
         timeTv.setOnClickListener {
-            if (prayerLabel != null) Toast.makeText(ctx, R.string.reminder_follows_prayer, Toast.LENGTH_SHORT).show()
-            else TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
+            if (session != null && prayerLabel() != null) {
+                val choices = (SESSION_DELAYS + delay).distinct().sorted()
+                AlertDialog.Builder(ctx)
+                    .setTitle(if (session == PrayerSessions.Session.MORNING) R.string.reminder_delay_title_fajr else R.string.reminder_delay_title_asr)
+                    .setSingleChoiceItems(choices.map { sessionDelayLabel(ctx, session, it) }.toTypedArray(), choices.indexOf(delay)) { d, which ->
+                        delay = choices[which]
+                        showTime()
+                        d.dismiss()
+                    }
+                    .show()
+            } else TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
         }
 
         var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
@@ -281,6 +316,10 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 val text = msg.text.toString().trim().ifEmpty { "Time for your azkar · tap to read" }
                 val s = (existing ?: Schedule(Store.newScheduleId(), t, text, h, m, true, null))
                     .copy(title = t, message = text, hour = h, minute = m, open = folder)
+                if (session != null) {
+                    AppPrefs.setSessionDelayMinutes(s.id, delay)
+                    WidgetUpdater.updateAll(ctx)   // countdown / today widgets show the new start time
+                }
                 Store.upsertSchedule(s)
                 ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
                 ReminderScheduler.apply(ctx, s)

@@ -19,12 +19,12 @@ class ZikrEditorViewModel @Inject constructor() : ViewModel() {
      * Adds a zikr. [folderSel] is a folder id, or "new" to file it under [newFolderName]
      * (reusing a folder of that name if one exists; a blank name leaves it unfiled).
      */
-    fun add(arabic: String, repeat: Int, folderSel: String?, newFolderName: String) {
+    fun add(arabic: String, repeat: Int, folderSel: String?, newFolderName: String, title: String = "", titleBelow: Boolean = false) {
         val folderId: String? = if (folderSel == "new") {
             val name = newFolderName.trim()
             if (name.isEmpty()) null
             else (Store.folders().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Store.addFolder(name)).id
         } else folderSel
-        Store.addZikr(arabic, "", repeat, folderId)
+        Store.addZikr(arabic, "", repeat, folderId, title, titleBelow)
     }
 }

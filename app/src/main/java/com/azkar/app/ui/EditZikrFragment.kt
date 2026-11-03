@@ -20,6 +20,7 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
         form.arabic.setText(z.arabic)
         form.n = z.repeat
         form.sel = z.folderId
+        form.setTitle(z.title, z.titleBelow)
 
         val swHide = view.findViewById<ToggleSwitch>(R.id.sw_hide)
         val hideSub = view.findViewById<TextView>(R.id.hide_sub)
@@ -32,7 +33,7 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
-            viewModel.update(z.copy(arabic = text, repeat = form.n, folderId = form.sel))
+            viewModel.update(z.copy(arabic = text, repeat = form.n, folderId = form.sel, title = form.title, titleBelow = form.titleBelow))
             nav().pop()
         }
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {

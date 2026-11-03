@@ -22,6 +22,7 @@ const val ACTION_RESET = "com.azkar.app.widget.RESET"
 const val ACTION_NEXT = "com.azkar.app.widget.NEXT"
 const val ACTION_UNDO = "com.azkar.app.widget.UNDO"
 const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
+const val ACTION_BOUNDARY = "com.azkar.app.widget.BOUNDARY"   // tracking widgets: a session started or ended
 
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
 

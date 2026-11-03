@@ -18,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -69,6 +70,14 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         swRem.on = viewModel.remembersPosition()
         renderRem()
         swRem.onToggle = { on -> viewModel.setRemember(on); renderRem() }
+
+        // Track this folder: counts the days it is finished (off by default).
+        val swTrack = view.findViewById<ToggleSwitch>(R.id.sw_track)
+        val trackSub = view.findViewById<TextView>(R.id.track_sub)
+        fun renderTrack() { trackSub.text = trackingSummary(ctx, listOf(viewModel.id), swTrack.on) }
+        swTrack.on = Tracking.isTracked(viewModel.id)
+        renderTrack()
+        swTrack.onToggle = { on -> setTracking(ctx, listOf(viewModel.id), on); renderTrack() }
 
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
