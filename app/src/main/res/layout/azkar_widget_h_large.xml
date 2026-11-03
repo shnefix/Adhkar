@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView
+        android:id="@+id/azkar_widget_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="fitXY" />
+    <FrameLayout
+        android:id="@+id/azkar_widget_hit"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <!-- Undo button area: 16dp margins, 44dp tall, 56dp wide (matches the bitmap). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingBottom="16dp">
+        <FrameLayout
+            android:id="@+id/azkar_widget_undo"
+            android:layout_width="56dp"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+</FrameLayout>

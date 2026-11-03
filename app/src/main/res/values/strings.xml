@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Azkar</string>
+    <string name="app_name" translatable="false">Adhkar</string>
+    <string name="widget_config_label">Configure Adhkar widget</string>
+    <string name="data_load_failed">Azkar data could not be loaded.</string>
+    <string name="anytime">Anytime</string>
     <string name="widget_done">Done</string>
     <string name="widget_tasbih">Tasbih</string>
     <string name="widget_reset">Reset</string>
@@ -51,6 +54,172 @@
     <string name="reminders_on_count">%1$d of %2$d reminders on</string>
     <string name="channel_name">Daily reminders</string>
     <string name="channel_description">Your azkar reminders</string>
-    <string name="before_sleep_en">Before sleep</string>
-    <string name="before_sleep_ar">أذكار النوم</string>
+    <string name="before_sleep_en" translatable="false">Before sleep</string>
+    <string name="before_sleep_ar" translatable="false">أذكار النوم</string>
+    <string name="azkar_widget_b_small_label">Azkar tap disc small</string><string name="azkar_widget_b_small_desc">Azkar tap disc, small</string>
+    <string name="azkar_widget_b_medium_label">Azkar tap disc medium</string><string name="azkar_widget_b_medium_desc">Azkar tap disc, medium</string>
+    <string name="azkar_widget_d_small_label">Azkar morning and evening small</string><string name="azkar_widget_d_small_desc">Morning and evening azkar, small</string>
+    <string name="azkar_widget_d_medium_label">Azkar morning and evening medium</string><string name="azkar_widget_d_medium_desc">Morning and evening azkar, medium</string>
+    <string name="azkar_widget_d_large_label">Azkar morning and evening large</string><string name="azkar_widget_d_large_desc">Morning and evening azkar, large</string>
+    <string name="azkar_widget_h_small_label">Azkar beads small</string><string name="azkar_widget_h_small_desc">Bead string azkar, small</string>
+    <string name="azkar_widget_h_medium_label">Azkar beads medium</string><string name="azkar_widget_h_medium_desc">Bead string azkar, medium</string>
+    <string name="azkar_widget_h_large_label">Azkar beads large</string><string name="azkar_widget_h_large_desc">Bead string azkar, large</string>
+    
+    <string name="azkar_widget_j_strip_dhikr_label">Azkar dhikr strip</string><string name="azkar_widget_j_strip_dhikr_desc">Dhikr count strip</string>
+    <string name="azkar_widget_j_strip_progress_label">Azkar progress strip</string><string name="azkar_widget_j_strip_progress_desc">Azkar progress strip</string>
+    
+    <string name="azkar_widget_j_tall_ring_label">Azkar tall ring</string><string name="azkar_widget_j_tall_ring_desc">Tall azkar progress ring</string>
+    <string name="azkar_widget_j_tall_timeline_label">Azkar tall timeline</string><string name="azkar_widget_j_tall_timeline_desc">Tall azkar timeline</string>
+    <string name="widget_editor_title">Widget editor</string>
+    <string name="apply">Apply</string>
+    <string name="widgets_on_home">Widgets on your home screen</string>
+    <string name="widget_preview">Live preview</string>
+    <string name="widget_content">Content</string>
+    <string name="widget_style">Widget style</string>
+    <string name="widget_text_options">Text options</string>
+    <string name="widget_behavior">Behavior</string>
+    <string name="show_counter">Show counter</string>
+    <string name="font_size">Font size: %1$.0f sp</string>
+    <string name="add_widget_to_home">Add widget to home</string>
+    <string name="reset">Reset</string>
+    <string name="no_widgets_on_home">No Azkar widgets are placed on your home screen.</string>
+    <string name="widget_pin_unsupported">Your launcher does not support adding widgets from this screen.</string>
+    <string name="widget_pin_requested">Choose a location for the widget on your home screen.</string>
+    <string name="widget_pin_failed">The widget could not be added. Please try again.</string>
+    <string name="widget_applied">Widget changes applied.</string>
+    <string name="widgets">widgets</string>
+    <string name="widget_preview_unavailable">Preview unavailable</string>
+    <string name="choose_widget">Choose a widget</string>
+    <string name="widget_sizes">Small · Medium · Large</string>
+    <string name="live_preview">LIVE PREVIEW</string>
+    <string name="apply_changes">Apply Changes</string>
+    <string name="available_widgets">Available widgets</string>
+    <string name="pick_widget_subtitle">Pick one to add to your home screen</string>
+    <string name="small_grid">SMALL · 2×2</string>
+    <string name="medium_grid">MEDIUM · 4×2</string>
+    <string name="large_grid">LARGE · 4×4</string>
+    <string name="typography">Typography</string>
+    <string name="arabic_font">Arabic font</string>
+    <string name="line_height">Line height: %1$.1f</string>
+    <string name="alignment">Alignment</string>
+    <string name="start">Start</string>
+    <string name="center">Center</string>
+    <string name="end">End</string>
+    <string name="text_color">Text</string>
+    <string name="background_color">Background</string>
+    <string name="corner_radius">Corner radius</string>
+    <string name="tap_action">Tap action</string>
+    <string name="tap_action_description">Choose what tapping the widget counter does.</string>
+    <string name="refresh">Refresh</string>
+    <string name="refresh_description">Choose how often the widget redraws.</string>
+    <string name="increment_counter">Increment counter</string>
+    <string name="every_hour">Every hour</string>
+    <string name="add_style_to_home">Add %1$s (%2$s) to home</string>
+    <string name="open_app">Open app</string>
+    <string name="open_reader">Open azkar reader</string>
+    <string name="next_zikr">Next zikr</string>
+    <string name="manual_only">Manual only</string>
+    <string name="every_15_minutes">Every 15 minutes</string>
+    <string name="every_30_minutes">Every 30 minutes</string>
+    <string name="every_6_hours">Every 6 hours</string>
+    <string name="daily">Daily</string>
+    <string name="widget_font_size">Font size: %1$.0f sp</string>
+    <string name="widget_line_height">Line height: %1$.1f</string>
+    <string name="all">All</string>
+    <string name="small">Small</string>
+    <string name="medium">Medium</string>
+    <string name="large">Large</string>
+    <string name="widget_today">Today</string>
+    <string name="widget_morning">Morning</string>
+    <string name="widget_evening">Evening</string>
+    <string name="widget_morning_azkar">Morning azkar</string>
+    <string name="widget_evening_azkar">Evening azkar</string>
+    <string name="widget_next">Next</string>
+    <string name="widget_next_label">Next: %1$s</string>
+    <string name="widget_now">Now</string>
+    <string name="widget_completed">Completed</string>
+    <string name="widget_tap_caps">TAP</string>
+    <string name="widget_tap_plus">tap +1</string>
+    <string name="widget_of_tap">of %1$d · tap</string>
+    <string name="widget_round_short">Round %1$d of %2$d</string>
+    <string name="widget_beads_round">Round %1$d of %2$d · %3$d beads each</string>
+    <string name="widget_recited">%1$d of %2$d recited</string>
+    <string name="widget_n_done">%1$d done</string>
+    <string name="widget_now_of">%1$d of %2$d now</string>
+    <string name="widget_azkar_word">azkar</string>
+    <string name="widget_new_designs">New designs</string>
+    <string name="editor_tab_content">Content</string>
+    <string name="editor_tab_style">Style</string>
+    <string name="editor_tab_behavior">Behavior</string>
+    <string name="reminder_after_fajr">%1$d min after Fajr</string>
+    <string name="reminder_after_asr">%1$d min after Asr</string>
+    <string name="reminder_follows_prayer">Set by the prayer times for your location</string>
+    <string name="reminder_at_fajr">At Fajr</string>
+    <string name="reminder_at_asr">At Asr</string>
+    <string name="reminder_delay_title_fajr">Start after Fajr</string>
+    <string name="reminder_delay_title_asr">Start after Asr</string>
+    <string name="tracking">Tracking</string>
+    <string name="track_sessions">Track morning &amp; evening</string>
+    <string name="tracking_hint">Counts the days you finish your azkar and unlocks the streak widgets. To track another folder, open it and choose Edit.</string>
+    <string name="track_folder">Track this folder</string>
+    <string name="tracking_off_summary">Off · counts the days you finish it</string>
+    <string name="tracking_streak_summary">%1$d-day streak · best %2$d</string>
+    <string name="tracking_widget_folders">Which tracked folders this widget follows.</string>
+    <string name="zikr_title_toggle">Add a title</string>
+    <string name="zikr_title_toggle_summary">A line shown with the zikr while reading</string>
+    <string name="zikr_title_hint">e.g. Recite after Fajr</string>
+    <string name="zikr_title_above">Above the zikr</string>
+    <string name="zikr_title_below">Below the zikr</string>
+    <string name="azkar_widget_c_streak_small_label">Azkar streak small</string>
+    <string name="azkar_widget_c_streak_small_desc">Your azkar streak, small</string>
+    <string name="azkar_widget_c_streak_medium_label">Azkar streak medium</string>
+    <string name="azkar_widget_c_streak_medium_desc">Your azkar streak this week</string>
+    <string name="azkar_widget_c_streak_large_label">Azkar streak large</string>
+    <string name="azkar_widget_c_streak_large_desc">Your azkar calendar, five weeks</string>
+    <string name="azkar_widget_g_countdown_small_label">Azkar countdown small</string>
+    <string name="azkar_widget_g_countdown_small_desc">Time until the next azkar</string>
+    <string name="azkar_widget_f_bento_small_label">Azkar bento small</string>
+    <string name="azkar_widget_f_bento_small_desc">Today, streak and next azkar at a glance</string>
+    <string name="azkar_widget_t_today_medium_label">Azkar today medium</string>
+    <string name="azkar_widget_t_today_medium_desc">Your day with the morning and evening azkar</string>
+    <string name="widget_tracking_description">%1$s: %2$d-day streak, best %3$d</string>
+    <string name="widget_sessions_title">Morning &amp; evening</string>
+    <string name="widget_all_tracked">All tracked</string>
+    <string name="widget_tracking_off">Tracking is off</string>
+    <string name="widget_tracking_off_hint">Turn it on in Settings</string>
+    <string name="widget_streak">Streak</string>
+    <string name="widget_days">days</string>
+    <string name="widget_streak_days">Streak · %1$d days</string>
+    <string name="widget_best">Best %1$d</string>
+    <string name="widget_n_days">%1$d days</string>
+    <string name="widget_best_streak">Best streak %1$d days</string>
+    <string name="widget_more">More</string>
+    <string name="widget_less">Less</string>
+    <string name="widget_duration_m">%1$dm</string>
+    <string name="widget_duration_h">%1$dh</string>
+    <string name="widget_duration_hm">%1$dh %2$dm</string>
+    <string name="widget_next_azkar">Next azkar</string>
+    <string name="widget_hours_minutes">hours · minutes</string>
+    <string name="widget_hours_minutes_left">hours · minutes left</string>
+    <string name="widget_ends_at">%1$s · ends %2$s</string>
+    <string name="widget_today_lower">today</string>
+    <string name="widget_day_streak">day streak</string>
+    <string name="widget_left_in">left · %1$s</string>
+    <string name="widget_to_session">to %1$s</string>
+    <string name="widget_best_lower">best streak</string>
+    <string name="widget_time_left">%1$s left</string>
+    <string name="widget_starts_in">%1$s in %2$s</string>
+    <string name="complete_streak">%1$d-day streak</string>
+    <string name="reminder_at_isha">At Isha</string>
+    <string name="reminder_after_isha">%1$d min after Isha</string>
+    <string name="reminder_delay_title_isha">Remind after Isha</string>
+    <string name="nudge_title_morning">Morning azkar not finished yet</string>
+    <string name="nudge_title_evening">Evening azkar not finished yet</string>
+    <string name="nudge_text_morning">%1$d of %2$d read · Dhuhr is at %3$s</string>
+    <string name="nudge_text_evening">%1$d of %2$d read · Maghrib is at %3$s</string>
+    <string name="nudge_setting">Remind me if not finished</string>
+    <string name="nudge_setting_summary">%1$d min before Dhuhr / Maghrib · tap to change</string>
+    <string name="nudge_setting_off">Off</string>
+    <string name="nudge_lead_title">How early?</string>
+    <string name="nudge_lead_option">%1$d min before Dhuhr / Maghrib</string>
 </resources>

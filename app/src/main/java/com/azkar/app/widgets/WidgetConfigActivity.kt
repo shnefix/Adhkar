@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 /** Shown when a widget is added: pick the design and folder. */
 class WidgetConfigActivity : AppCompatActivity() {
+    private var dialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,7 +21,9 @@ class WidgetConfigActivity : AppCompatActivity() {
         Store.init(this)
         val id = intent?.extras?.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
-        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
+        // Exported for the launcher: only configure widgets that belong to this app.
+        val owner = AppWidgetManager.getInstance(this).getAppWidgetInfo(id)?.provider?.packageName
+        if (id == AppWidgetManager.INVALID_APPWIDGET_ID || owner != packageName) { finish(); return }
         lifecycleScope.launch {
             Store.awaitReady()
             chooseStyle(id, WidgetUpdater.kindOf(this@WidgetConfigActivity, id))
@@ -28,8 +31,8 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun chooseStyle(id: Int, kind: WidgetKind) {
-        val styles = WidgetStyle.values().filter { kind in it.kinds }
-        AlertDialog.Builder(this)
+        val styles = WidgetStyle.values().filter { kind in it.offered }
+        dialog = AlertDialog.Builder(this)
             .setTitle(R.string.widget_style_title)
             .setItems(styles.map { it.label }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }
             .setOnCancelListener { finish() }
@@ -40,9 +43,9 @@ class WidgetConfigActivity : AppCompatActivity() {
         val ids = ArrayList<String>()
         val names = ArrayList<String>()
         Store.folders().forEach { f -> ids.add(f.id); names.add((f.icon?.let { "$it " } ?: "") + f.name) }
-        if (Store.zikrs().any { it.folderId == null }) { ids.add("anytime"); names.add("Anytime") }
+        if (Store.zikrs().any { it.folderId == null }) { ids.add("anytime"); names.add(getString(R.string.anytime)) }
         if (ids.isEmpty()) { save(id, kind, style, "anytime"); return }
-        AlertDialog.Builder(this)
+        dialog = AlertDialog.Builder(this)
             .setTitle(R.string.widget_folder_title)
             .setItems(names.toTypedArray()) { _, i -> save(id, kind, style, ids[i]) }
             .setOnCancelListener { finish() }
@@ -54,5 +57,10 @@ class WidgetConfigActivity : AppCompatActivity() {
         WidgetUpdater.update(this, AppWidgetManager.getInstance(this), id, kind)
         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         finish()
+    }
+
+    override fun onDestroy() {
+        dialog?.dismiss()   // a rotation would otherwise leak the window
+        super.onDestroy()
     }
 }

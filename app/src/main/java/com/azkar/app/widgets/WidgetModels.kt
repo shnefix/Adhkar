@@ -12,10 +12,13 @@ enum class WidgetKind { SMALL, MEDIUM, LARGE }
 
 private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE)
 
-/** The four available designs. [kinds] = which sizes exist for that design. */
-enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
-    CLASSIC("Classic", ALL_KINDS),
-    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE)),
+/**
+ * The four designs. [kinds] = sizes the renderer can draw (widgets already placed keep working);
+ * [offered] = sizes the pickers still offer for new widgets.
+ */
+enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>, val offered: Set<WidgetKind> = kinds) {
+    CLASSIC("Classic", ALL_KINDS, setOf(WidgetKind.SMALL)),
+    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE), setOf(WidgetKind.MEDIUM)),
     TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
     CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
 }
@@ -49,9 +52,20 @@ class WidgetModel(
     val rounds = ceil(target / beadTotal.toDouble()).toInt().coerceAtLeast(1)
 
     companion object {
-        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel {
+        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel =
+            WidgetStore.progress(ctx, widgetId).let { (i, c) -> forProgress(folder, i, c) }
+
+        /**
+         * [folder] as far as it was read today anywhere (reader, or any widget's taps), for widgets that
+         * show a folder they aren't counting themselves. [own] is this widget's progress when it counts [folder].
+         */
+        fun today(folder: String, own: WidgetModel? = null): WidgetModel {
+            val done = com.azkar.app.data.Tracking.today(folder)?.done ?: 0
+            return if (own != null && own.done >= done) own else forProgress(folder, done, 0)
+        }
+
+        private fun forProgress(folder: String, i: Int, c: Int): WidgetModel {
             val items = Store.readerItems(folder)
-            val (i, c) = WidgetStore.progress(ctx, widgetId)
             val idx = i.coerceIn(0, items.size)
             val cnt = if (idx < items.size) c.coerceIn(0, (items[idx].target - 1).coerceAtLeast(0)) else 0
             val labels = items.map { it0 ->

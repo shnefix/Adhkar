@@ -5,10 +5,13 @@ import android.view.View
 import android.widget.EditText
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.azkar.app.R
-import com.azkar.app.data.Store
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
+    private val viewModel: ZikrEditorViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val newBox = view.findViewById<View>(R.id.newname_box)
@@ -21,12 +24,7 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
-            val folderId: String? = if (form.sel == "new") {
-                val name = newName.text.toString().trim()
-                if (name.isEmpty()) null
-                else (Store.folders().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Store.addFolder(name)).id
-            } else form.sel
-            Store.addZikr(text, "", form.n, folderId)
+            viewModel.add(text, form.n, form.sel, newName.text.toString(), form.title, form.titleBelow)
             nav().pop()
         }
     }

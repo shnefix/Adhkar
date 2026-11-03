@@ -5,9 +5,20 @@ import org.json.JSONObject
 
 /** Builds a backup file that ImportJson reads back. Read-only: never touches stored data. */
 object ExportJson {
-    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also { if (z.note.isNotBlank()) it.put("note", z.note) }
+    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
+        if (z.note.isNotBlank()) it.put("note", z.note)
+        if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", if (z.titleBelow) "below" else "above")
+    }
 
-    fun build(s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT): String {
+    /**
+     * [sessionDelays]: minutes after the prayer per reminder id ("m", "e", "s"); [nudgeMinutes] null leaves the
+     * "not finished yet" reminder out; [tracking] is [Tracking.toJson] (tracked folders and their history).
+     */
+    fun build(
+        s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT,
+        sessionDelays: Map<String, Int> = emptyMap(), nudgeOn: Boolean = true, nudgeMinutes: Int? = null,
+        tracking: JSONObject? = null
+    ): String {
         val folders = JSONArray()
         s.folders.forEach { f ->
             val az = JSONArray()
@@ -29,7 +40,11 @@ if (f.remember) o.put("remember", true)
             rems.put(o)
         }
         root.put("reminders", rems)
-        root.put("settings", JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn).put("arabicSp", arabicSp))
+        val settings = JSONObject().put("arabicSize", arabicSize).put("notificationsEnabled", notificationsOn).put("arabicSp", arabicSp)
+        if (sessionDelays.isNotEmpty()) settings.put("prayerDelays", JSONObject().apply { sessionDelays.forEach { (k, v) -> put(k, v) } })
+        nudgeMinutes?.let { settings.put("nudgeEnabled", nudgeOn).put("nudgeMinutes", it) }
+        root.put("settings", settings)
+        tracking?.let { root.put("tracking", it) }
         return root.toString(2)
     }
 }

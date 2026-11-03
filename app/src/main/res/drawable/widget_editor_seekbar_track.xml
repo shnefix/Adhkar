@@ -1,0 +1,23 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape>
+            <corners android:radius="2dp" />
+            <solid android:color="@color/widget_editor_border" />
+            <size android:height="4dp" />
+        </shape>
+    </item>
+    <item android:id="@android:id/secondaryProgress">
+        <shape>
+            <corners android:radius="2dp" />
+            <solid android:color="@color/widget_editor_gold" />
+            <size android:height="4dp" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <shape>
+            <corners android:radius="2dp" />
+            <solid android:color="@color/widget_editor_gold" />
+            <size android:height="4dp" />
+        </shape>
+    </item>
+</layer-list>

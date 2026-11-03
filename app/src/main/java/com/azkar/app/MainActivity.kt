@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
@@ -13,7 +14,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
+import com.azkar.app.reminders.LocationUpdater
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
@@ -21,10 +24,15 @@ import com.azkar.app.ui.ReaderFragment
 import com.azkar.app.ui.Tab
 import com.azkar.app.widgets.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
-
+  
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private var currentTab: Tab = Tab.HOME
+
+    // Prayer-time reminders: approximate location is enough. Asked once; denying keeps the fixed times.
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) LocationUpdater.refresh(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,26 +48,34 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
         }
+        setContentView(R.layout.activity_main)
         var contentShown = false
         lifecycleScope.launch {
             try {
                 repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                     if (contentShown) return@repeatOnLifecycle
                     Store.awaitReady()
-                    ThemeMode.apply(Store.theme())
+                    ThemeMode.apply(AppPrefs.theme())
                     if (Store.consumeRecoveryNotice()) {
                         Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
                     }
-                    setContentView(R.layout.activity_main)
-                    if (savedInstanceState == null) {
+                    com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(this@MainActivity)
+                    // The container is set in onCreate so restored fragments have somewhere to attach;
+                    // show Home only when nothing was restored (fresh start or empty state).
+                    if (supportFragmentManager.findFragmentById(R.id.container) == null) {
                         showRoot(HomeFragment())
                         handleIntent(intent)
                     }
                     contentShown = true
+                    if (LocationUpdater.hasPermission(this@MainActivity)) LocationUpdater.refresh(this@MainActivity)
+                    else if (!AppPrefs.locationAsked()) {
+                        AppPrefs.setLocationAsked()
+                        locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Azkar", "Unable to initialize application data", e)
-                Toast.makeText(this@MainActivity, "Azkar data could not be loaded.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, R.string.data_load_failed, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -113,7 +129,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun pop() {
-        android.util.Log.d("AzkarNav", "pop() called from:", Throwable())
         supportFragmentManager.popBackStack()
     }
 
@@ -124,7 +139,6 @@ class MainActivity : AppCompatActivity() {
     }
     /** Resets the back stack and shows Home. */
     fun goHome() {
-        android.util.Log.d("AzkarNav", "goHome() called from:", Throwable())
         currentTab = Tab.HOME
         showRoot(HomeFragment())
     }

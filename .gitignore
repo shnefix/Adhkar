@@ -1,6 +1,22 @@
+# Gradle / Android Studio
 .gradle/
+.kotlin/
 build/
+captures/
 local.properties
 .idea/
 *.iml
+.DS_Store
+
+# Release signing: never commit the key or its passwords
+keystore.properties
+*.jks
 *.keystore
+
+# Logs, dumps and scratch files
+*.log
+*.hprof
+hs_err_pid*
+replay_pid*
+/*.txt
+*-backup-*/

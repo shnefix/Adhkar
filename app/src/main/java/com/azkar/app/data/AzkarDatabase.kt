@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [FolderEntity::class, ZikrEntity::class, ScheduleEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AzkarDatabase : RoomDatabase() {

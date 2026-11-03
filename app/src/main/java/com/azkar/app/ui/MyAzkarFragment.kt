@@ -16,7 +16,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
@@ -111,7 +110,7 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
         val list = ArrayList<Card>()
 
         current.folders.forEach { f ->
-            val b = Builtins.byKey(f.id)
+            val isDefault = Store.isDefaultFolder(f.id)
 
             list.add(
                 Card(
@@ -119,8 +118,8 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                     f.name,
                     azkarCount(counts[f.id] ?: 0),
                     f.icon,
-                    b?.icon ?: R.drawable.ic_folder_1p75,
-                    if (b != null) teal else gold,
+                    if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
+                    if (isDefault) teal else gold,
                     false
                 ) {
                     nav().push(EditFolderFragment.of(f.id))
@@ -316,6 +315,9 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                     try {
                         val r = Store.importAllAsync(p)
                         ReminderScheduler.rescheduleAll(requireContext())
+                        // A backup with tracking turns the tracking widgets on.
+                        com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(requireContext())
+                        com.azkar.app.widgets.WidgetUpdater.updateAll(requireContext())
                         AlertDialog.Builder(requireContext())
                             .setTitle("Import complete")
                             .setMessage(
@@ -340,15 +342,15 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
     {
       "name": "Morning",
       "azkar": [
-        { "text": "سبحان الله", "count": 33 },
-        { "text": "الحمد لله", "count": 33 },
-        { "text": "الله أكبر", "count": 34 }
+        { "text": "Example zikr", "count": 33 },
+        { "text": "Another zikr", "count": 33 },
+        { "text": "A third zikr", "count": 34 }
       ]
     },
     {
       "name": "Duas",
       "azkar": [
-        { "text": "رَبِّ زِدْنِي عِلْمًا", "count": 1 }
+        { "text": "Example dua", "count": 1 }
       ]
     }
   ]

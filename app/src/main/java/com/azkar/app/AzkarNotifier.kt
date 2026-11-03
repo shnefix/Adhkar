@@ -16,10 +16,11 @@ object AzkarNotifier {
         ReminderScheduler.createChannel(context)
     }
 
-    fun showBeforeSleep(context: Context) {
+    /** [folder]: what a tap opens (null just opens the app). */
+    fun showBeforeSleep(context: Context, folder: String?) {
         val openIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("open", "sleep")
+            folder?.let { putExtra("open", it) }
         }
         val tapIntent = PendingIntent.getActivity(
             context, 0, openIntent,

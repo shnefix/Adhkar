@@ -5,35 +5,39 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.azkar.app.R
-import com.azkar.app.data.Store
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
+    private val viewModel: ZikrEditorViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val z = Store.zikr(requireArguments().getString("id") ?: "")
+        val z = viewModel.zikr(requireArguments().getString("id") ?: "")
         if (z == null) { nav().pop(); return }
         val form = ZikrForm(view, allowNew = false)
         form.arabic.setText(z.arabic)
         form.n = z.repeat
         form.sel = z.folderId
+        form.setTitle(z.title, z.titleBelow)
 
         val swHide = view.findViewById<ToggleSwitch>(R.id.sw_hide)
         val hideSub = view.findViewById<TextView>(R.id.hide_sub)
         fun renderHide() { hideSub.text = if (swHide.on) "Skipped while reading. Still saved here." else "Shown when you read this folder" }
-        swHide.on = Store.hiddenZikrs().contains(z.id)
+        swHide.on = viewModel.isHidden(z.id)
         renderHide()
-        swHide.onToggle = { on -> Store.setZikrsHidden(listOf(z.id), on); renderHide() }
+        swHide.onToggle = { on -> viewModel.setHidden(z.id, on); renderHide() }
 
         view.findViewById<View>(R.id.btn_close).setOnClickListener { nav().pop() }
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
-            Store.updateZikr(z.copy(arabic = text, repeat = form.n, folderId = form.sel))
+            viewModel.update(z.copy(arabic = text, repeat = form.n, folderId = form.sel, title = form.title, titleBelow = form.titleBelow))
             nav().pop()
         }
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {
-            Store.deleteZikr(z.id)
+            viewModel.delete(z.id)
             nav().pop()
         }
     }

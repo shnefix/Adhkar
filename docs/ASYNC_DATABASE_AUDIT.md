@@ -24,12 +24,15 @@ and are outside this Room migration.
 ## Main-thread call sites
 
 - `AzkarApp.onCreate` and `MainActivity.onCreate` call non-blocking `Store.init`.
-- `HomeFragment`, `LibraryFragment`, and `MyAzkarFragment` collect Room Flow
-  through ViewModels.
-- `FolderFragment` and editor/customization screens use Store snapshots during
-  interaction; those reads do not access Room.
-- Editor/import screens invoke Store mutations from click/activity-result
-  callbacks.
+- `HomeFragment`, `LibraryFragment`, `MyAzkarFragment`, `FolderFragment`, and
+  `EditFolderFragment` collect Room Flow through ViewModels (`FolderViewModel`
+  combines it with `Store.hiddenZikrsFlow`).
+- `AddZikrFragment` and `EditZikrFragment` write through `ZikrEditorViewModel`.
+- Customization and import screens still use Store snapshots during
+  interaction and invoke Store mutations from click/activity-result callbacks;
+  those reads do not access Room.
+- Reader, theme, and notification preferences live in `AppPrefs`
+  (SharedPreferences only).
 - `ReminderScheduler` and widget configuration/rendering intentionally retain
   synchronous Store compatibility because they are not lifecycle-bound UI
   screens and must return a complete snapshot to platform callbacks.

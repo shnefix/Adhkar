@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg" android:scrollbars="none" android:overScrollMode="never" android:fillViewport="true">
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/btn_close" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="Cancel" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_close_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:src="@drawable/ic_close_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <TextView style="@style/TB" android:text="Add zikr" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <View android:layout_width="44dp" android:layout_height="44dp"/>
@@ -13,6 +13,17 @@
 <EditText style="@style/Ar" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="8dp" android:paddingHorizontal="18dp" android:paddingVertical="14dp" android:background="@drawable/bg_in20" android:textColor="@color/arabic" android:textSize="24sp" android:lineHeight="40.8sp" android:gravity="top|start" android:textDirection="rtl" android:layoutDirection="rtl" android:inputType="textMultiLine" android:minLines="1" android:hint="اكتب الذكر هنا" android:textColorHint="@color/hint"/>
 <TextView style="@style/T" android:text="Tip: add diacritics so it reads correctly." android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="16dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/zikr_title_toggle" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/zikr_title_toggle_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_title" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/zikr_title_toggle"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:id="@+id/title_box" android:visibility="gone" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<EditText style="@style/T" android:id="@+id/zikr_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:paddingHorizontal="18dp" android:paddingVertical="12dp" android:background="@drawable/bg_in20" android:hint="@string/zikr_title_hint" android:textColorHint="@color/hint" android:textColor="@color/text" android:textSize="16sp" android:textDirection="firstStrong" android:inputType="textCapSentences|textMultiLine" android:maxLines="3"/>
+<LinearLayout android:orientation="horizontal" android:id="@+id/title_pos" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content">
@@ -21,11 +32,11 @@
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="48dp" android:gravity="center_vertical" android:background="@drawable/bg_in24">
 <FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="Fewer repeats" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <EditText style="@style/TB" android:id="@+id/n" android:text="1" android:textSize="20sp" android:textColor="@color/text" android:gravity="center" android:inputType="number" android:maxLength="3" android:selectAllOnFocus="true" android:singleLine="true" android:imeOptions="actionDone" android:background="@null" android:padding="0dp" android:minWidth="56dp" android:layout_width="wrap_content" android:layout_height="match_parent"/>
 <FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="More repeats" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 </LinearLayout>
 </LinearLayout>
@@ -37,13 +48,13 @@
 <LinearLayout android:orientation="vertical" android:id="@+id/newname_box" android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="New folder name" android:textSize="14sp" android:textColor="@color/light" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:layout_height="52dp" android:paddingHorizontal="18dp" android:gravity="center_vertical" android:background="@drawable/bg_in26g" android:layout_marginTop="8dp" android:layout_width="match_parent">
-<ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/gold"/>
+<ImageView android:src="@drawable/ic_folder_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold"/>
 <EditText style="@style/T" android:id="@+id/newname" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="10dp" android:background="@null" android:hint="e.g. Travel, Ramadan, Exams" android:textColorHint="@color/hint" android:textColor="@color/text" android:textSize="16sp" android:inputType="text" android:singleLine="true" android:padding="0dp"/>
 </LinearLayout>
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="16dp"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_save" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="16dp" android:layout_width="match_parent">
-<ImageView android:src="@drawable/ic_check_2p25" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/bg"/>
+<ImageView android:src="@drawable/ic_check_2p25" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/bg"/>
 <TextView style="@style/TB" android:text="Save zikr" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>

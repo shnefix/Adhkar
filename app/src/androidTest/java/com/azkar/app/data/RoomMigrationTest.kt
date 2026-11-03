@@ -52,7 +52,7 @@ class RoomMigrationTest {
     fun existingUserDataIsImportedAndPreserved() {
         val data = RoomMigration.LegacyData(
             listOf(Folder("f", "Personal", "📚", true)),
-            listOf(Zikr("z", "ذكر", "note", 7, "f")),
+            listOf(Zikr("z", "Sample zikr", "note", 7, "f")),
             listOf(Schedule("s", "Reminder", "message", 8, 30, true, "f"))
         )
         assertTrue(runBlocking { RoomMigration.importIfEmpty(repository, data) })
@@ -89,7 +89,7 @@ class RoomMigrationTest {
     fun invalidCountsAndTimesAreRejected() {
         assertFalse(RoomMigration.validate(RoomMigration.LegacyData(
             listOf(Folder("f", "Folder")),
-            listOf(Zikr("z", "ذكر", "", 0, "f")),
+            listOf(Zikr("z", "Sample zikr", "", 0, "f")),
             emptyList()
         )))
         assertFalse(RoomMigration.validate(RoomMigration.LegacyData(
@@ -121,7 +121,7 @@ class RoomMigrationTest {
     fun suspendOperationsReadWriteAndObserveRoomContent() = runBlocking {
         val data = AzkarContent(
             listOf(Folder("f", "Personal")),
-            listOf(Zikr("z", "ذكر", "", 1, "f")),
+            listOf(Zikr("z", "Sample zikr", "", 1, "f")),
             emptyList()
         )
 
@@ -139,7 +139,7 @@ class RoomMigrationTest {
                     repository.replaceAllAsync(
                         AzkarContent(
                             listOf(Folder("f$index", "Folder $index")),
-                            listOf(Zikr("z$index", "ذكر $index", "", index, "f$index")),
+                            listOf(Zikr("z$index", "Sample zikr $index", "", index, "f$index")),
                             emptyList()
                         )
                     )

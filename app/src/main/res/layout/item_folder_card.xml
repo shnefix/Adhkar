@@ -1,6 +1,6 @@
 
 <LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:minHeight="116dp"
     android:paddingTop="14dp"
@@ -24,7 +24,7 @@
             android:src="@drawable/ic_folder_1p75"
             android:layout_width="22dp"
             android:layout_height="22dp"
-            android:tint="@color/gold"/>
+            app:tint="@color/gold"/>
 
         <TextView
             android:id="@+id/emoji"

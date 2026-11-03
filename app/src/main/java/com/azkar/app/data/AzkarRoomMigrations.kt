@@ -11,4 +11,12 @@ object AzkarRoomMigrations {
             db.execSQL("ALTER TABLE schedules ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+    /** Optional zikr title, shown above (or below) the zikr in the reader. */
+    val V2_TO_V3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE zikrs ADD COLUMN title TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE zikrs ADD COLUMN titleBelow INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 }

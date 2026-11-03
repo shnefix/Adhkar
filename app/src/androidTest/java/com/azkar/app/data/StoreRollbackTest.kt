@@ -40,7 +40,8 @@ class StoreRollbackTest {
         dao.failNext = true
 
         Store.addFolder("Failed")
-        repository.awaitPendingWrites()
+        // The simulated failure is rethrown by design (see RoomMigrationTest); only wait for it here.
+        runCatching { repository.awaitPendingWrites() }
 
         assertEquals(initialContent.folders, Store.folders())
         assertEquals(initialContent, repository.loadContent())

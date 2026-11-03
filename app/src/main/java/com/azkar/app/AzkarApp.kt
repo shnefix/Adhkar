@@ -2,6 +2,7 @@ package com.azkar.app
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +17,9 @@ class AzkarApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.init(this)
+        // Night mode isn't persisted by AppCompat. Setting it here, before any activity exists, avoids a
+        // recreate during MainActivity's startup, which left Home blank on phones in system light mode.
+        ThemeMode.apply(AppPrefs.theme())
         AzkarNotifier.createChannel(this)
         appScope.launch {
             runCatching {

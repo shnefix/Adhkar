@@ -13,6 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Compatibility facade over Room content and lightweight SharedPreferences settings. */
 object Store {
@@ -23,22 +26,22 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 1
+    private const val DEFAULTS_VERSION = 6
+    private const val HOME_FOLDER_ID = "d_15"                   // الواجهة, added in defaults version 4
+    private const val ZAD_FOLDER_ID = "d_16"                    // زَادُ المَعَادِ, added in defaults version 6
+    private const val WAKE_FOLDER_ID = "d_9"
+    private const val MORNING_FOLDER_ID = "d_14"
+    private const val EVENING_FOLDER_ID = "d_11"
+    private const val WAKE_FOLDER_NAME = "أذكار الإستقاظ"
+    private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????")
+    /** Default folders shown first on Home, in this order. */
+    private val HOME_DEFAULTS = listOf(HOME_FOLDER_ID, "d_14", "d_11", WAKE_FOLDER_ID, "d_13", "d_1")
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
-    private const val K_SIZE = "arabic_size"
-    private const val K_THEME = "theme_mode"
     private const val K_HZ = "hidden_zikrs"
-    private const val K_REM = "reminder_"
-    private const val K_NOTIF = "notif_on"
     private const val K_SCHED = "schedules"
     private const val K_SCHEDULES_INITIALIZED = "schedules_initialized"
-    private const val K_SP = "arabic_sp"
-    private const val K_TAP = "tap_advance"
-    private const val K_AWAKE = "keep_awake"
-    private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
-    private const val K_POSC = "posc_"    // posc_<folderId> = its count
     private const val K_SCHEMA = "schema_version"
     private const val K_RECOVERED = "data_recovered"
     private const val K_ROOM_MIGRATION_VERIFIED = "room_migration_verified"
@@ -49,7 +52,9 @@ object Store {
     private var zCache: List<Zikr> = emptyList()
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
-    private var hzCache: Set<String> = emptySet()
+    private var defaultFolderIds: Set<String> = emptySet()
+    private val hzState = MutableStateFlow<Set<String>>(emptySet())
+    private val hzCache: Set<String> get() = hzState.value
     private var cacheGeneration = 0L
     private lateinit var repository: AzkarRepository
     private val widgetRefreshPending = AtomicBoolean(false)
@@ -62,6 +67,8 @@ object Store {
         if (::sp.isInitialized) return
         appCtx = context.applicationContext
         sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
+        AppPrefs.attach(sp)
+        Tracking.attach(appCtx.getSharedPreferences("azkar_tracking", Context.MODE_PRIVATE))
         repository = AzkarRepository(AzkarDatabaseProvider.get(appCtx).azkarDao())
         val result = CompletableDeferred<Result<Unit>>()
         initResult = result
@@ -90,9 +97,9 @@ object Store {
         sCache = loaded.schedules
         val legacy = try {
             LegacyContent(
-                parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]"),
-                parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]"),
-                parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
+                LegacyJson.parseZikrs(sp.getString(K_ZIKRS, "[]") ?: "[]"),
+                LegacyJson.parseFolders(sp.getString(K_FOLDERS, "[]") ?: "[]"),
+                LegacyJson.parseSchedules(sp.getString(K_SCHED, "[]") ?: "[]")
             )
         } catch (e: Exception) {
             android.util.Log.e("Azkar", "Stored content was corrupt; keeping it for recovery", e)
@@ -126,27 +133,14 @@ object Store {
             fCache = emptyList()
             sCache = emptyList()
         }
-        hzCache = try { parseIds(sp.getString(K_HZ, "[]") ?: "[]") } catch (_: Exception) { emptySet() }
+        hzState.value = try { LegacyJson.parseIds(sp.getString(K_HZ, "[]") ?: "[]") } catch (_: Exception) { emptySet() }
         if (recovered) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
         else migrateSchema()
         syncDefaults()
+        defaultFolderIds = defaults()?.folders?.mapNotNull { it.id }?.toSet().orEmpty()
         migrateSchedules()
         sanitizeIcons()
         repository.awaitPendingWrites()
-    }
-
-    private data class LegacyContent(
-        val zikrs: List<Zikr>,
-        val folders: List<Folder>,
-        val schedules: List<Schedule>
-    ) {
-        fun isValid(): Boolean =
-            zikrs.map { it.id }.all { it.isNotBlank() } &&
-                folders.map { it.id }.all { it.isNotBlank() } &&
-                schedules.map { it.id }.all { it.isNotBlank() } &&
-                zikrs.map { it.id }.distinct().size == zikrs.size &&
-                folders.map { it.id }.distinct().size == folders.size &&
-                schedules.map { it.id }.distinct().size == schedules.size
     }
 
     private suspend fun migrateLegacy(legacy: LegacyContent): Boolean {
@@ -195,25 +189,52 @@ object Store {
     /**
      * Gives every user the defaults from the JSON, additively: folders match by id then name,
      * azkar are skipped if the same text already exists in that folder, nothing is overwritten or deleted.
-     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). Users of the previous build already
-     * received everything, so for them it only records the version.
+     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). A full merge only happens on a fresh
+     * install; upgrades receive just the folders added since, so default folders a user deleted stay deleted.
      */
     private fun syncDefaults() {
-        if (sp.getInt(K_DEFAULTS_VER, 0) >= DEFAULTS_VERSION) return
-        val alreadyHave = sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
-        if (!alreadyHave && !mergeDefaults()) return          // asset unreadable: try again next start
+        val from = sp.getInt(K_DEFAULTS_VER, 0)
+        if (from >= DEFAULTS_VERSION) return
+        val p = defaults() ?: return                          // asset unreadable: try again next start
+        val fresh = from == 0 && !sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
+        if (fresh) mergeDefaults(p)
+        else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == HOME_FOLDER_ID }))
+        if (!fresh && from < 6) mergeDefaults(p.copy(folders = p.folders.filter { it.id == ZAD_FOLDER_ID }))
+        if (from < 4) applyHomeDefaults()
+        if (from in 1 until 5) applySessionDefaults()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
-    private fun mergeDefaults(): Boolean {
-        val p = defaults() ?: return false
+    /**
+     * Version 4: fixes the wake-up folder's name (it was saved as "?????" by an encoding bug) and puts
+     * the [HOME_DEFAULTS] folders first on Home. Folders the user renamed or deleted are left alone.
+     */
+    private fun applyHomeDefaults() {
+        folder(WAKE_FOLDER_ID)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
+        val present = HOME_DEFAULTS.filter { folder(it) != null }
+        setHidden(hidden() - present.toSet())
+        setHomeOrder(present + homeOrder().filter { it !in present })
+    }
+
+    /**
+     * Version 5 (upgrades only; fresh installs get the same from the JSON and [migrateSchedules]):
+     * morning / evening remember their position, and their reminders open those folders.
+     */
+    private fun applySessionDefaults() {
+        listOf(MORNING_FOLDER_ID, EVENING_FOLDER_ID).filter { folder(it) != null }.forEach { setFolderRemember(it, true) }
+        mapOf("m" to MORNING_FOLDER_ID, "e" to EVENING_FOLDER_ID).forEach { (sid, fid) ->
+            val s = schedule(sid) ?: return@forEach
+            if (folder(fid) != null && (s.open == null || folder(s.open) == null)) upsertSchedule(s.copy(open = fid))
+        }
+    }
+
+    private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
         val before = fCache.map { it.id }.toSet()
         val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
         saveContent(ns.folders, ns.zikrs, ns.schedules)
         val created = ns.folders.map { it.id }.filter { it !in before }.toSet()
         val hide = p.folders.filter { it.home != true }.mapNotNull { it.id }.filter { it in created }
         if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
-        return true
     }
 
     /** One time: the three fixed reminders become editable schedules (same on/off state). */
@@ -221,45 +242,14 @@ object Store {
         if (sp.getBoolean(K_SCHEDULES_INITIALIZED, false)) return
         saveSchedules(
             listOf(
-                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, reminderOn("m", true), "morning"),
-                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, reminderOn("e", true), "evening"),
-                Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, reminderOn("s", false), "sleep")
+                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, AppPrefs.reminderOn("m", true), MORNING_FOLDER_ID),
+                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, AppPrefs.reminderOn("e", true), EVENING_FOLDER_ID),
+                Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, AppPrefs.reminderOn("s", false), "sleep")
             )
         )
     }
 
-    // ---------- Parsing / saving (the only code that touches the caches) ----------
-    private fun parseZikrs(raw: String): List<Zikr> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Zikr(o.getString("id"), o.getString("ar"), o.optString("note", ""), o.optInt("n", 1), if (o.isNull("f")) null else o.getString("f"))
-        }
-    }
-
-    private fun parseFolders(raw: String): List<Folder> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Folder(
-                o.getString("id"), o.getString("name"),
-                if (o.isNull("ic")) null else o.optString("ic", "").ifEmpty { null },
-                o.optBoolean("rm", false)
-            )
-        }
-    }
-
-    private fun parseSchedules(raw: String): List<Schedule> {
-        val arr = JSONArray(raw)
-        return (0 until arr.length()).map {
-            val o = arr.getJSONObject(it)
-            Schedule(
-                o.getString("id"), o.optString("t", ""), o.optString("m", ""), o.optInt("h", 8), o.optInt("mi", 0),
-                o.optBoolean("on", true), if (o.isNull("open")) null else o.getString("open")
-            )
-        }
-    }
-
+    // ---------- Saving (the only code that touches the caches) ----------
     @Synchronized
     private fun saveZikrs(list: List<Zikr>) {
         saveContent(fCache, list, sCache)
@@ -308,7 +298,7 @@ object Store {
 
     private fun notifyWidgets() {
         if (::appCtx.isInitialized && widgetRefreshPending.compareAndSet(false, true)) {
-            appCtx.mainExecutor.execute {
+            androidx.core.content.ContextCompat.getMainExecutor(appCtx).execute {
                 try {
                     WidgetUpdater.updateAll(appCtx)
                 } finally {
@@ -327,13 +317,16 @@ object Store {
     fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
     @Synchronized
-    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?): Zikr {
+    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titleBelow: Boolean = false): Zikr {
         zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
-            val merged = it.copy(note = note.ifBlank { it.note }, repeat = repeat)
+            val merged = it.copy(
+                note = note.ifBlank { it.note }, repeat = repeat,
+                title = title.ifBlank { it.title }, titleBelow = if (title.isBlank()) it.titleBelow else titleBelow
+            )
             updateZikr(merged)
             return merged
         }
-        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId)
+        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titleBelow)
         saveZikrs(zCache + z)
         return z
     }
@@ -405,15 +398,16 @@ object Store {
         saveContent(nextFolders, nextZikrs, nextSchedules)
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
-        clearPosition(id)
+        AppPrefs.clearPosition(id)
+        Tracking.setTracked(id, false)
     }
 
     fun folderName(key: String?): String {
         if (key == null) return "Anytime"
-        return folder(key)?.name ?: Builtins.byKey(key)?.title ?: "Anytime"
+        return folder(key)?.name ?: "Anytime"
     }
 
-    fun isBuiltinFolder(key: String?) = Builtins.byKey(key) != null
+    fun isDefaultFolder(key: String?) = key != null && key in defaultFolderIds
 
     // ---------- Import / export ----------
     suspend fun importAllAsync(p: ImportJson.Parsed.Ok): ImportMerge.Summary {
@@ -438,8 +432,15 @@ object Store {
         if (published) notifyWidgets()
         sp.edit().putBoolean(K_SCHEDULES_INITIALIZED, true).apply()
         val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
-        sp2?.let { setArabicSp(it) }
-        p.settings?.notificationsOn?.let { setNotificationsOn(it) }
+        sp2?.let { AppPrefs.setArabicSp(it) }
+        p.settings?.notificationsOn?.let { AppPrefs.setNotificationsOn(it) }
+        p.settings?.prayerDelays?.forEach { (id, minutes) -> AppPrefs.setSessionDelayMinutes(id, minutes) }
+        p.settings?.nudgeOn?.let { AppPrefs.setNudgeOn(it) }
+        p.settings?.nudgeMinutes?.let { AppPrefs.setNudgeLeadMinutes(it) }
+        // Tracked folders follow their folder: same id if it kept it, else the id the merge gave it.
+        p.tracking?.let { t ->
+            Tracking.restore(t.folders, t.history) { fileId -> (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null } }
+        }
         return sum
     }
 
@@ -450,9 +451,9 @@ object Store {
         val backup = try { JSONObject(raw) } catch (_: Exception) { return false }
         val legacy = try {
             LegacyContent(
-                parseZikrs(backup.optString("zikrs", "[]")),
-                parseFolders(backup.optString("folders", "[]")),
-                parseSchedules(backup.optString("schedules", "[]"))
+                LegacyJson.parseZikrs(backup.optString("zikrs", "[]")),
+                LegacyJson.parseFolders(backup.optString("folders", "[]")),
+                LegacyJson.parseSchedules(backup.optString("schedules", "[]"))
             )
         } catch (_: Exception) {
             return false
@@ -475,7 +476,12 @@ object Store {
     }
 
     suspend fun exportJsonAsync(): String = withContext(Dispatchers.Default) {
-        ExportJson.build(ImportMerge.State(fCache, zCache, sCache), arabicSize(), notificationsOn(), arabicSp())
+        ExportJson.build(
+            ImportMerge.State(fCache, zCache, sCache), AppPrefs.arabicSize(), AppPrefs.notificationsOn(), AppPrefs.arabicSp(),
+            sessionDelays = listOf("m", "e", "s").associateWith { AppPrefs.sessionDelayMinutes(it) },
+            nudgeOn = AppPrefs.nudgeOn(), nudgeMinutes = AppPrefs.nudgeLeadMinutes(),
+            tracking = Tracking.toJson()
+        )
     }
 
     // ---------- Home customisation ----------
@@ -514,65 +520,28 @@ object Store {
         setHidden(hide.filter { folder(it) != null }.toSet())
     }
 
-    // ---------- Settings ----------
-    /** 0 = small, 1 = medium (default), 2 = large. */
-    fun arabicSize() = sp.getInt(K_SIZE, 1)
-    fun setArabicSize(v: Int) = sp.edit().putInt(K_SIZE, v).apply()
-
     // ---------- Per-folder reading position ----------
     fun rememberPosition(folderId: String) = folder(folderId)?.remember == true
 
     @Synchronized
     fun setFolderRemember(id: String, on: Boolean) {
         saveFolders(fCache.map { if (it.id == id) it.copy(remember = on) else it })
-        if (!on) clearPosition(id)          // old progress must never leak back in
-    }
-
-    fun savePosition(folderId: String, zikrId: String, count: Int) {
-        sp.edit().putString(K_POS + folderId, zikrId).putInt(K_POSC + folderId, count).apply()
-    }
-
-    fun savedPosition(folderId: String): Pair<String, Int>? {
-        val id = sp.getString(K_POS + folderId, null) ?: return null
-        return id to sp.getInt(K_POSC + folderId, 0)
-    }
-
-    fun clearPosition(folderId: String) {
-        sp.edit().remove(K_POS + folderId).remove(K_POSC + folderId).apply()
-    }
-
-    // ---------- Reader settings ----------
-    /** Arabic size in sp. Existing Small/Medium/Large choices carry over as 20/26/32. */
-    fun arabicSp(): Int = ReaderPrefs.clampSp(sp.getInt(K_SP, ReaderPrefs.spFromOldIndex(arabicSize())))
-    fun setArabicSp(v: Int) = sp.edit().putInt(K_SP, ReaderPrefs.clampSp(v)).apply()
-    fun tapAdvance() = sp.getBoolean(K_TAP, true)
-    fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
-    fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
-    fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
-
-    /** 0 = teal theme, 1 = OLED black (default). */
-    fun theme() = sp.getInt(K_THEME, 1)
-    fun setTheme(v: Int) = sp.edit().putInt(K_THEME, v).apply()
-
-    private fun parseIds(raw: String): Set<String> {
-        val a = JSONArray(raw)
-        return (0 until a.length()).map { a.getString(it) }.toSet()
+        if (!on) AppPrefs.clearPosition(id)          // old progress must never leak back in
     }
 
     fun hiddenZikrs(): Set<String> = hzCache
 
+    /** Hidden zikr ids as they change; SharedPreferences-backed, so not part of the Room content flow. */
+    val hiddenZikrsFlow: StateFlow<Set<String>> = hzState.asStateFlow()
+
     @Synchronized
     fun setZikrsHidden(ids: kotlin.collections.Collection<String>, hide: Boolean) {
-        hzCache = Visibility.apply(hzCache, ids, hide)
+        hzState.value = Visibility.apply(hzCache, ids, hide)
         sp.edit().putString(K_HZ, JSONArray(hzCache.toList()).toString()).apply()
     }
 
-    fun reminderOn(key: String, default: Boolean) = sp.getBoolean(K_REM + key, default)
 
     // ---------- Notification schedules ----------
-    fun notificationsOn() = sp.getBoolean(K_NOTIF, true)
-    fun setNotificationsOn(v: Boolean) = sp.edit().putBoolean(K_NOTIF, v).apply()
-
     fun schedules(): List<Schedule> = sCache
     fun schedule(id: String): Schedule? = sCache.firstOrNull { it.id == id }
     fun newScheduleId(): String = UUID.randomUUID().toString()
@@ -588,10 +557,10 @@ object Store {
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
         if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id)) } ?: emptyList()
+            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow)) } ?: emptyList()
         }
         val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id) }
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"

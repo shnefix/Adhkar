@@ -5,24 +5,32 @@ import org.json.JSONObject
 
 /**
  * Parses and validates an Azkar JSON file (hand-written or produced by Export).
- * Only "folders" is required. Optional: folder "id"/"icon", zikr "note", top-level "unfiled", "reminders", "settings".
+ * Only "folders" is required. Optional: folder "id"/"icon", zikr "note"/"title"/"titlePosition" ("above" or "below"),
+ * top-level "unfiled", "reminders", "settings".
  */
 object ImportJson {
-    data class Item(val text: String, val count: Int, val note: String = "")
+    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titleBelow: Boolean = false)
     data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
-    data class SettingsIn(val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null)
+    data class SettingsIn(
+        val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null,
+        val prayerDelays: Map<String, Int> = emptyMap(), val nudgeOn: Boolean? = null, val nudgeMinutes: Int? = null
+    )
+    /** Tracked folder ids and their daily history, as written by Export (ids are the file's own). */
+    data class TrackingIn(val folders: List<String>, val history: Map<String, Map<String, Tracking.Progress>>)
     sealed class Parsed {
         data class Ok(
             val folders: List<FolderIn>,
             val unfiled: List<Item> = emptyList(),
             val reminders: List<ReminderIn> = emptyList(),
-            val settings: SettingsIn? = null
+            val settings: SettingsIn? = null,
+            val tracking: TrackingIn? = null
         ) : Parsed()
         data class Error(val message: String) : Parsed()
     }
 
     private val TIME = Regex("^(\\d{1,2}):(\\d{2})$")
+    private val DAY = Regex("^\\d{8}$")   // tracking history keys: yyyyMMdd
 
     private fun items(az: org.json.JSONArray, where: String): Any {
         val out = ArrayList<Item>()
@@ -40,7 +48,9 @@ object ImportJson {
             }
             if (n < 1 || n > 999) return "$where, zikr ${j + 1}: \"count\" must be a whole number from 1 to 999."
             val note = if (o.isNull("note")) "" else o.optString("note", "")
-            out.add(Item(text, n, note))
+            val title = if (o.isNull("title")) "" else o.optString("title", "").trim()
+            val below = o.optString("titlePosition", "above").equals("below", ignoreCase = true)
+            out.add(Item(text, n, note, title, below))
         }
         return out
     }
@@ -99,12 +109,32 @@ object ImportJson {
             SettingsIn(
                 (so.opt("arabicSize") as? Number)?.toInt()?.takeIf { it in 0..2 },
                 if (so.opt("notificationsEnabled") is Boolean) so.getBoolean("notificationsEnabled") else null,
-                (so.opt("arabicSp") as? Number)?.toInt()?.takeIf { it in ReaderPrefs.FONT_MIN..ReaderPrefs.FONT_MAX }
+                (so.opt("arabicSp") as? Number)?.toInt()?.takeIf { it in ReaderPrefs.FONT_MIN..ReaderPrefs.FONT_MAX },
+                so.optJSONObject("prayerDelays")?.let { d ->
+                    d.keys().asSequence().mapNotNull { k -> (d.opt(k) as? Number)?.toInt()?.takeIf { it in 0..AppPrefs.SESSION_DELAY_MAX }?.let { k to it } }.toMap()
+                }.orEmpty(),
+                if (so.opt("nudgeEnabled") is Boolean) so.getBoolean("nudgeEnabled") else null,
+                (so.opt("nudgeMinutes") as? Number)?.toInt()?.takeIf { it in 1..AppPrefs.SESSION_DELAY_MAX }
             )
+        }
+        // Tracking is optional and never fails an import: unreadable entries are skipped.
+        val tracking = root.optJSONObject("tracking")?.let { t ->
+            val ids = t.optJSONArray("folders")?.let { a -> (0 until a.length()).mapNotNull { a.opt(it) as? String } }.orEmpty()
+            val hist = t.optJSONObject("history")?.let { h ->
+                h.keys().asSequence().mapNotNull { id ->
+                    val days = h.optJSONObject(id) ?: return@mapNotNull null
+                    id to days.keys().asSequence().mapNotNull { k ->
+                        val parts = days.optString(k).split('/')
+                        val d = parts.getOrNull(0)?.toIntOrNull(); val tot = parts.getOrNull(1)?.toIntOrNull()
+                        if (d == null || tot == null || tot <= 0 || !DAY.matches(k)) null else k to Tracking.Progress(d.coerceIn(0, tot), tot)
+                    }.toMap()
+                }.toMap()
+            }.orEmpty()
+            TrackingIn(ids, hist).takeIf { ids.isNotEmpty() || hist.isNotEmpty() }
         }
         if (folders.sumOf { it.items.size } + unfiled.size == 0 && rems.isEmpty()) {
             return Parsed.Error(if (folders.isEmpty()) "The \"folders\" list is empty." else "The file contains no azkar.")
         }
-        return Parsed.Ok(folders, unfiled, rems, st)
+        return Parsed.Ok(folders, unfiled, rems, st, tracking)
     }
 }
