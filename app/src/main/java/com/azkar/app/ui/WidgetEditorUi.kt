@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.azkar.app.R
+import kotlin.math.roundToInt
 
 /** Editor colors, taken from the app theme (teal or OLED) by [load] each time the editor opens. */
 internal object EditorColors {
@@ -255,7 +256,7 @@ internal fun toggleRow(ctx: Context, title: String, subtitle: String, checked: B
         }, LinearLayout.LayoutParams(Ui.pxi(ctx, 56f), Ui.pxi(ctx, 44f)))
     }
 
-private fun stepperButton(ctx: Context, symbol: String, description: String, onClick: () -> Unit) =
+private fun stepperButton(ctx: Context, symbol: String, description: String, enabled: Boolean = true, onClick: () -> Unit) =
     editorText(ctx, symbol, 26f, EditorColors.Gold).apply {
         gravity = Gravity.CENTER
         background = GradientDrawable().apply {
@@ -264,22 +265,68 @@ private fun stepperButton(ctx: Context, symbol: String, description: String, onC
             setStroke(Ui.pxi(ctx, 1f), EditorColors.Dot)
         }
         contentDescription = description
+        isEnabled = enabled
+        alpha = if (enabled) 1f else 0.35f
         setOnClickListener { onClick() }
     }
 
+private const val MINUTE_STEP = 5
+private const val LAST_MINUTE_STEP = 60 - MINUTE_STEP
+
 /**
- * Custom refresh interval: [value] is shown in [hours] or minutes. [onValue] receives the new value
- * (already clamped), [onUnit] the new unit. Typed numbers are committed on Done / focus loss.
+ * One stepper press. Order: 15, 20 … 55 min, then 1, 2 … hours, so the unit rolls over instead
+ * of the value getting stuck at "0 hours" or climbing through hundreds of minutes.
+ * Manual (minutes <= 0) starts from the smallest value of the current unit. Returns (minutes, hours unit).
+ */
+internal fun stepInterval(minutes: Int, hours: Boolean, up: Boolean): Pair<Int, Boolean> {
+    if (minutes <= 0) return (if (hours) 60 else MIN_INTERVAL_MINUTES) to hours
+    return if (hours) {
+        val h = minutes / 60
+        when {
+            up -> ((h + 1) * 60).coerceAtMost(MAX_INTERVAL_MINUTES) to true
+            h <= 1 -> LAST_MINUTE_STEP to false
+            else -> (h - 1) * 60 to true
+        }
+    } else when {
+        up && minutes >= LAST_MINUTE_STEP -> ((minutes / 60 + 1) * 60).coerceAtMost(MAX_INTERVAL_MINUTES) to true
+        up -> (minutes / MINUTE_STEP + 1) * MINUTE_STEP to false
+        else -> ((minutes - 1) / MINUTE_STEP * MINUTE_STEP).coerceAtLeast(MIN_INTERVAL_MINUTES) to false
+    }
+}
+
+/** Switching units converts the interval (45 min → 1 hour) rather than reusing the number (45 → 45 hours). */
+private fun convertUnit(minutes: Int, toHours: Boolean): Int = when {
+    minutes <= 0 -> if (toHours) 60 else MIN_INTERVAL_MINUTES
+    toHours -> ((minutes / 60f).roundToInt() * 60).coerceIn(60, MAX_INTERVAL_MINUTES)
+    else -> minutes.coerceAtLeast(MIN_INTERVAL_MINUTES)
+}
+
+private fun formatInterval(minutes: Int): String {
+    if (minutes < 60) return "$minutes min"
+    val h = minutes / 60
+    val r = minutes % 60
+    val hours = if (h == 1) "1 hour" else "$h hours"
+    return if (r == 0) hours else "$hours $r min"
+}
+
+/**
+ * Custom refresh interval. [minutes] is the saved interval (0 = manual), shown in [hours] or minutes.
+ * [onChange] receives the new interval in minutes (already clamped) and the unit to show it in.
+ * Typed numbers are committed on Done / focus loss.
  */
 internal fun customIntervalBox(
-    ctx: Context, value: Int, hours: Boolean, active: Boolean,
-    onValue: (Int) -> Unit, onUnit: (Boolean) -> Unit
+    ctx: Context, minutes: Int, hours: Boolean, active: Boolean,
+    onChange: (minutes: Int, hours: Boolean) -> Unit
 ): View {
+    val manual = minutes <= 0
+    val factor = if (hours) 60 else 1
+    val value = minutes / factor
     val minV = if (hours) 1 else MIN_INTERVAL_MINUTES
-    val maxV = if (hours) MAX_INTERVAL_MINUTES / 60 else MAX_INTERVAL_MINUTES
+    val maxV = MAX_INTERVAL_MINUTES / factor
     val box = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
-        background = editorShape(EditorColors.Custom, 18f, ctx, EditorColors.Gold)
+        // Only outlined in gold while it is the interval in use, so it never looks selected next to a preset.
+        background = editorShape(EditorColors.Custom, 18f, ctx, if (active) EditorColors.Gold else EditorColors.Border)
         val pad = Ui.pxi(ctx, 16f)
         setPadding(pad, pad, pad, pad)
     }
@@ -295,7 +342,9 @@ internal fun customIntervalBox(
     box.addView(header)
 
     val input = EditText(ctx).apply {
-        setText(value.toString())
+        if (manual) setText("") else setText(value.toString())
+        hint = "—"
+        setHintTextColor(EditorColors.Muted)
         inputType = InputType.TYPE_CLASS_NUMBER
         imeOptions = EditorInfo.IME_ACTION_DONE
         setSingleLine(true)
@@ -318,8 +367,9 @@ internal fun customIntervalBox(
     var committed = false
     fun commit() {
         if (committed) return
-        val v = input.text.toString().filter(Char::isDigit).toIntOrNull()?.coerceIn(minV, maxV) ?: value
-        if (v != value) { committed = true; onValue(v) } else input.setText(value.toString())
+        val v = input.text.toString().filter(Char::isDigit).toIntOrNull()?.coerceIn(minV, maxV)
+        if (v != null && v * factor != minutes) { committed = true; onChange(v * factor, hours) }
+        else input.setText(if (manual) "" else value.toString())
     }
     input.setOnEditorActionListener { v, actionId, _ ->
         if (actionId == EditorInfo.IME_ACTION_DONE) { commit(); v.clearFocus(); true } else false
@@ -328,22 +378,33 @@ internal fun customIntervalBox(
 
     val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
     val gap = Ui.pxi(ctx, 12f)
-    row.addView(stepperButton(ctx, "−", "Decrease interval") { onValue((value - 1).coerceIn(minV, maxV)) },
+    fun step(up: Boolean) {
+        val (m, h) = stepInterval(minutes, hours, up)
+        onChange(m, h)
+    }
+    row.addView(stepperButton(ctx, "−", "Decrease interval", enabled = manual || minutes > MIN_INTERVAL_MINUTES) { step(false) },
         LinearLayout.LayoutParams(Ui.pxi(ctx, 48f), Ui.pxi(ctx, 48f)))
     row.addView(input, LinearLayout.LayoutParams(0, Ui.pxi(ctx, 56f), 1f).also { it.marginStart = gap; it.marginEnd = gap })
-    row.addView(stepperButton(ctx, "+", "Increase interval") { onValue((value + 1).coerceIn(minV, maxV)) },
+    row.addView(stepperButton(ctx, "+", "Increase interval", enabled = manual || minutes < MAX_INTERVAL_MINUTES) { step(true) },
         LinearLayout.LayoutParams(Ui.pxi(ctx, 48f), Ui.pxi(ctx, 48f)))
     box.addSpaced(row)
 
-    box.addSpaced(segmented(ctx, listOf("Minutes", "Hours"), if (hours) 1 else 0) { onUnit(it == 1) })
+    box.addSpaced(segmented(ctx, listOf("Minutes", "Hours"), if (hours) 1 else 0) { i ->
+        val toHours = i == 1
+        if (toHours != hours || manual) onChange(convertUnit(minutes, toHours), toHours)
+    })
 
-    val unitWord = if (hours) (if (value == 1) "hour" else "hours") else (if (value == 1) "minute" else "minutes")
-    val caption = SpannableStringBuilder("Refreshes every ")
-    val start = caption.length
-    caption.append("$value $unitWord")
-    caption.setSpan(ForegroundColorSpan(EditorColors.Gold), start, caption.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-    caption.setSpan(StyleSpan(Typeface.BOLD), start, caption.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-    caption.append(" · minimum $MIN_INTERVAL_MINUTES min")
+    val caption = if (manual) {
+        SpannableStringBuilder("Manual refresh · tap + or − to set an interval")
+    } else {
+        SpannableStringBuilder("Refreshes every ").apply {
+            val start = length
+            append(formatInterval(minutes))
+            setSpan(ForegroundColorSpan(EditorColors.Gold), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(StyleSpan(Typeface.BOLD), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(" · minimum $MIN_INTERVAL_MINUTES min")
+        }
+    }
     box.addSpaced(editorText(ctx, caption, 13f, EditorColors.Muted).apply { gravity = Gravity.CENTER })
     return box
 }

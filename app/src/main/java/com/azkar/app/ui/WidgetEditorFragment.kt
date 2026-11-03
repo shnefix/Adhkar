@@ -263,21 +263,17 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         val minutes = a.refreshMinutes
         val refresh = sectionCard(ctx, "Refresh", "How often the widget redraws. Shorter uses more battery.")
         refresh.addSpaced(chipGroup(ctx, presets.map { it to presetLabel(it) }, minutes.takeIf { it in presets }) { m ->
+            // A preset decides its own unit; a unit left over from the custom box would show 15 min as "0 hours".
+            customHours.remove(item.id)
             update(view) { it.copy(refreshMinutes = m) }
         })
-        val hours = customHours[item.id] ?: (minutes >= 60 && minutes % 60 == 0)
-        val factor = if (hours) 60 else 1
-        val shown = if (minutes <= 0) 45 / factor.coerceAtLeast(1) else (minutes / factor).coerceAtLeast(1)
+        // Hours only make sense from one hour up.
+        val hours = minutes >= 60 && (customHours[item.id] ?: (minutes % 60 == 0))
         val active = minutes > 0 && minutes !in presets
-        refresh.addSpaced(customIntervalBox(ctx, shown.coerceAtLeast(1), hours, active,
-            onValue = { v -> update(view) { it.copy(refreshMinutes = v * factor) } },
-            onUnit = { h ->
-                customHours[item.id] = h
-                val min = if (h) 1 else MIN_INTERVAL_MINUTES
-                val v = shown.coerceAtLeast(min)
-                update(view) { it.copy(refreshMinutes = v * (if (h) 60 else 1)) }
-            }
-        ))
+        refresh.addSpaced(customIntervalBox(ctx, minutes, hours, active) { m, h ->
+            customHours[item.id] = h
+            update(view) { it.copy(refreshMinutes = m) }
+        })
         column.addCard(refresh)
     }
 
