@@ -138,7 +138,10 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             onFinish = {
                 Tracking.record(key, items.size, items.size)
                 AppPrefs.clearPosition(key)
-                nav().finishReading()
+                // finishReading() removes this fragment at once, so keep the activity before calling it.
+                val main = nav()
+                main.finishReading()
+                if (AppPrefs.completionScreen()) main.push(CompleteFragment.of(folderTitle, key))
             }
             onPage = { dir ->
                 if (dir > 0) rn.next() else rn.prev()

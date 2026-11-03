@@ -182,4 +182,17 @@
     <string name="widget_best_lower">أفضل مواظبة</string>
     <string name="widget_time_left">متبقٍ %1$s</string>
     <string name="widget_starts_in">%1$s بعد %2$s</string>
+    <string name="complete_streak">مواظبة %1$d يوم</string>
+    <string name="reminder_at_isha">عند العشاء</string>
+    <string name="reminder_after_isha">بعد العشاء بـ %1$d دقيقة</string>
+    <string name="reminder_delay_title_isha">التذكير بعد العشاء</string>
+    <string name="nudge_title_morning">لم تُتم أذكار الصباح بعد</string>
+    <string name="nudge_title_evening">لم تُتم أذكار المساء بعد</string>
+    <string name="nudge_text_morning">قرأت %1$d من %2$d · الظهر الساعة %3$s</string>
+    <string name="nudge_text_evening">قرأت %1$d من %2$d · المغرب الساعة %3$s</string>
+    <string name="nudge_setting">ذكّرني إن لم أُتمها</string>
+    <string name="nudge_setting_summary">قبل الظهر / المغرب بـ %1$d دقيقة · اضغط للتغيير</string>
+    <string name="nudge_setting_off">متوقف</string>
+    <string name="nudge_lead_title">قبل كم؟</string>
+    <string name="nudge_lead_option">قبل الظهر / المغرب بـ %1$d دقيقة</string>
 </resources>

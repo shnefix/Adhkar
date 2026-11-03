@@ -52,9 +52,20 @@ class WidgetModel(
     val rounds = ceil(target / beadTotal.toDouble()).toInt().coerceAtLeast(1)
 
     companion object {
-        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel {
+        fun load(ctx: Context, widgetId: Int, folder: String): WidgetModel =
+            WidgetStore.progress(ctx, widgetId).let { (i, c) -> forProgress(folder, i, c) }
+
+        /**
+         * [folder] as far as it was read today anywhere (reader, or any widget's taps), for widgets that
+         * show a folder they aren't counting themselves. [own] is this widget's progress when it counts [folder].
+         */
+        fun today(folder: String, own: WidgetModel? = null): WidgetModel {
+            val done = com.azkar.app.data.Tracking.today(folder)?.done ?: 0
+            return if (own != null && own.done >= done) own else forProgress(folder, done, 0)
+        }
+
+        private fun forProgress(folder: String, i: Int, c: Int): WidgetModel {
             val items = Store.readerItems(folder)
-            val (i, c) = WidgetStore.progress(ctx, widgetId)
             val idx = i.coerceIn(0, items.size)
             val cnt = if (idx < items.size) c.coerceIn(0, (items[idx].target - 1).coerceAtLeast(0)) else 0
             val labels = items.map { it0 ->

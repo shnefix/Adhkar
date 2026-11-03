@@ -52,6 +52,25 @@ class PrayerSessionsTest {
     }
 
     @Test
+    fun notFinishedReminderComesBeforeTheSessionEnds() {
+        val lead = 45 * 60_000L
+        assertEquals(PrayerSessions.minute(today.dhuhr) - lead, PrayerSessions.nextNudge(Session.MORNING, at(7), lead, cairo, zone, PrayerSessions.DELAY_MS))
+        // After today's has passed, tomorrow's.
+        assertEquals(PrayerSessions.minute(tomorrow.maghrib) - lead, PrayerSessions.nextNudge(Session.EVENING, at(20), lead, cairo, zone, PrayerSessions.DELAY_MS))
+        // A lead longer than the session never lands before the session starts.
+        assertEquals(PrayerSessions.minute(today.asr) + PrayerSessions.DELAY_MS,
+            PrayerSessions.nextNudge(Session.EVENING, at(12), 10 * 60 * 60_000L, cairo, zone, PrayerSessions.DELAY_MS))
+    }
+
+    @Test
+    fun beforeSleepFollowsIsha() {
+        val delay = 120 * 60_000L
+        assertEquals(PrayerSessions.minute(today.isha) + delay, PrayerSessions.nextAfterIsha(at(12), cairo, zone, delay))
+        assertEquals(PrayerSessions.minute(tomorrow.isha) + delay, PrayerSessions.nextAfterIsha(at(23, 59), cairo, zone, delay))
+        assertNull(PrayerSessions.nextAfterIsha(at(12), null, zone, delay))
+    }
+
+    @Test
     fun sessionsEndAtDhuhrAndMaghrib() {
         assertEquals(PrayerSessions.minute(today.dhuhr), PrayerSessions.endAfter(Session.MORNING, at(7), cairo, zone))
         assertEquals(PrayerSessions.minute(today.maghrib), PrayerSessions.endAfter(Session.EVENING, at(15, 30), cairo, zone))

@@ -13,6 +13,7 @@ object AppPrefs {
     private const val K_SP = "arabic_sp"
     private const val K_TAP = "tap_advance"
     private const val K_AWAKE = "keep_awake"
+    private const val K_COMPLETE = "completion_screen"
     private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
     private const val K_POSC = "posc_"    // posc_<folderId> = its count
     private const val K_POST = "post_"    // post_<folderId> = when it was saved (ms)
@@ -22,7 +23,11 @@ object AppPrefs {
     private const val K_DELAY = "session_delay_"   // session_delay_<scheduleId> = minutes after Fajr / Asr
 
     const val SESSION_DELAY_DEFAULT = 10
-    const val SESSION_DELAY_MAX = 180
+    const val SLEEP_DELAY_DEFAULT = 120      // before sleep ("s"): minutes after Isha
+    const val SESSION_DELAY_MAX = 300
+    const val NUDGE_LEAD_DEFAULT = 45        // "not finished yet": minutes before Dhuhr / Maghrib
+    private const val K_NUDGE = "nudge_on"
+    private const val K_NUDGE_LEAD = "nudge_lead"
 
     /** Called by [Store.init]; shares the "azkar" preferences file so existing values carry over. */
     internal fun attach(prefs: SharedPreferences) {
@@ -40,6 +45,9 @@ object AppPrefs {
     fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
     fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
+    /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
+    fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
+    fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()
 
     /** 0 = teal theme, 1 = OLED black (default). */
     fun theme() = sp.getInt(K_THEME, 1)
@@ -83,12 +91,19 @@ object AppPrefs {
      * Minutes after Fajr (morning, "m") or Asr (evening, "e") when that session's azkar start.
      * Falls back to the default before [attach], so pure unit tests can call into PrayerSessions.
      */
-    fun sessionDelayMinutes(scheduleId: String): Int =
-        if (::sp.isInitialized) sp.getInt(K_DELAY + scheduleId, SESSION_DELAY_DEFAULT).coerceIn(0, SESSION_DELAY_MAX)
-        else SESSION_DELAY_DEFAULT
+    fun sessionDelayMinutes(scheduleId: String): Int {
+        val default = if (scheduleId == "s") SLEEP_DELAY_DEFAULT else SESSION_DELAY_DEFAULT
+        return if (::sp.isInitialized) sp.getInt(K_DELAY + scheduleId, default).coerceIn(0, SESSION_DELAY_MAX) else default
+    }
 
     fun setSessionDelayMinutes(scheduleId: String, minutes: Int) =
         sp.edit().putInt(K_DELAY + scheduleId, minutes.coerceIn(0, SESSION_DELAY_MAX)).apply()
+
+    /** "Not finished yet" reminder for tracked morning / evening azkar (on unless turned off). */
+    fun nudgeOn() = sp.getBoolean(K_NUDGE, true)
+    fun setNudgeOn(v: Boolean) = sp.edit().putBoolean(K_NUDGE, v).apply()
+    fun nudgeLeadMinutes() = sp.getInt(K_NUDGE_LEAD, NUDGE_LEAD_DEFAULT)
+    fun setNudgeLeadMinutes(v: Int) = sp.edit().putInt(K_NUDGE_LEAD, v).apply()
 
     /** True once the app has asked for location permission (it asks only once). */
     fun locationAsked() = sp.getBoolean(K_LOC_ASKED, false)

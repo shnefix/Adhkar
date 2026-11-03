@@ -206,4 +206,17 @@
     <string name="widget_best_lower">best streak</string>
     <string name="widget_time_left">%1$s left</string>
     <string name="widget_starts_in">%1$s in %2$s</string>
+    <string name="complete_streak">%1$d-day streak</string>
+    <string name="reminder_at_isha">At Isha</string>
+    <string name="reminder_after_isha">%1$d min after Isha</string>
+    <string name="reminder_delay_title_isha">Remind after Isha</string>
+    <string name="nudge_title_morning">Morning azkar not finished yet</string>
+    <string name="nudge_title_evening">Evening azkar not finished yet</string>
+    <string name="nudge_text_morning">%1$d of %2$d read · Dhuhr is at %3$s</string>
+    <string name="nudge_text_evening">%1$d of %2$d read · Maghrib is at %3$s</string>
+    <string name="nudge_setting">Remind me if not finished</string>
+    <string name="nudge_setting_summary">%1$d min before Dhuhr / Maghrib · tap to change</string>
+    <string name="nudge_setting_off">Off</string>
+    <string name="nudge_lead_title">How early?</string>
+    <string name="nudge_lead_option">%1$d min before Dhuhr / Maghrib</string>
 </resources>

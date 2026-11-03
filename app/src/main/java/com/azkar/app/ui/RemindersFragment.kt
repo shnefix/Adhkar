@@ -35,30 +35,43 @@ fun timeLabel(ctx: Context, h: Int, m: Int): String =
     if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
     else "%d:%02d %s".format(if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
 
-/** "10 min after Fajr", or "At Fajr" for no delay. */
-fun sessionDelayLabel(ctx: Context, session: PrayerSessions.Session, minutes: Int): String {
-    val morning = session == PrayerSessions.Session.MORNING
-    return if (minutes == 0) ctx.getString(if (morning) R.string.reminder_at_fajr else R.string.reminder_at_asr)
-    else ctx.getString(if (morning) R.string.reminder_after_fajr else R.string.reminder_after_asr, minutes)
+/** The prayer a reminder follows, with its labels and the delays offered after it. */
+private enum class PrayerAnchor(val atRes: Int, val afterRes: Int, val titleRes: Int, val delays: List<Int>) {
+    FAJR(R.string.reminder_at_fajr, R.string.reminder_after_fajr, R.string.reminder_delay_title_fajr, listOf(0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180)),
+    ASR(R.string.reminder_at_asr, R.string.reminder_after_asr, R.string.reminder_delay_title_asr, listOf(0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180)),
+    ISHA(R.string.reminder_at_isha, R.string.reminder_after_isha, R.string.reminder_delay_title_isha, listOf(0, 30, 60, 90, 120, 150, 180, 240, 300));
+
+    companion object {
+        fun of(scheduleId: String) = when (scheduleId) {
+            PrayerSessions.Session.MORNING.scheduleId -> FAJR
+            PrayerSessions.Session.EVENING.scheduleId -> ASR
+            PrayerSessions.SLEEP_SCHEDULE -> ISHA
+            else -> null
+        }
+    }
 }
+
+/** "10 min after Fajr", or "At Fajr" for no delay. */
+private fun delayLabel(ctx: Context, anchor: PrayerAnchor, minutes: Int): String =
+    if (minutes == 0) ctx.getString(anchor.atRes) else ctx.getString(anchor.afterRes, minutes)
 
 /**
  * "10 min after Fajr · 4:52 AM" for a reminder that follows prayer times, or null when it uses its
- * fixed time (not a morning / evening reminder, or no location yet). [delayMinutes] previews an unsaved choice.
+ * fixed time (another reminder, or no location yet). [delayMinutes] previews an unsaved choice.
  */
 fun prayerTimeLabel(
     ctx: Context, s: Schedule,
     delayMinutes: Int = AppPrefs.sessionDelayMinutes(s.id)
 ): String? {
-    val session = PrayerSessions.forSchedule(s.id) ?: return null
-    val at = PrayerSessions.nextReminder(session, System.currentTimeMillis(), delayMs = delayMinutes * 60_000L) ?: return null
+    val anchor = PrayerAnchor.of(s.id) ?: return null
+    val at = PrayerSessions.nextPrayerReminder(s.id, System.currentTimeMillis(), delayMinutes * 60_000L) ?: return null
     val c = java.util.Calendar.getInstance().apply { timeInMillis = at }
-    return sessionDelayLabel(ctx, session, delayMinutes) + " · " +
+    return delayLabel(ctx, anchor, delayMinutes) + " · " +
         timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
 }
 
-/** Delays offered for morning / evening azkar, in minutes after Fajr / Asr. */
-private val SESSION_DELAYS = listOf(0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180)
+/** Lead times offered for the "not finished yet" reminder, in minutes before Dhuhr / Maghrib. */
+private val NUDGE_LEADS = listOf(15, 30, 45, 60, 90)
 
 class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
@@ -129,15 +142,42 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         // Tracking: off by default; covers the morning and evening folders (other folders opt in from Edit folder).
         val swTrack = view.findViewById<ToggleSwitch>(R.id.sw_track)
         val trackSub = view.findViewById<TextView>(R.id.track_sub)
+        // "Not finished yet": only offered while morning / evening are tracked; tap the text to change how early.
+        val nudgeRow = view.findViewById<View>(R.id.nudge_row)
+        val swNudge = view.findViewById<ToggleSwitch>(R.id.sw_nudge)
+        val nudgeSub = view.findViewById<TextView>(R.id.nudge_sub)
         fun renderTracking() {
             val folders = sessionFolders()
             swTrack.on = folders.isNotEmpty() && folders.all { Tracking.isTracked(it) }
             trackSub.text = trackingSummary(ctx, folders, swTrack.on)
+            nudgeRow.visibility = if (swTrack.on) View.VISIBLE else View.GONE
+            swNudge.on = AppPrefs.nudgeOn()
+            nudgeSub.text = if (swNudge.on) getString(R.string.nudge_setting_summary, AppPrefs.nudgeLeadMinutes())
+            else getString(R.string.nudge_setting_off)
         }
         renderTracking()
         swTrack.onToggle = { on -> setTracking(ctx, sessionFolders(), on); renderTracking() }
+        swNudge.onToggle = { on ->
+            AppPrefs.setNudgeOn(on)
+            ReminderScheduler.scheduleNudges(ctx)
+            renderTracking()
+        }
+        view.findViewById<View>(R.id.nudge_text).setOnClickListener {
+            val current = AppPrefs.nudgeLeadMinutes()
+            val choices = (NUDGE_LEADS + current).distinct().sorted()
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.nudge_lead_title)
+                .setSingleChoiceItems(choices.map { getString(R.string.nudge_lead_option, it) }.toTypedArray(), choices.indexOf(current)) { d, which ->
+                    AppPrefs.setNudgeLeadMinutes(choices[which])
+                    ReminderScheduler.scheduleNudges(ctx)
+                    renderTracking()
+                    d.dismiss()
+                }
+                .show()
+        }
 
 // Reading switches
+        view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = AppPrefs.completionScreen(); onToggle = { AppPrefs.setCompletionScreen(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
 
@@ -264,19 +304,19 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         var m = existing?.minute ?: 0
         title.setText(existing?.title ?: "")
         msg.setText(existing?.message ?: "")
-        // Morning / evening follow the prayer times while a location is known: instead of a clock time,
-        // the user picks how many minutes after Fajr / Asr they start (saved with the reminder).
-        val session = existing?.let { PrayerSessions.forSchedule(it.id) }
+        // Morning / evening / before sleep follow the prayer times while a location is known: instead of a clock
+        // time, the user picks how many minutes after Fajr / Asr / Isha they come (saved with the reminder).
+        val anchor = existing?.let { PrayerAnchor.of(it.id) }
         var delay = existing?.let { AppPrefs.sessionDelayMinutes(it.id) } ?: AppPrefs.SESSION_DELAY_DEFAULT
         fun prayerLabel() = existing?.let { prayerTimeLabel(ctx, it, delay) }
         fun showTime() { timeTv.text = prayerLabel() ?: timeLabel(ctx, h, m) }
         showTime()
         timeTv.setOnClickListener {
-            if (session != null && prayerLabel() != null) {
-                val choices = (SESSION_DELAYS + delay).distinct().sorted()
+            if (anchor != null && prayerLabel() != null) {
+                val choices = (anchor.delays + delay).distinct().sorted()
                 AlertDialog.Builder(ctx)
-                    .setTitle(if (session == PrayerSessions.Session.MORNING) R.string.reminder_delay_title_fajr else R.string.reminder_delay_title_asr)
-                    .setSingleChoiceItems(choices.map { sessionDelayLabel(ctx, session, it) }.toTypedArray(), choices.indexOf(delay)) { d, which ->
+                    .setTitle(anchor.titleRes)
+                    .setSingleChoiceItems(choices.map { delayLabel(ctx, anchor, it) }.toTypedArray(), choices.indexOf(delay)) { d, which ->
                         delay = choices[which]
                         showTime()
                         d.dismiss()
@@ -316,7 +356,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 val text = msg.text.toString().trim().ifEmpty { "Time for your azkar · tap to read" }
                 val s = (existing ?: Schedule(Store.newScheduleId(), t, text, h, m, true, null))
                     .copy(title = t, message = text, hour = h, minute = m, open = folder)
-                if (session != null) {
+                if (anchor != null) {
                     AppPrefs.setSessionDelayMinutes(s.id, delay)
                     WidgetUpdater.updateAll(ctx)   // countdown / today widgets show the new start time
                 }

@@ -16,6 +16,7 @@ object Tracking {
 
     private const val K_TRACKED = "tracked"           // JSON list of folder ids
     private const val K_DAYS = "days_"                // days_<folderId> = {"yyyyMMdd": "done/total"}
+    private const val K_TODAY = "today_"              // today_<folderId> = "yyyyMMdd:done/total", for every folder
     private const val KEEP_DAYS = 400
 
     /** Widget folder value meaning "every tracked folder". */
@@ -61,9 +62,18 @@ object Tracking {
     } catch (_: Exception) { emptySet() }
 
     // ---------- Recording ----------
-    /** Saves today's progress for a tracked folder; a day keeps its best result. Untracked folders are ignored. */
+    /**
+     * Saves how far [folderId] got today; a day keeps its best result. Every folder keeps today's value
+     * (widgets and the "not finished yet" reminder read it); only tracked folders keep a history.
+     */
     fun record(folderId: String, done: Int, total: Int, at: Long = System.currentTimeMillis()) {
-        if (total <= 0 || !::sp.isInitialized || !isTracked(folderId)) return
+        if (total <= 0 || !::sp.isInitialized) return
+        val key0 = dayKey(at)
+        val prev = today(folderId, at)
+        if (prev == null || prev.total != total || done > prev.done) {
+            sp.edit().putString(K_TODAY + folderId, "$key0:${done.coerceIn(0, total)}/$total").apply()
+        }
+        if (!isTracked(folderId)) return
         val days = history(folderId).toMutableMap()
         val key = dayKey(at)
         val before = days[key]
@@ -74,6 +84,18 @@ object Tracking {
         val o = JSONObject()
         kept.forEach { k -> days[k]?.let { o.put(k, "${it.done}/${it.total}") } }
         sp.edit().putString(K_DAYS + folderId, o.toString()).apply()
+    }
+
+    /** How far [folderId] got today (any folder, tracked or not); null if it wasn't opened today. */
+    fun today(folderId: String, at: Long = System.currentTimeMillis()): Progress? {
+        if (!::sp.isInitialized) return null
+        val raw = sp.getString(K_TODAY + folderId, null) ?: return null
+        val (day, value) = raw.split(':').takeIf { it.size == 2 }?.let { it[0] to it[1] } ?: return null
+        if (day != dayKey(at)) return null
+        val parts = value.split('/')
+        val d = parts.getOrNull(0)?.toIntOrNull() ?: return null
+        val t = parts.getOrNull(1)?.toIntOrNull() ?: return null
+        return Progress(d, t)
     }
 
     // Streaks walk the history day by day, so each folder's JSON is parsed once per change, not per day.
@@ -102,7 +124,7 @@ object Tracking {
         val key = dayKey(day)
         var done = 0; var total = 0
         folders.forEach { f ->
-            val p = history(f)[key]
+            val p = history(f)[key] ?: today(f, day.timeInMillis)
             if (p != null) { done += p.done; total += p.total }
             else total += Store.readerItems(f).size
         }

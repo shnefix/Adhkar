@@ -20,6 +20,7 @@ import com.azkar.app.R
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
+import com.azkar.app.data.Tracking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,6 +61,60 @@ object ReminderScheduler {
     fun rescheduleAll(ctx: Context) {
         cancelLegacy(ctx)
         Store.schedules().forEach { apply(ctx, it) }
+        scheduleNudges(ctx)
+    }
+
+    // ---------- "Not finished yet" (tracked morning / evening only) ----------
+    private const val NUDGE = "nudge_"
+
+    /** Sets or cancels the reminder before Dhuhr / Maghrib for each session, by the tracking and nudge switches. */
+    fun scheduleNudges(ctx: Context) {
+        val now = System.currentTimeMillis()
+        PrayerSessions.Session.values().forEach { s ->
+            val id = NUDGE + s.scheduleId
+            val at = if (AppPrefs.notificationsOn() && AppPrefs.nudgeOn() && Tracking.isTracked(s.folderId))
+                PrayerSessions.nextNudge(s, now, AppPrefs.nudgeLeadMinutes() * 60_000L) else null
+            if (at == null) cancel(ctx, id)
+            else if (canExact(ctx)) alarms(ctx).setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, id))
+            else alarms(ctx).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, id))
+        }
+    }
+
+    /** Session behind a nudge alarm id, or null for an ordinary reminder. */
+    fun nudgeSession(id: String): PrayerSessions.Session? =
+        if (id.startsWith(NUDGE)) PrayerSessions.forSchedule(id.removePrefix(NUDGE)) else null
+
+    @SuppressLint("MissingPermission")
+    fun notifyNudge(ctx: Context, s: PrayerSessions.Session) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+        val now = System.currentTimeMillis()
+        val items = Store.readerItems(s.folderId)
+        val done = Tracking.today(s.folderId)?.done ?: 0
+        if (items.isEmpty() || done >= items.size) return              // finished (or nothing to read): stay quiet
+        val end = PrayerSessions.endAfter(s, now) ?: return
+        val morning = s == PrayerSessions.Session.MORNING
+        val nid = 200 + s.ordinal
+        val open = PendingIntent.getActivity(
+            ctx, nid,
+            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra("open", s.folderId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val endLabel = android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(end))
+        val n = NotificationCompat.Builder(ctx, CHANNEL)
+            .setSmallIcon(R.drawable.ic_bell_1p75)
+            .setColor(ctx.getColor(R.color.gold))
+            .setContentTitle(ctx.getString(if (morning) R.string.nudge_title_morning else R.string.nudge_title_evening))
+            .setContentText(ctx.getString(if (morning) R.string.nudge_text_morning else R.string.nudge_text_evening, done, items.size, endLabel))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .setTimeoutAfter(end - now)
+            .build()
+        NotificationManagerCompat.from(ctx).notify(nid, n)
     }
 
     /** Schedules or cancels one reminder according to the global and individual switches. */
@@ -69,8 +124,8 @@ object ReminderScheduler {
 
     fun schedule(ctx: Context, s: Schedule) {
         val am = alarms(ctx)
-        // Morning / evening follow Fajr / Asr when a location is known; otherwise the fixed time.
-        val at = PrayerSessions.forSchedule(s.id)?.let { PrayerSessions.nextReminder(it, System.currentTimeMillis()) }
+        // Morning / evening / before sleep follow Fajr / Asr / Isha when a location is known; otherwise the fixed time.
+        val at = PrayerSessions.nextPrayerReminder(s.id, System.currentTimeMillis())
             ?: ReminderTime.next(s.hour, s.minute)
         if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
@@ -86,8 +141,11 @@ object ReminderScheduler {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
-        if (s.id == "s") {
-            AzkarNotifier.showBeforeSleep(ctx)
+        if (s.id == PrayerSessions.SLEEP_SCHEDULE) {
+            // Opens the reminder's folder; older installs saved "sleep", which is no folder, so use the default one.
+            val folder = s.open?.takeIf { Store.folder(it) != null }
+                ?: PrayerSessions.SLEEP_FOLDER.takeIf { Store.folder(it) != null }
+            AzkarNotifier.showBeforeSleep(ctx, folder)
             return
         }
         // A morning / evening reminder only lives until Dhuhr / Maghrib; one arriving after that is dropped.
@@ -129,6 +187,14 @@ class ReminderReceiver : BroadcastReceiver() {
                 Store.awaitReady()
                 ReminderScheduler.createChannel(ctx)
                 val id = intent.getStringExtra("id") ?: return@launch
+                ReminderScheduler.nudgeSession(id)?.let { session ->
+                    // Only while that session is still running; the check for "finished" is in notifyNudge.
+                    if (AppPrefs.notificationsOn() && AppPrefs.nudgeOn() && Tracking.isTracked(session.folderId) &&
+                        PrayerSessions.inSession(session, System.currentTimeMillis()) == true
+                    ) ReminderScheduler.notifyNudge(ctx, session)
+                    ReminderScheduler.scheduleNudges(ctx)
+                    return@launch
+                }
                 val s = Store.schedule(id) ?: return@launch
                 if (!AppPrefs.notificationsOn() || !s.enabled) return@launch
                 // A delayed alarm that lands after Dhuhr / Maghrib skips today's reminder.

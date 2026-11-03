@@ -5,6 +5,7 @@ import com.azkar.app.R
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
 import com.azkar.app.reminders.PrayerSessions
+import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.NewWidgetUpdater
 import com.azkar.app.widgets.WidgetUpdater
 
@@ -18,6 +19,7 @@ internal fun sessionFolders(): List<String> =
  */
 internal fun setTracking(ctx: Context, folders: List<String>, on: Boolean) {
     folders.forEach { Tracking.setTracked(it, on) }
+    ReminderScheduler.scheduleNudges(ctx)       // "not finished yet" only runs for tracked sessions
     NewWidgetUpdater.syncTrackingProviders(ctx)
     WidgetUpdater.updateAll(ctx)
 }

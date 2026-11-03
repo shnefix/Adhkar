@@ -182,10 +182,13 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── D · morning & evening ─────────────────────────
 
-    /** The morning / evening folder by id (names can be renamed or translated); the widget's own folder if it's gone. */
+    /**
+     * The morning / evening folder by id (names can be renamed or translated) with today's progress from the
+     * reader and every widget, so both halves agree with what was actually read; the widget's own folder if it's gone.
+     */
     private fun sessionModel(m: WidgetModel, session: PrayerSessions.Session): WidgetModel {
         val f = Store.folder(session.folderId) ?: return m
-        return if (f.name == m.folderName) m else WidgetModel.load(ctx, AppWidgetManager.INVALID_APPWIDGET_ID, f.id)
+        return WidgetModel.today(f.id, m.takeIf { f.name == m.folderName })
     }
 
     private fun morningActive() = AzkarSessionClock.morningActive()

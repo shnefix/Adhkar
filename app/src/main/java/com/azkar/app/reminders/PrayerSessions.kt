@@ -92,6 +92,45 @@ object PrayerSessions {
     }
 
     /**
+     * "Not finished yet" reminder for [s]: [leadMs] before Dhuhr / Maghrib (never before the session starts),
+     * the next one strictly after [now]; null without a location.
+     */
+    fun nextNudge(
+        s: Session, now: Long, leadMs: Long, loc: Pair<Double, Double>? = AppPrefs.location(),
+        zone: TimeZone = TimeZone.getDefault(), delayMs: Long = delayMs(s)
+    ): Long? {
+        val (lat, lng) = loc ?: return null
+        for (d in 0..1) {
+            val t = timesOn(dayShift(now, d, zone), lat, lng, zone)
+            val at = maxOf(end(s, t).time - leadMs, start(s, t).time + delayMs)
+            if (at > now) return at
+        }
+        return null
+    }
+
+    // ---------- Before sleep: follows Isha ----------
+    const val SLEEP_SCHEDULE = "s"
+    const val SLEEP_FOLDER = "d_13"
+
+    /** Next before-sleep reminder: the chosen time after Isha, strictly after [now]; null without a location. */
+    fun nextAfterIsha(
+        now: Long, loc: Pair<Double, Double>? = AppPrefs.location(), zone: TimeZone = TimeZone.getDefault(),
+        delayMs: Long = AppPrefs.sessionDelayMinutes(SLEEP_SCHEDULE) * 60_000L
+    ): Long? {
+        val (lat, lng) = loc ?: return null
+        for (d in 0..1) {
+            val at = minute(timesOn(dayShift(now, d, zone), lat, lng, zone).isha) + delayMs
+            if (at > now) return at
+        }
+        return null
+    }
+
+    /** Next time of a reminder that follows a prayer (morning, evening, before sleep); null for other reminders or without a location. */
+    fun nextPrayerReminder(scheduleId: String, now: Long, delayMs: Long = AppPrefs.sessionDelayMinutes(scheduleId) * 60_000L): Long? =
+        if (scheduleId == SLEEP_SCHEDULE) nextAfterIsha(now, delayMs = delayMs)
+        else forSchedule(scheduleId)?.let { nextReminder(it, now, delayMs = delayMs) }
+
+    /**
      * True when a reading position saved at [savedAt] belongs to a session that has since ended,
      * so the reader starts again from the first zikr.
      */
