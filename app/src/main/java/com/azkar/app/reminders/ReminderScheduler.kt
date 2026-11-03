@@ -11,15 +11,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.view.View
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.azkar.app.AzkarNotifier
 import com.azkar.app.MainActivity
 import com.azkar.app.R
-import com.azkar.app.ThemeMode
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
@@ -98,23 +95,15 @@ object ReminderScheduler {
                 .apply { s.open?.let { putExtra("open", it) } },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val ar = s.open?.let { Store.folderName(it).takeUnless { name -> name == "Anytime" } } ?: ""
-        // The system UI inflates RemoteViews with the device's night setting, not ours,
-        // so each theme has its own layout built only from colours that never flip.
-        val layout = if (AppPrefs.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
-        val rv = RemoteViews(ctx.packageName, layout).apply {
-            setTextViewText(R.id.n_title, s.title)
-            setTextViewText(R.id.n_body, s.message)
-            setTextViewText(R.id.n_ar, ar)
-            setViewVisibility(R.id.n_ar, if (ar.isEmpty()) View.GONE else View.VISIBLE)
-        }
+        // Android's own template (no custom view): Android 12+ always draws a system frame around custom
+        // views, so a custom dark box can't fill the notification. The folder's Arabic name joins the title.
+        val ar = s.open?.let { Store.folderName(it).takeUnless { name -> name == "Anytime" } }
+        val title = if (ar.isNullOrEmpty()) s.title else "${s.title} · $ar"
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_bell_1p75)
             .setColor(ctx.getColor(R.color.gold))
-            .setContentTitle(s.title)
+            .setContentTitle(title)
             .setContentText(s.message)
-            .setCustomContentView(rv)
-            .setCustomBigContentView(rv)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

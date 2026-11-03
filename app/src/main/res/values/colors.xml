@@ -48,15 +48,6 @@
     <color name="widget_oled_panel">#111111</color>
     <color name="widget_oled_panel_border">#1F1F1F</color>
     <color name="widget_oled_outline">#3A3A3A</color>
-    <!-- Notification palettes: NEVER override these in values-night. -->
-    <color name="notif_day_card">#0D2124</color>
-    <color name="notif_day_border">#000000</color>
-    <color name="notif_day_text">#EDF4F1</color>
-    <color name="notif_day_muted">#9DB8B3</color>
-    <color name="notif_oled_card">#000000</color>
-    <color name="notif_oled_border">#000000</color>
-    <color name="notif_oled_text">#EDEDED</color>
-    <color name="notif_oled_muted">#9A9A9A</color>
     <color name="azkar_widget_gold">#E3C06E</color>
     <color name="azkar_widget_gold_soft">#EBCB82</color>
     <color name="azkar_widget_gold_halo">#4A3F22</color>
