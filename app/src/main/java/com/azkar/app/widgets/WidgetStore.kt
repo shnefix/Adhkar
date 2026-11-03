@@ -77,6 +77,11 @@ object WidgetStore {
         ))
     }
 
+    /** Sets the refresh interval a widget starts with, unless the user already chose one. */
+    fun setDefaultRefresh(ctx: Context, id: Int, minutes: Int) {
+        if (!sp(ctx).contains("refresh_$id")) sp(ctx).edit().putInt("refresh_$id", minutes).apply()
+    }
+
     fun setConfig(
         ctx: Context,
         id: Int,

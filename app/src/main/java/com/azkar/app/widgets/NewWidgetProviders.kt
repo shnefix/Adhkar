@@ -45,6 +45,10 @@ abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 com.azkar.app.data.Store.awaitReady()
+                // Widgets that show a countdown would be up to an hour out of date with the usual hourly refresh.
+                if (family in NewWidgetUpdater.COUNTDOWN_FAMILIES) {
+                    ids.forEach { WidgetStore.setDefaultRefresh(context, it, NewWidgetUpdater.COUNTDOWN_REFRESH_MINUTES) }
+                }
                 NewWidgetUpdater.updateIds(context, manager, family, ids)
                 ids.forEach { NewWidgetUpdater.scheduleRefresh(context, family, it) }
             } finally {
@@ -121,6 +125,10 @@ object NewWidgetUpdater {
     )
 
     fun providerClass(family: AzkarWidgetFamily): Class<*> = providers.getValue(family)
+
+    /** Families showing time left; they start with [COUNTDOWN_REFRESH_MINUTES] instead of hourly. */
+    val COUNTDOWN_FAMILIES = setOf(AzkarWidgetFamily.G_COUNTDOWN_SMALL, AzkarWidgetFamily.F_BENTO_SMALL, AzkarWidgetFamily.T_TODAY_MEDIUM)
+    const val COUNTDOWN_REFRESH_MINUTES = 15
 
     /**
      * Tracking widgets are only listed by the launcher while tracking is on: their providers start disabled

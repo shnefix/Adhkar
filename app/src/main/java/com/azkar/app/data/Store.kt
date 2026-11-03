@@ -434,6 +434,13 @@ object Store {
         val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
         sp2?.let { AppPrefs.setArabicSp(it) }
         p.settings?.notificationsOn?.let { AppPrefs.setNotificationsOn(it) }
+        p.settings?.prayerDelays?.forEach { (id, minutes) -> AppPrefs.setSessionDelayMinutes(id, minutes) }
+        p.settings?.nudgeOn?.let { AppPrefs.setNudgeOn(it) }
+        p.settings?.nudgeMinutes?.let { AppPrefs.setNudgeLeadMinutes(it) }
+        // Tracked folders follow their folder: same id if it kept it, else the id the merge gave it.
+        p.tracking?.let { t ->
+            Tracking.restore(t.folders, t.history) { fileId -> (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null } }
+        }
         return sum
     }
 
@@ -469,7 +476,12 @@ object Store {
     }
 
     suspend fun exportJsonAsync(): String = withContext(Dispatchers.Default) {
-        ExportJson.build(ImportMerge.State(fCache, zCache, sCache), AppPrefs.arabicSize(), AppPrefs.notificationsOn(), AppPrefs.arabicSp())
+        ExportJson.build(
+            ImportMerge.State(fCache, zCache, sCache), AppPrefs.arabicSize(), AppPrefs.notificationsOn(), AppPrefs.arabicSp(),
+            sessionDelays = listOf("m", "e", "s").associateWith { AppPrefs.sessionDelayMinutes(it) },
+            nudgeOn = AppPrefs.nudgeOn(), nudgeMinutes = AppPrefs.nudgeLeadMinutes(),
+            tracking = Tracking.toJson()
+        )
     }
 
     // ---------- Home customisation ----------

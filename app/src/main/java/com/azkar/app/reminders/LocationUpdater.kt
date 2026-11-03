@@ -9,6 +9,11 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import com.azkar.app.data.AppPrefs
+import com.azkar.app.data.Store
+import com.azkar.app.widgets.WidgetUpdater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /** Keeps the saved location (used for prayer times) current; reschedules reminders when it moves. */
 object LocationUpdater {
@@ -49,6 +54,13 @@ object LocationUpdater {
         val moved = old == null || FloatArray(1).also {
             Location.distanceBetween(old.first, old.second, loc.latitude, loc.longitude, it)
         }[0] > RESCHEDULE_METERS
-        if (moved) ReminderScheduler.rescheduleAll(ctx)
+        if (moved) {
+            ReminderScheduler.rescheduleAll(ctx)
+            // Widgets drawn with the old (or no) location show the wrong prayer windows until their next refresh.
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching { Store.awaitReady(); WidgetUpdater.updateAll(ctx) }
+                    .onFailure { android.util.Log.w("Azkar", "Widget refresh after location change failed", it) }
+            }
+        }
     }
 }

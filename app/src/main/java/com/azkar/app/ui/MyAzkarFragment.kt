@@ -315,6 +315,9 @@ class MyAzkarFragment : Fragment(R.layout.fragment_my_azkar) {
                     try {
                         val r = Store.importAllAsync(p)
                         ReminderScheduler.rescheduleAll(requireContext())
+                        // A backup with tracking turns the tracking widgets on.
+                        com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(requireContext())
+                        com.azkar.app.widgets.WidgetUpdater.updateAll(requireContext())
                         AlertDialog.Builder(requireContext())
                             .setTitle("Import complete")
                             .setMessage(

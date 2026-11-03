@@ -118,6 +118,33 @@ object Tracking {
         return days
     }
 
+    // ---------- Backup ----------
+    /** Tracked folders and their history for the backup file: {"folders": [...], "history": {id: {day: "done/total"}}}. */
+    fun toJson(): JSONObject {
+        val history = JSONObject()
+        Store.folders().forEach { f ->
+            val days = history(f.id)
+            if (days.isNotEmpty()) history.put(f.id, JSONObject().apply { days.forEach { (k, p) -> put(k, "${p.done}/${p.total}") } })
+        }
+        return JSONObject().put("folders", org.json.JSONArray(tracked())).put("history", history)
+    }
+
+    /**
+     * Restores a backup's tracking: folders become tracked and each day keeps the better of the two results.
+     * [mapId] turns a folder id from the file into the id it got in this app (null: the folder isn't here).
+     */
+    fun restore(tracked: List<String>, history: Map<String, Map<String, Progress>>, mapId: (String) -> String?) {
+        tracked.mapNotNull(mapId).forEach { setTracked(it, true) }
+        history.forEach { (fileId, days) ->
+            val id = mapId(fileId) ?: return@forEach
+            val merged = history(id).toMutableMap()
+            days.forEach { (k, p) -> if ((merged[k]?.fraction ?: -1f) < p.fraction) merged[k] = p }
+            val o = JSONObject()
+            merged.keys.sorted().takeLast(KEEP_DAYS).forEach { k -> merged[k]?.let { o.put(k, "${it.done}/${it.total}") } }
+            sp.edit().putString(K_DAYS + id, o.toString()).apply()
+        }
+    }
+
     // ---------- Reading back ----------
     /** Combined progress of [folders] on [day]: done and total azkar summed over the folders. */
     fun progress(folders: List<String>, day: Calendar): Progress {

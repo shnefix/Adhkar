@@ -3,7 +3,8 @@ package com.azkar.app.data
 /** Pure merge of an import into the current data. Never overwrites or deletes anything that exists. */
 object ImportMerge {
     data class State(val folders: List<Folder>, val zikrs: List<Zikr>, val schedules: List<Schedule>)
-    data class Summary(val created: Int, val merged: Int, val added: Int, val skipped: Int, val reminders: Int)
+    /** [folderIds]: folder id in the file -> folder id it got in the app. */
+    data class Summary(val created: Int, val merged: Int, val added: Int, val skipped: Int, val reminders: Int, val folderIds: Map<String, String> = emptyMap())
 
     fun apply(s: State, p: ImportJson.Parsed.Ok, newId: () -> String): Pair<State, Summary> {
         val fl = s.folders.toMutableList()
@@ -38,6 +39,6 @@ object ImportMerge {
                 sl.add(Schedule(id, r.title, r.message, r.hour, r.minute, r.enabled, target)); rem++
             }
         }
-        return State(fl, zl, sl) to Summary(created, merged, added, skipped, rem)
+        return State(fl, zl, sl) to Summary(created, merged, added, skipped, rem, idMap)
     }
 }
