@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.app.PendingIntent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
@@ -46,6 +47,8 @@ import com.azkar.app.widgets.WidgetStyle
 import com.azkar.app.widgets.WidgetUpdater
 import com.azkar.app.widgets.WidgetPinReceiver
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.Locale
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
@@ -55,9 +58,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private var tabs: List<TextView> = emptyList()
     private var activePickerAdapter: PickerAdapter? = null
     private var tabsInFamilyMode: Boolean? = null
+    private val customHours = HashMap<Int, Boolean>()
 
     private enum class EditorTab(val title: String) {
-        CONTENT("Content"), STYLE("Style"), TEXT("Text"), COLORS("Colors"), BEHAVIOR("Behavior")
+        CONTENT("Content"), STYLE("Style"), LOOK("Look"), BEHAVIOR("Behavior")
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -86,7 +90,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         render(view)
     }
 
-    private fun render(view: View) {
+    private fun render(view: View, rebuildTabContent: Boolean = true) {
         val item = selected ?: run {
             view.findViewById<TextView>(R.id.preview_arabic).setText(R.string.no_widgets_on_home)
             view.findViewById<TextView>(R.id.preview_size).text = ""
@@ -118,7 +122,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         view.findViewById<TextView>(R.id.preview_meta).text =
             "${model.folderName} · ${model.shown} / ${model.target}"
         applyPreview(view, item, model)
-        renderTabContent(view)
+        if (rebuildTabContent) renderTabContent(view)
     }
 
     private fun renderChips(view: View, placed: List<PlacedWidget>) {
@@ -147,218 +151,144 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     }
 
     private fun renderTabs(view: View) {
+        val ctx = requireContext()
         val root = view.findViewById<LinearLayout>(R.id.editor_tabs)
         root.removeAllViews()
+        root.background = editorShape(EditorColors.Tabs, 14f, ctx)
+        val pad = Ui.pxi(ctx, 4f)
+        root.setPadding(pad, pad, pad, pad)
         val shownTabs = visibleTabs()
-        tabs = shownTabs.map { tab ->
-            TextView(requireContext(), null, 0, R.style.WidgetEditorMedium).apply {
+        tabs = shownTabs.mapIndexed { index, tab ->
+            val on = tab == activeTab
+            TextView(ctx, null, 0, R.style.WidgetEditorMedium).apply {
                 text = tab.title
                 gravity = Gravity.CENTER
-                minWidth = Ui.pxi(requireContext(), 48f)
+                textSize = 14f
+                setTextColor(if (on) EditorColors.Bg else EditorColors.Muted)
+                setTypeface(typeface, if (on) Typeface.BOLD else Typeface.NORMAL)
+                background = if (on) editorShape(EditorColors.Gold, 10f, ctx) else null
                 setOnClickListener {
                     activeTab = tab
                     viewModel.setActiveTab(tab.ordinal)
                     renderTabs(view)
                     renderTabContent(view)
                 }
-                root.addView(this, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(requireContext(), 44f)).also {
-                    it.marginEnd = Ui.pxi(requireContext(), 20f)
+                root.addView(this, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).also {
+                    if (index < shownTabs.lastIndex) it.marginEnd = pad
                 })
             }
         }
-        tabs.forEachIndexed { index, text ->
-            text.setTextColor(requireContext().getColor(
-                if (shownTabs[index] == activeTab) R.color.widget_editor_gold else R.color.widget_editor_muted
-            ))
-            text.background = if (shownTabs[index] == activeTab) requireContext().getDrawable(R.drawable.widget_editor_tab_selected) else null
-        }
+    }
+
+    private fun LinearLayout.addCard(card: View) {
+        addView(card, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).also { it.bottomMargin = Ui.pxi(context, 16f) })
     }
 
     private fun renderTabContent(view: View) {
         val root = view.findViewById<FrameLayout>(R.id.tab_content)
         root.removeAllViews()
         val item = selected ?: return
-        val appearance = item.config.appearance
+        val column = vertical()
         when (activeTab) {
-            EditorTab.CONTENT -> {
-                val column = vertical()
-                column.addView(folderPanel(view, item.config.folder), LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-                ).also { it.bottomMargin = Ui.pxi(requireContext(), 8f) })
-                // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
-                if (item.family == null) {
-                    addSwitchRow(column, R.string.show_counter, null, appearance.showCounter) {
-                        update(view) { it.copy(showCounter = !it.showCounter) }
-                    }
-                }
-                root.addView(column)
-            }
-            EditorTab.STYLE, EditorTab.TEXT -> root.addView(typographyPanel(view, appearance))
-            EditorTab.COLORS -> root.addView(colorsPanel(view, appearance))
-            EditorTab.BEHAVIOR -> {
-                val column = vertical()
-                if (item.family == null) column.addView(optionPanel(
-                    R.string.tap_action,
-                    R.string.tap_action_description,
-                    WidgetStore.TapAction.values().map { it to tapLabel(it) },
-                    appearance.tapAction
-                ) { action -> update(view) { it.copy(tapAction = action) } })
-                column.addView(optionPanel(
-                    R.string.refresh,
-                    R.string.refresh_description,
-                    listOf(0, 15, 30, 60, 360, 1440).map { it to refreshLabel(it) },
-                    appearance.refreshMinutes
-                ) { minutes -> update(view) { it.copy(refreshMinutes = minutes) } })
-                root.addView(column)
-            }
+            EditorTab.CONTENT -> contentCards(view, item, column)
+            EditorTab.STYLE -> styleCards(view, item, column)
+            EditorTab.LOOK -> lookCards(view, item, column)
+            EditorTab.BEHAVIOR -> behaviorCards(view, item, column)
         }
+        root.addView(column)
     }
 
-    private fun <T> optionPanel(
-        titleId: Int,
-        descriptionId: Int,
-        options: List<Pair<T, String>>,
-        selectedValue: T,
-        onSelected: (T) -> Unit
-    ): View = optionPanelText(getString(titleId), getString(descriptionId), options, selectedValue, onSelected)
-
-    private fun <T> optionPanelText(
-        title: String,
-        description: String,
-        options: List<Pair<T, String>>,
-        selectedValue: T,
-        onSelected: (T) -> Unit
-    ): View {
-        val panel = panel()
-        panel.addView(bodyText(title).apply { textSize = 14f })
-        panel.addView(bodyText(description).apply {
-            textSize = 12f
-            setTextColor(requireContext().getColor(R.color.widget_editor_muted))
+    private fun contentCards(view: View, item: PlacedWidget, column: LinearLayout) {
+        val ctx = requireContext()
+        val folder = sectionCard(ctx, "Folder", "Which azkar folder this widget shows.")
+        folder.addSpaced(chipGroup(ctx, Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
+            updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
-        val group = FlowLayout(requireContext())
-        options.forEach { (value, label) ->
-            group.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorMedium).apply {
-                text = if (value == selectedValue) "✓  $label" else label
-                textSize = 13f
-                gravity = Gravity.CENTER
-                minHeight = Ui.pxi(requireContext(), 44f)
-                setPadding(Ui.pxi(requireContext(), 16f), 0, Ui.pxi(requireContext(), 16f), 0)
-                setTextColor(requireContext().getColor(
-                    if (value == selectedValue) R.color.widget_editor_black else R.color.widget_editor_muted
-                ))
-                background = roundedBackground(
-                    if (value == selectedValue) R.color.widget_editor_gold else R.color.widget_editor_surface2,
-                    if (value == selectedValue) R.color.widget_editor_gold else R.color.widget_editor_border,
-                    22f
-                )
-                setOnClickListener { onSelected(value) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(requireContext(), 44f)).also {
-                it.marginEnd = Ui.pxi(requireContext(), 8f)
-                it.bottomMargin = Ui.pxi(requireContext(), 8f)
-            })
+        column.addCard(folder)
+        // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
+        if (item.family == null) {
+            val counter = sectionCard(ctx, "Counter")
+            counter.addSpaced(toggleRow(ctx, getString(R.string.show_counter), "Display progress on the widget",
+                item.config.appearance.showCounter) { on -> update(view) { it.copy(showCounter = on) } })
+            column.addCard(counter)
         }
-        panel.addView(group)
-        return panel
     }
 
-    private fun typographyPanel(view: View, a: WidgetStore.Appearance): View {
-        val panel = panel()
-        panel.addView(label(R.string.typography))
-        addValueRow(panel, R.string.arabic_font, "Amiri")
-        addSliderRow(panel, R.string.widget_font_size, a.fontSizeSp, 16, 44, view) { value ->
-            update(view) { it.copy(fontSizeSp = value) }
-        }
-        addSliderRow(panel, R.string.widget_line_height, a.lineHeight, 12, 20, view) { value ->
-            update(view) { it.copy(lineHeight = value) }
-        }
-        val alignment = horizontal()
-        alignment.addView(body(R.string.alignment), LinearLayout.LayoutParams(0, Ui.pxi(requireContext(), 40f), 1f))
-        val segmented = horizontal().apply {
-            background = roundedBackground(Color.BLACK, R.color.widget_editor_border, 12f)
-            setPadding(Ui.pxi(requireContext(), 3f), Ui.pxi(requireContext(), 3f), Ui.pxi(requireContext(), 3f), Ui.pxi(requireContext(), 3f))
-        }
-        listOf(R.string.start to 0, R.string.center to 1, R.string.end to 2).forEach { (textId, value) ->
-            val text = body(textId).apply {
-                gravity = Gravity.CENTER
-                setTextColor(requireContext().getColor(if (a.alignment == value) R.color.widget_editor_gold else R.color.widget_editor_muted))
-                if (a.alignment == value) background = roundedBackground(R.color.widget_editor_surface2, 0, 9f)
-                setOnClickListener { update(view) { it.copy(alignment = value) } }
-            }
-            segmented.addView(text, LinearLayout.LayoutParams(Ui.pxi(requireContext(), 62f), Ui.pxi(requireContext(), 34f)))
-        }
-        alignment.addView(segmented)
-        panel.addView(alignment)
-        return panel
-    }
-
-    private fun colorsPanel(view: View, a: WidgetStore.Appearance): View {
-        val panel = panel()
-        panel.addView(body(R.string.text_color))
-        panel.addView(swatches(view, a.textColor, listOf(R.color.widget_editor_text, R.color.widget_editor_gold, R.color.widget_editor_gold_deep, R.color.widget_editor_muted), false))
-        panel.addView(body(R.string.background_color))
-        panel.addView(swatches(view, a.backgroundColor, listOf(R.color.widget_editor_black, R.color.widget_editor_surface1, R.color.widget_editor_surface2, android.R.color.transparent), true))
-        addSliderRow(panel, R.string.corner_radius, a.cornerRadiusDp, 8, 32, view) { value ->
-            update(view) { it.copy(cornerRadiusDp = value) }
-        }
-        return panel
-    }
-
-    private fun swatches(view: View, selectedColor: Int, colors: List<Int>, transparent: Boolean): View {
-        val row = horizontal()
-        colors.forEach { colorId ->
-            val color = if (colorId == android.R.color.transparent) Color.TRANSPARENT else requireContext().getColor(colorId)
-            val swatch = View(requireContext()).apply {
-                background = swatchBackground(color, selectedColor == color)
-                setOnClickListener {
-                    update(view) { if (transparent) it.copy(backgroundColor = color) else it.copy(textColor = color) }
-                }
-            }
-            row.addView(swatch, LinearLayout.LayoutParams(Ui.pxi(requireContext(), 36f), Ui.pxi(requireContext(), 36f)).also {
-                it.marginEnd = Ui.pxi(requireContext(), 12f)
-            })
-        }
-        return row
-    }
-
-    private fun addSliderRow(parent: LinearLayout, labelId: Int, value: Float, min: Int, maxValue: Int, view: View, onChange: (Float) -> Unit) {
-        val row = horizontal()
-        val valueText = TextView(requireContext(), null, 0, R.style.WidgetEditorMedium).apply {
-            text = if (labelId == R.string.widget_font_size) getString(R.string.widget_font_size, value) else getString(R.string.widget_line_height, value)
-            setTextColor(requireContext().getColor(R.color.widget_editor_gold))
-        }
-        row.addView(valueText, LinearLayout.LayoutParams(0, Ui.pxi(requireContext(), 24f), 1f))
-        parent.addView(row)
-        val seek = SeekBar(requireContext(), null, 0, R.style.WidgetEditorSeekBar).apply {
-            max = maxValue - min
-            progress = (value * if (labelId == R.string.widget_line_height) 10 else 1).toInt() - min
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                    if (fromUser) onChange(if (labelId == R.string.widget_line_height) (progress + min) / 10f else (progress + min).toFloat())
-                }
-                override fun onStartTrackingTouch(bar: SeekBar) = Unit
-                override fun onStopTrackingTouch(bar: SeekBar) = Unit
-            })
-        }
-        parent.addView(seek, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 32f)))
-    }
-
-    private fun addSwitchRow(parent: LinearLayout, titleId: Int, value: String?, checked: Boolean, onChange: () -> Unit) {
-        val row = horizontal().apply {
-            background = roundedBackground(R.color.widget_editor_surface1, R.color.widget_editor_border, 16f)
-            setPadding(Ui.pxi(requireContext(), 16f), 0, Ui.pxi(requireContext(), 12f), 0)
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        row.addView(body(titleId).apply { if (value != null) text = "$text  $value" }, LinearLayout.LayoutParams(0, -1, 1f))
-        if (value == null) {
-            val toggle = SwitchCompat(ContextThemeWrapper(requireContext(), R.style.WidgetEditorSwitch)).apply {
-                isChecked = checked
-                setOnClickListener { onChange() }
-            }
-            row.addView(toggle, LinearLayout.LayoutParams(Ui.pxi(requireContext(), 52f), Ui.pxi(requireContext(), 48f)))
-        }
-        parent.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 56f)).also {
-            it.bottomMargin = Ui.pxi(requireContext(), 8f)
+    private fun styleCards(view: View, item: PlacedWidget, column: LinearLayout) {
+        val ctx = requireContext()
+        val styles = WidgetStyle.values().filter { item.kind in it.kinds }
+        val card = sectionCard(ctx, "Design", "How this ${sizeName(item.kind).lowercase()} widget is laid out.")
+        card.addSpaced(chipGroup(ctx, styles.map { it to it.label }, item.config.style) { s ->
+            updateConfig(view) { cfg -> cfg.copy(style = s) }
         })
+        column.addCard(card)
+    }
+
+    private fun lookCards(view: View, item: PlacedWidget, column: LinearLayout) {
+        val ctx = requireContext()
+        val a = item.config.appearance
+        val typography = sectionCard(ctx, getString(R.string.typography))
+        typography.addSpaced(valueRow(ctx, getString(R.string.arabic_font), "Amiri"))
+        typography.addSpaced(sliderRow(ctx, "Font size", 14, 40, a.fontSizeSp.roundToInt().coerceIn(14, 40), { "$it sp" }) { v ->
+            update(view, rebuild = false) { it.copy(fontSizeSp = v.toFloat()) }
+        })
+        typography.addSpaced(sliderRow(ctx, "Line height", 10, 20, (a.lineHeight * 10).roundToInt().coerceIn(10, 20),
+            { String.format(Locale.US, "%.1f", it / 10f) }) { v ->
+            update(view, rebuild = false) { it.copy(lineHeight = v / 10f) }
+        })
+        typography.addSpaced(valueRow(ctx, getString(R.string.alignment)))
+        typography.addSpaced(segmented(ctx, listOf(getString(R.string.start), getString(R.string.center), getString(R.string.end)), a.alignment) { i ->
+            update(view) { it.copy(alignment = i) }
+        }, 10f)
+        column.addCard(typography)
+
+        val colors = sectionCard(ctx, "Colors")
+        colors.addSpaced(colorRow(ctx, getString(R.string.text_color), EditorTextColors, a.textColor) { c ->
+            update(view) { it.copy(textColor = c) }
+        })
+        colors.addSpaced(colorRow(ctx, getString(R.string.background_color), EditorBgColors, a.backgroundColor) { c ->
+            update(view) { it.copy(backgroundColor = c) }
+        })
+        colors.addSpaced(sliderRow(ctx, getString(R.string.corner_radius), 8, 32, a.cornerRadiusDp.roundToInt().coerceIn(8, 32), { "$it dp" }) { v ->
+            update(view, rebuild = false) { it.copy(cornerRadiusDp = v.toFloat()) }
+        })
+        column.addCard(colors)
+    }
+
+    private fun behaviorCards(view: View, item: PlacedWidget, column: LinearLayout) {
+        val ctx = requireContext()
+        val a = item.config.appearance
+        // OLED designs: a tap always adds one, so the tap-action card only exists for the old widgets.
+        if (item.family == null) {
+            val tap = sectionCard(ctx, getString(R.string.tap_action), getString(R.string.tap_action_description))
+            tap.addSpaced(chipGroup(ctx, WidgetStore.TapAction.values().map { it to tapLabel(it) }, a.tapAction) { action ->
+                update(view) { it.copy(tapAction = action) }
+            })
+            column.addCard(tap)
+        }
+
+        val presets = listOf(0, 15, 30, 60, 360, 1440)
+        val minutes = a.refreshMinutes
+        val refresh = sectionCard(ctx, getString(R.string.refresh), getString(R.string.refresh_description))
+        refresh.addSpaced(chipGroup(ctx, presets.map { it to refreshLabel(it) }, minutes.takeIf { it in presets }) { m ->
+            update(view) { it.copy(refreshMinutes = m) }
+        })
+        val hours = customHours[item.id] ?: (minutes >= 60 && minutes % 60 == 0)
+        val factor = if (hours) 60 else 1
+        val shown = if (minutes <= 0) 45 / factor.coerceAtLeast(1) else (minutes / factor).coerceAtLeast(1)
+        val active = minutes > 0 && minutes !in presets
+        refresh.addSpaced(customIntervalBox(ctx, shown.coerceAtLeast(1), hours, active,
+            onValue = { v -> update(view) { it.copy(refreshMinutes = v * factor) } },
+            onUnit = { h ->
+                customHours[item.id] = h
+                val min = if (h) 1 else MIN_INTERVAL_MINUTES
+                val v = shown.coerceAtLeast(min)
+                update(view) { it.copy(refreshMinutes = v * (if (h) 60 else 1)) }
+            }
+        ))
+        column.addCard(refresh)
     }
 
     private fun showPicker() {
@@ -557,30 +487,24 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }
     }
 
-    private fun update(view: View, change: (WidgetStore.Appearance) -> WidgetStore.Appearance) {
+    /** [rebuild] = false while a slider is being dragged, so the slider is not recreated under the finger. */
+    private fun update(view: View, rebuild: Boolean = true, change: (WidgetStore.Appearance) -> WidgetStore.Appearance) {
         val item = selected ?: return
         viewModel.update(item.id, item.config.copy(appearance = change(item.config.appearance)))
         selected = viewModel.load(requireContext()).firstOrNull { it.id == item.id }
         selected?.let { viewModel.setSelectedId(it.id) }
-        render(view)
+        render(view, rebuild)
     }
 
     private fun visibleTabs(): List<EditorTab> =
         if (selected?.family != null) listOf(EditorTab.CONTENT, EditorTab.BEHAVIOR) else EditorTab.values().toList()
-
-    private fun folderPanel(view: View, current: String): View =
-        optionPanelText(
-            "Folder",
-            "Which azkar folder this widget shows.",
-            Store.folders().map { it.id to Store.folderName(it.id) },
-            current
-        ) { id -> updateConfig(view) { it.copy(folder = id) } }
 
     private fun updateConfig(view: View, change: (WidgetStore.Config) -> WidgetStore.Config) {
         val item = selected ?: return
         viewModel.update(item.id, change(item.config))
         selected = viewModel.load(requireContext()).firstOrNull { it.id == item.id }
         selected?.let { viewModel.setSelectedId(it.id) }
+        renderChips(view, viewModel.load(requireContext()))
         render(view)
     }
 
@@ -633,9 +557,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             height = Ui.pxi(ctx, if (item.kind == WidgetKind.LARGE) 170f else 128f)
         }
     }
-
-    private fun bodyText(value: String) =
-        TextView(requireContext(), null, 0, R.style.WidgetEditorBody).apply { text = value }
 
     override fun onResume() {
         super.onResume()
