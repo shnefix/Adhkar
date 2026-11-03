@@ -15,6 +15,9 @@ Most azkar apps need an account, show ads, or send data to a server. Adhkar does
 no internet permission at all, so it can't track you or send anything anywhere. Your azkar, folders and
 progress stay on your phone.
 
+It comes with the common daily azkar, and you can add your own: write any zikr or dua, choose how
+many times to repeat it, and organise it into your own folders.
+
 ## Screenshots
 
 | Home | Library | My azkar |
@@ -25,9 +28,10 @@ progress stay on your phone.
 
 ## Features
 
+- **Add your own azkar**: write any zikr or dua, set its repeat count, and put it in your own folders;
+  edit, reorder or hide any folder, including the built-in ones
 - Morning, evening, before-sleep and other azkar collections built in
 - Focused Arabic reader with tap-to-advance, counters, adjustable text size and keep-screen-on
-- Your own azkar and folders: add, edit, reorder, hide
 - Reminders for morning, evening and before sleep; morning and evening can follow prayer times
   for your approximate location (optional)
 - Optional tracking of the days you finish your morning and evening azkar, with streaks
