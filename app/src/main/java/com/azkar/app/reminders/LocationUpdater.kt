@@ -29,7 +29,8 @@ object LocationUpdater {
             .maxByOrNull { it.time }
             ?.let { save(app, it) }
         // Not every phone has a working network or fused provider, so ask each enabled one; any fix will do.
-        val onFix: androidx.core.util.Consumer<Location> = androidx.core.util.Consumer { loc -> if (loc != null) save(app, loc) }
+        // Android passes null when no fix arrives in time; the type must allow it or Kotlin throws and the app closes.
+        val onFix: androidx.core.util.Consumer<Location?> = androidx.core.util.Consumer { loc -> if (loc != null) save(app, loc) }
         val noCancel: android.os.CancellationSignal? = null
         listOf("fused", LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
             .filter { it in providers }
