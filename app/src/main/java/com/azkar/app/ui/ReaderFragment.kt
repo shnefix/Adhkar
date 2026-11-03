@@ -15,7 +15,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.ReaderResume
 import com.azkar.app.data.Store
 
@@ -51,8 +50,7 @@ val (startIdx, startCount) = when {
 }
 rn = ReaderNav(items.map { it.target }, startIdx, startCount)
         val folderTitle = Store.folderName(key)
-        val title = if (key in listOf("morning", "evening", "afterPrayer", "sleep", "waking") &&
-            Builtins.byKey(key)?.title == folderTitle) "$folderTitle azkar" else folderTitle
+        val title = if (Store.isDefaultFolder(key)) "$folderTitle azkar" else folderTitle
         val sizeSp = Store.arabicSp()
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)

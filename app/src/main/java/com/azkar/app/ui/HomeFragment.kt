@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
 import com.azkar.app.data.AzkarContent
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.Folder
 import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
@@ -46,12 +45,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
 
             fun card(f: Folder): View {
-                val c = Builtins.byKey(f.id)
-                return if (c != null) {
+                return if (Store.isDefaultFolder(f.id)) {
                     layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
-                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, c.icon)
+                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_book_1p75)
                         findViewById<TextView>(R.id.title).text = f.name
-                        findViewById<TextView>(R.id.sub_ar).text = if (f.name == c.title) c.homeArabic else ""
+                        findViewById<TextView>(R.id.sub_ar).text = ""
                         setOnClickListener { open(f) }
                     }
                 } else {
@@ -66,8 +64,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val foldersById = content.folders.associateBy { it.id }
             val hidden = Store.hidden()
             val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { foldersById[it] }
-            val collections = shown.filter { Builtins.byKey(it.id) != null }
-            val mine = shown.filter { Builtins.byKey(it.id) == null }
+            val collections = shown.filter { Store.isDefaultFolder(it.id) }
+            val mine = shown.filter { !Store.isDefaultFolder(it.id) }
 
             fun section(label: String?, cards: List<View>): View? {
                 if (cards.isEmpty()) return null

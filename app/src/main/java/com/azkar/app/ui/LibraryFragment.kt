@@ -13,7 +13,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.AzkarContent
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -43,9 +42,9 @@ class LibraryFragment : Fragment(R.layout.fragment_library) {
             val out = ArrayList<Card>()
             content.folders.forEach { f ->
                 if (query.isNotEmpty() && !f.name.lowercase().contains(query)) return@forEach
-                val b = Builtins.byKey(f.id)
-                out.add(Card(f.id, f.name, azkarCount(counts[f.id] ?: 0), f.icon, b?.icon ?: R.drawable.ic_folder_1p75,
-                    if (b != null) teal else gold, false) { nav().push(FolderFragment.of(f.id)) })
+                val isDefault = com.azkar.app.data.Store.isDefaultFolder(f.id)
+                out.add(Card(f.id, f.name, azkarCount(counts[f.id] ?: 0), f.icon, if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
+                    if (isDefault) teal else gold, false) { nav().push(FolderFragment.of(f.id)) })
             }
             val anytime = counts[null] ?: 0
             if (anytime > 0 && (query.isEmpty() || "anytime".contains(query))) {

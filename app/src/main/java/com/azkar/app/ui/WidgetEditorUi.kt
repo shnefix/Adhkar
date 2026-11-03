@@ -2,22 +2,24 @@ package com.azkar.app.ui
 
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
-import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.appcompat.widget.SwitchCompat
 import com.azkar.app.R
 
 /** Design tokens of the "Customize widget" design (Main / Behavior). */
@@ -83,13 +85,15 @@ internal fun <T> chipGroup(ctx: Context, options: List<Pair<T, String>>, selecte
             gravity = Gravity.CENTER
             setTextColor(if (on) EditorColors.Bg else EditorColors.ChipText)
             setTypeface(typeface, if (on) Typeface.BOLD else Typeface.NORMAL)
-            setPadding(Ui.pxi(ctx, 16f), 0, Ui.pxi(ctx, 16f), 0)
+            minHeight = Ui.pxi(ctx, 44f)
+            minimumHeight = Ui.pxi(ctx, 44f)
+            setPadding(Ui.pxi(ctx, 16f), Ui.pxi(ctx, 10f), Ui.pxi(ctx, 16f), Ui.pxi(ctx, 10f))
             background = editorShape(
                 if (on) EditorColors.Gold else EditorColors.Chip, 22f, ctx,
                 if (on) EditorColors.Gold else EditorColors.ChipBorder
             )
             setOnClickListener { onSelect(value) }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(ctx, 44f)).also {
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
             it.marginEnd = Ui.pxi(ctx, 8f)
             it.bottomMargin = Ui.pxi(ctx, 8f)
         })
@@ -137,7 +141,8 @@ internal fun sliderRow(
         addView(editorText(ctx, label, 15f, EditorColors.Text), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         addView(valueView)
     })
-    val seek = SeekBar(ctx, null, 0, R.style.WidgetEditorSeekBar).apply {
+    val seek = SeekBar(ctx).apply {
+        styleGoldSlider(ctx)
         max = maxValue - minValue
         progress = (current - minValue).coerceIn(0, maxValue - minValue)
         setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -153,6 +158,33 @@ internal fun sliderRow(
     }
     column.addView(seek, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(ctx, 40f)))
     return column
+}
+
+/** Thin gold track over a dark one with a round gold knob (the design's Slider), drawn in code so no theme tint can override it. */
+private fun SeekBar.styleGoldSlider(ctx: Context) {
+    val trackHeight = Ui.pxi(ctx, 4f)
+    val track = GradientDrawable().apply { setColor(EditorColors.Border); cornerRadius = trackHeight / 2f }
+    val fill = GradientDrawable().apply { setColor(EditorColors.Gold); cornerRadius = trackHeight / 2f }
+    val layers = LayerDrawable(arrayOf(track, ClipDrawable(fill, Gravity.START, ClipDrawable.HORIZONTAL))).apply {
+        setId(0, android.R.id.background)
+        setId(1, android.R.id.progress)
+        for (i in 0..1) {
+            setLayerGravity(i, Gravity.CENTER_VERTICAL)
+            setLayerHeight(i, trackHeight)
+        }
+    }
+    val knob = Ui.pxi(ctx, 22f)
+    progressDrawable = layers
+    thumb = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(EditorColors.Gold)
+        setSize(knob, knob)
+    }
+    progressTintList = null
+    progressBackgroundTintList = null
+    thumbTintList = null
+    splitTrack = false
+    setPadding(knob / 2, 0, knob / 2, 0)
 }
 
 internal fun colorRow(ctx: Context, label: String, colors: List<Int>, selected: Int, onSelect: (Int) -> Unit): View {
@@ -184,11 +216,33 @@ internal fun toggleRow(ctx: Context, title: String, subtitle: String, checked: B
             addView(editorText(ctx, title, 15f, EditorColors.Text))
             addSpaced(editorText(ctx, subtitle, 13f, EditorColors.Muted), 2f)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(SwitchCompat(ContextThemeWrapper(ctx, R.style.WidgetEditorSwitch)).apply {
-            isChecked = checked
-            setOnCheckedChangeListener { _, on -> onChange(on) }
-        }, LinearLayout.LayoutParams(Ui.pxi(ctx, 52f), Ui.pxi(ctx, 48f)))
+        addView(goldSwitch(ctx, checked, onChange), LinearLayout.LayoutParams(Ui.pxi(ctx, 52f), Ui.pxi(ctx, 32f)))
     }
+
+/** The design's switch: gold track + dark knob when on, dark track + grey knob when off. */
+internal fun goldSwitch(ctx: Context, initial: Boolean, onChange: (Boolean) -> Unit): View {
+    val track = FrameLayout(ctx)
+    val knob = View(ctx)
+    track.addView(knob)
+    var on = initial
+    fun render() {
+        track.background = editorShape(if (on) EditorColors.Gold else EditorColors.Border, 16f, ctx)
+        knob.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(if (on) EditorColors.Bg else EditorColors.Muted)
+        }
+        val size = Ui.pxi(ctx, if (on) 24f else 16f)
+        val inset = Ui.pxi(ctx, if (on) 4f else 8f)
+        knob.layoutParams = FrameLayout.LayoutParams(
+            size, size, Gravity.CENTER_VERTICAL or (if (on) Gravity.END else Gravity.START)
+        ).also { if (on) it.marginEnd = inset else it.marginStart = inset }
+    }
+    render()
+    track.isClickable = true
+    track.isFocusable = true
+    track.setOnClickListener { on = !on; render(); onChange(on) }
+    return track
+}
 
 private fun stepperButton(ctx: Context, symbol: String, description: String, onClick: () -> Unit) =
     editorText(ctx, symbol, 26f, EditorColors.Gold).apply {
@@ -242,6 +296,13 @@ internal fun customIntervalBox(
         setPadding(0, 0, 0, 0)
         contentDescription = "Custom interval"
         setSelectAllOnFocus(true)
+        highlightColor = (EditorColors.Gold and 0x00FFFFFF) or 0x55000000
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            textCursorDrawable = GradientDrawable().apply {
+                setColor(EditorColors.Gold)
+                setSize(Ui.pxi(ctx, 2f), Ui.pxi(ctx, 30f))
+            }
+        }
     }
     var committed = false
     fun commit() {

@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import android.content.res.ColorStateList
 import com.azkar.app.R
-import com.azkar.app.data.Builtins
 import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
 
@@ -81,16 +80,16 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         val hidden = Store.hidden()
         val last = ids.size - 1
         ids.forEachIndexed { idx, id ->
-            val builtin = Builtins.byKey(id)
+            val builtin = Store.isDefaultFolder(id)
             val isHidden = id in hidden
             val v = layoutInflater.inflate(R.layout.item_customize_row, rows, false)
             v.alpha = if (isHidden) 0.55f else 1f
             v.findViewById<ImageView>(R.id.ic).apply {
-                setImageResource(if (builtin != null) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
-                imageTintList = ColorStateList.valueOf(c(if (builtin != null) R.color.teal else R.color.gold))
+                setImageResource(if (builtin) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
+                imageTintList = ColorStateList.valueOf(c(if (builtin) R.color.teal else R.color.gold))
             }
             Ui.folderIcon(v.findViewById(R.id.ic), v.findViewById(R.id.emoji), Store.folder(id)?.icon,
-                if (builtin != null) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
+                if (builtin) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
             v.findViewById<TextView>(R.id.name).text = Store.folder(id)?.name ?: ""
             v.findViewById<View>(R.id.up).alpha = if (idx == 0) 0.35f else 1f
             v.findViewById<View>(R.id.down).alpha = if (idx == last) 0.35f else 1f
@@ -115,7 +114,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         val fs = Store.folders()
         fs.forEachIndexed { idx, f ->
             val v = layoutInflater.inflate(R.layout.item_customize_row, libRows, false)
-            val builtin = Builtins.byKey(f.id) != null
+            val builtin = Store.isDefaultFolder(f.id)
             Ui.folderIcon(v.findViewById(R.id.ic), v.findViewById(R.id.emoji), f.icon,
                 if (builtin) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
             v.findViewById<ImageView>(R.id.ic).imageTintList = ColorStateList.valueOf(c(if (builtin) R.color.teal else R.color.gold))

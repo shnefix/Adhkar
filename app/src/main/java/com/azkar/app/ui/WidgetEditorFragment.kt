@@ -257,12 +257,21 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         column.addCard(colors)
     }
 
+    private fun presetLabel(minutes: Int) = when (minutes) {
+        0 -> "Manual"
+        15 -> "15 min"
+        30 -> "30 min"
+        60 -> "Hourly"
+        360 -> "6 hours"
+        else -> "Daily"
+    }
+
     private fun behaviorCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
         val a = item.config.appearance
         // OLED designs: a tap always adds one, so the tap-action card only exists for the old widgets.
         if (item.family == null) {
-            val tap = sectionCard(ctx, getString(R.string.tap_action), getString(R.string.tap_action_description))
+            val tap = sectionCard(ctx, "Tap action", "What happens when you tap the counter.")
             tap.addSpaced(chipGroup(ctx, WidgetStore.TapAction.values().map { it to tapLabel(it) }, a.tapAction) { action ->
                 update(view) { it.copy(tapAction = action) }
             })
@@ -271,8 +280,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
 
         val presets = listOf(0, 15, 30, 60, 360, 1440)
         val minutes = a.refreshMinutes
-        val refresh = sectionCard(ctx, getString(R.string.refresh), getString(R.string.refresh_description))
-        refresh.addSpaced(chipGroup(ctx, presets.map { it to refreshLabel(it) }, minutes.takeIf { it in presets }) { m ->
+        val refresh = sectionCard(ctx, "Refresh", "How often the widget redraws. Shorter uses more battery.")
+        refresh.addSpaced(chipGroup(ctx, presets.map { it to presetLabel(it) }, minutes.takeIf { it in presets }) { m ->
             update(view) { it.copy(refreshMinutes = m) }
         })
         val hours = customHours[item.id] ?: (minutes >= 60 && minutes % 60 == 0)
@@ -360,10 +369,16 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
                 it.marginEnd = Ui.pxi(requireContext(), 8f)
             })
         }
-        root.addView(filters, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 36f)).also {
+        root.addView(HorizontalScrollView(requireContext()).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(filters)
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 36f)).also {
             it.topMargin = Ui.pxi(requireContext(), 16f)
         })
         val recycler = RecyclerView(requireContext()).apply {
+            setHasFixedSize(true)
+            isNestedScrollingEnabled = true
             overScrollMode = View.OVER_SCROLL_NEVER
             clipToPadding = false
             setPadding(0, 0, 0, Ui.pxi(requireContext(), 64f))
@@ -394,6 +409,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         })
         dialog.setContentView(container)
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         dialog.show()
         dialog.window?.apply {
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
