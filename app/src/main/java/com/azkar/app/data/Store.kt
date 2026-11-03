@@ -26,8 +26,9 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 5
+    private const val DEFAULTS_VERSION = 6
     private const val HOME_FOLDER_ID = "d_15"                   // الواجهة, added in defaults version 4
+    private const val ZAD_FOLDER_ID = "d_16"                    // زَادُ المَعَادِ, added in defaults version 6
     private const val WAKE_FOLDER_ID = "d_9"
     private const val MORNING_FOLDER_ID = "d_14"
     private const val EVENING_FOLDER_ID = "d_11"
@@ -198,6 +199,7 @@ object Store {
         val fresh = from == 0 && !sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
         if (fresh) mergeDefaults(p)
         else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == HOME_FOLDER_ID }))
+        if (!fresh && from < 6) mergeDefaults(p.copy(folders = p.folders.filter { it.id == ZAD_FOLDER_ID }))
         if (from < 4) applyHomeDefaults()
         if (from in 1 until 5) applySessionDefaults()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
