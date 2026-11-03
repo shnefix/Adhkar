@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
 const val ACTION_NEXT = "com.azkar.app.widget.NEXT"
+const val ACTION_UNDO = "com.azkar.app.widget.UNDO"
 const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
 
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
@@ -127,6 +128,7 @@ object WidgetUpdater {
         WidgetKind.values().forEach { k ->
             mgr.getAppWidgetIds(ComponentName(ctx, providerClass(k))).forEach { update(ctx, mgr, it, k) }
         }
+        NewWidgetUpdater.updateAll(ctx)
     }
 
     fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {

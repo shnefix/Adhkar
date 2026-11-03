@@ -57,4 +57,17 @@
     <color name="notif_oled_border">#000000</color>
     <color name="notif_oled_text">#EDEDED</color>
     <color name="notif_oled_muted">#9A9A9A</color>
+    <color name="azkar_widget_gold">#E3C06E</color>
+    <color name="azkar_widget_gold_soft">#EBCB82</color>
+    <color name="azkar_widget_gold_halo">#4A3F22</color>
+    <color name="azkar_widget_ink">#000000</color>
+    <color name="azkar_widget_cream">#F7F3E8</color>
+    <color name="azkar_widget_muted">#A9A699</color>
+    <color name="azkar_widget_track">#262626</color>
+    <color name="azkar_widget_chip">#1A1A1A</color>
+    <color name="azkar_widget_inner">#111111</color>
+    <color name="azkar_widget_inner_border">#1F1F1F</color>
+    <color name="azkar_widget_bead_off">#2E2E2E</color>
+    <color name="azkar_widget_outline">#3A3A3A</color>
+    <color name="azkar_widget_card_border">#232323</color>
 </resources>

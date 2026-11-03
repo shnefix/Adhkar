@@ -141,6 +141,22 @@ object WidgetLogic {
 
     fun reset(ctx: Context, id: Int) = WidgetStore.saveProgress(ctx, id, 0, 0)
 
+    fun undo(ctx: Context, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        val items = Store.readerItems(cfg.folder)
+        if (items.isEmpty()) return
+        var (idx, cnt) = WidgetStore.progress(ctx, id)
+        if (idx >= items.size) {
+            idx = (items.size - 1).coerceAtLeast(0)
+            cnt = items[idx].target
+        }
+        if (cnt > 0) cnt-- else if (idx > 0) {
+            idx--
+            cnt = (items[idx].target - 1).coerceAtLeast(0)
+        }
+        WidgetStore.saveProgress(ctx, id, idx, cnt)
+    }
+
     fun next(ctx: Context, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
         val items = Store.readerItems(cfg.folder)
