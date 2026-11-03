@@ -48,16 +48,8 @@
     <string name="azkar_widget_j_tall_ring_label">حلقة الأذكار الطويلة</string><string name="azkar_widget_j_tall_ring_desc">حلقة تقدم الأذكار الطويلة</string>
     <string name="azkar_widget_j_tall_timeline_label">خط أذكار زمني</string><string name="azkar_widget_j_tall_timeline_desc">خط أذكار زمني طويل</string>
     <string name="widget_editor_title">محرر الأدوات</string>
-    <string name="apply">تطبيق</string>
     <string name="widgets_on_home">الأدوات على الشاشة الرئيسية</string>
-    <string name="widget_preview">معاينة مباشرة</string>
-    <string name="widget_content">المحتوى</string>
-    <string name="widget_style">نمط الأداة</string>
-    <string name="widget_text_options">خيارات النص</string>
-    <string name="widget_behavior">السلوك</string>
     <string name="show_counter">إظهار العداد</string>
-    <string name="font_size">حجم الخط: %1$.0f</string>
-    <string name="add_widget_to_home">إضافة أداة إلى الشاشة الرئيسية</string>
     <string name="reset">إعادة ضبط</string>
     <string name="no_widgets_on_home">لا توجد أدوات أذكار على شاشتك الرئيسية.</string>
     <string name="widget_pin_unsupported">لا يدعم المشغّل إضافة الأدوات من هذه الشاشة.</string>
@@ -76,7 +68,6 @@
     <string name="large_grid">كبيرة · ٤×٤</string>
     <string name="typography">الخط</string>
     <string name="arabic_font">الخط العربي</string>
-    <string name="line_height">ارتفاع السطر: %1$.1f</string>
     <string name="alignment">المحاذاة</string>
     <string name="start">بداية</string>
     <string name="center">وسط</string>
@@ -85,22 +76,13 @@
     <string name="background_color">الخلفية</string>
     <string name="corner_radius">استدارة الزوايا</string>
     <string name="tap_action">إجراء النقر</string>
-    <string name="tap_action_description">اختر ما يفعله النقر على عداد الأداة.</string>
     <string name="refresh">التحديث</string>
-    <string name="refresh_description">اختر معدل إعادة رسم الأداة.</string>
     <string name="increment_counter">زيادة العداد</string>
-    <string name="every_hour">كل ساعة</string>
     <string name="add_style_to_home">إضافة %1$s (%2$s) إلى الشاشة الرئيسية</string>
     <string name="open_app">فتح التطبيق</string>
     <string name="open_reader">فتح قارئ الأذكار</string>
     <string name="next_zikr">الذكر التالي</string>
-    <string name="manual_only">يدوي فقط</string>
-    <string name="every_15_minutes">كل ١٥ دقيقة</string>
-    <string name="every_30_minutes">كل ٣٠ دقيقة</string>
-    <string name="every_6_hours">كل ٦ ساعات</string>
     <string name="daily">يوميًا</string>
-    <string name="widget_font_size">حجم الخط: %1$.0f</string>
-    <string name="widget_line_height">ارتفاع السطر: %1$.1f</string>
     <string name="all">الكل</string>
     <string name="small">صغيرة</string>
     <string name="medium">متوسطة</string>
@@ -110,18 +92,14 @@
     <string name="widget_evening">المساء</string>
     <string name="widget_morning_azkar">أذكار الصباح</string>
     <string name="widget_evening_azkar">أذكار المساء</string>
-    <string name="widget_next">التالي</string>
     <string name="widget_next_label">التالي: %1$s</string>
     <string name="widget_now">الآن</string>
     <string name="widget_completed">مكتمل</string>
     <string name="widget_tap_caps">اضغط</string>
-    <string name="widget_tap_plus">اضغط +1</string>
     <string name="widget_of_tap">من %1$d · اضغط</string>
     <string name="widget_round_short">الجولة %1$d من %2$d</string>
     <string name="widget_beads_round">الجولة %1$d من %2$d · %3$d حبات لكل جولة</string>
     <string name="widget_recited">%1$d من %2$d تمت قراءتها</string>
-    <string name="widget_n_done">تم %1$d</string>
-    <string name="widget_now_of">%1$d من %2$d الآن</string>
     <string name="widget_azkar_word">أذكار</string>
     <string name="widget_new_designs">تصاميم جديدة</string>
     <string name="editor_tab_content">المحتوى</string>
@@ -129,7 +107,6 @@
     <string name="editor_tab_behavior">السلوك</string>
     <string name="reminder_after_fajr">بعد الفجر بـ %1$d دقيقة</string>
     <string name="reminder_after_asr">بعد العصر بـ %1$d دقيقة</string>
-    <string name="reminder_follows_prayer">يتبع مواقيت الصلاة في موقعك</string>
     <string name="reminder_at_fajr">عند الفجر</string>
     <string name="reminder_at_asr">عند العصر</string>
     <string name="reminder_delay_title_fajr">البدء بعد الفجر</string>
@@ -217,7 +194,6 @@
     <string name="theme">السمة</string>
     <string name="back">رجوع</string>
     <string name="all_notifications">كل الإشعارات</string>
-    <string name="completion_screen_description">شاشة الإتمام</string>
     <string name="widget_preview_unavailable">المعاينة غير متاحة</string>
     <string name="widget_small_desc">الأذكار · صغير</string>
     <string name="widget_medium_desc">الأذكار · عريض</string>
@@ -480,4 +456,19 @@
     <string name="widget_small_label">أذكار · صغير</string>
     <string name="widget_medium_label">أذكار · عريض</string>
     <string name="widget_large_label">أذكار · كبير</string>
+    <string name="location">الموقع</string>
+    <string name="location_auto">من هاتفك (تقريبي)</string>
+    <string name="location_manual">محدد يدويًا: %1$s</string>
+    <string name="location_none">غير محدد · تستخدم التذكيرات أوقاتها الثابتة</string>
+    <string name="location_use_phone">استخدام موقع هاتفي</string>
+    <string name="location_choose_city">اختيار مدينة</string>
+    <string name="location_enter_coords">إدخال الإحداثيات</string>
+    <string name="latitude_hint">خط العرض (من −90 إلى 90)</string>
+    <string name="longitude_hint">خط الطول (من −180 إلى 180)</string>
+    <string name="location_out_of_range">أدخل رقمًا ضمن النطاق</string>
+    <string name="location_permission_denied">الوصول إلى الموقع متوقف. اختر مدينة أو أدخل الإحداثيات بدلًا من ذلك.</string>
+    <string name="previous_zikr">الذكر السابق</string>
+    <string name="zikr_exists_title">محفوظ مسبقًا</string>
+    <string name="zikr_exists_message">هذا الذكر موجود بالفعل في «%1$s» (×%2$d). هل تريد تحديثه بتعديلاتك؟</string>
+    <string name="update">تحديث</string>
 </resources>

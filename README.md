@@ -33,10 +33,11 @@ many times to repeat it, and organise it into your own folders.
 - Morning, evening, before-sleep and other azkar collections built in
 - Focused Arabic reader with tap-to-advance, counters, notes, adjustable text size and keep-screen-on
 - Reminders for morning, evening and before sleep; they can follow prayer times for your approximate
-  location (optional), with a choice of calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more)
-  and the standard or Hanafi Asr time
+  location, or a city or coordinates you set by hand (no location permission needed), with a choice of
+  calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more) and the standard or Hanafi Asr time
 - Optional tracking of the days you finish your morning and evening azkar, with streaks
-- Home-screen widgets in many sizes and styles, including tap-to-count
+- Home-screen widgets in many sizes and styles, including tap-to-count; widgets and the reader share
+  their progress
 - Import and export your azkar as a JSON file
 - Full Arabic interface on Arabic phones (RTL), OLED black theme, bundled Amiri and DM Sans fonts
 
@@ -54,7 +55,7 @@ many times to repeat it, and organise it into your own folders.
 | Internet access | **None.** The app does not request the `INTERNET` permission, so it cannot send or receive data. |
 | Ads, analytics, tracking | None. No third-party SDKs for ads, analytics or crash reporting. |
 | Account | None needed. |
-| Location | Optional, approximate only (`ACCESS_COARSE_LOCATION`). Used on the phone to calculate prayer times for reminders. Deny it and fixed times are used. |
+| Location | Optional, approximate only (`ACCESS_COARSE_LOCATION`). Used on the phone to calculate prayer times for reminders. Deny it and choose a city or enter coordinates instead, or keep the fixed times. |
 | Notifications | Only for the reminders you turn on. |
 | Your data | Stored on the phone only. If you turn on Android's own backup, Android may include the app's data (azkar, settings, last approximate location) in your Google backup. |
 
@@ -63,7 +64,7 @@ Other permissions: `RECEIVE_BOOT_COMPLETED` (to restore reminders after a restar
 
 ## Build from source
 
-Requirements: JDK 17 and the Android SDK (Android Studio includes both).
+Requirements: JDK 17 and the Android SDK with platform 37 (Android Studio includes both).
 
 ```bash
 ./gradlew assembleDebug      # app/build/outputs/apk/debug/Adhkar-<version>-debug.apk

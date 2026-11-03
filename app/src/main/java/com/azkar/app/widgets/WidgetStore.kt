@@ -1,6 +1,8 @@
 package com.azkar.app.widgets
 
 import android.content.Context
+import com.azkar.app.data.AppPrefs
+import com.azkar.app.data.ReaderItem
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
 import android.util.Log
@@ -123,6 +125,20 @@ object WidgetStore {
         sp(ctx).edit().putString("day_$id", today()).putInt("idx_$id", idx).putInt("cnt_$id", count).apply()
     }
 
+    /**
+     * Today's position for every widget that shows [folder]: widgets follow the reader and each other.
+     * [idx] / [count] use the widget's meaning: [idx] azkar are finished, [count] taps into the next one.
+     */
+    fun syncFolderProgress(ctx: Context, folder: String, idx: Int, count: Int) {
+        val s = sp(ctx)
+        val ids = s.all.mapNotNull { (k, v) -> if (k.startsWith("folder_") && v == folder) k.removePrefix("folder_").toIntOrNull() else null }
+        if (ids.isEmpty()) return
+        val e = s.edit()
+        val day = today()
+        ids.forEach { e.putString("day_$it", day).putInt("idx_$it", idx).putInt("cnt_$it", count) }
+        e.apply()
+    }
+
     fun clear(ctx: Context, id: Int) {
         sp(ctx).edit().remove("style_$id").remove("folder_$id")
             .remove("font_size_$id").remove("line_height_$id").remove("alignment_$id")
@@ -146,11 +162,26 @@ object WidgetLogic {
             cnt++
             if (cnt >= items[idx].target) { idx++; cnt = 0 }
         }
-        WidgetStore.saveProgress(ctx, id, idx, cnt)
+        share(ctx, id, cfg.folder, items, idx, cnt)
         Tracking.record(cfg.folder, idx, items.size)   // no-op unless the folder is tracked
     }
 
-    fun reset(ctx: Context, id: Int) = WidgetStore.saveProgress(ctx, id, 0, 0)
+    fun reset(ctx: Context, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        share(ctx, id, cfg.folder, Store.readerItems(cfg.folder), 0, 0)
+    }
+
+    /**
+     * Saves a widget's new position and shares it: other widgets on the same folder move with it, and so does
+     * where the reader resumes, for folders that remember their position.
+     */
+    private fun share(ctx: Context, id: Int, folder: String, items: List<ReaderItem>, idx: Int, cnt: Int) {
+        WidgetStore.saveProgress(ctx, id, idx, cnt)
+        WidgetStore.syncFolderProgress(ctx, folder, idx, cnt)
+        if (!Store.rememberPosition(folder)) return
+        val current = items.getOrNull(idx)
+        if (current == null) AppPrefs.clearPosition(folder) else AppPrefs.savePosition(folder, current.id, cnt)
+    }
 
     fun undo(ctx: Context, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
@@ -165,7 +196,7 @@ object WidgetLogic {
             idx--
             cnt = (items[idx].target - 1).coerceAtLeast(0)
         }
-        WidgetStore.saveProgress(ctx, id, idx, cnt)
+        share(ctx, id, cfg.folder, items, idx, cnt)
     }
 
     fun next(ctx: Context, id: Int, kind: WidgetKind) {
@@ -173,6 +204,6 @@ object WidgetLogic {
         val items = Store.readerItems(cfg.folder)
         if (items.isEmpty()) return
         val (idx, _) = WidgetStore.progress(ctx, id)
-        WidgetStore.saveProgress(ctx, id, (idx + 1).coerceAtMost(items.size), 0)
+        share(ctx, id, cfg.folder, items, (idx + 1).coerceAtMost(items.size), 0)
     }
 }

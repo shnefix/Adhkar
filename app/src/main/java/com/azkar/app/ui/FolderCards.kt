@@ -60,7 +60,7 @@ class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCall
             h.name.typeface = h.amiri
             h.name.textSize = 22f
             h.name.textDirection = View.TEXT_DIRECTION_RTL
-            TextViewCompat.setLineHeight(h.name, (22f * 1.4f * ctx.resources.displayMetrics.scaledDensity).toInt())
+            TextViewCompat.setLineHeight(h.name, android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 22f * 1.4f, ctx.resources.displayMetrics).toInt())
         } else {
             h.name.typeface = h.dmBold
             h.name.textSize = 17f

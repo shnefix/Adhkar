@@ -8,11 +8,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.ReaderResume
@@ -20,6 +20,7 @@ import com.azkar.app.data.AppPrefs
 import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
+import com.azkar.app.widgets.WidgetStore
 
 class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     private lateinit var rn: ReaderNav
@@ -34,7 +35,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val ctx = requireContext()
         view.keepScreenOn = AppPrefs.keepScreenOn()   // a view flag: released automatically when the reader goes away
         view.isHapticFeedbackEnabled = false
-        view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
 
         val key = requireArguments().getString("key")
@@ -90,7 +90,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val note = view.findViewById<TextView>(R.id.note)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
         val segs = view.findViewById<LinearLayout>(R.id.segs)
-        val ring = view.findViewById<RingView>(R.id.ring)
+        val ring = view.findViewById<RingView>(R.id.ring).apply { isHapticFeedbackEnabled = false }
         val countTv = view.findViewById<TextView>(R.id.count)
         val sub = view.findViewById<TextView>(R.id.sub)
         val hint = view.findViewById<TextView>(R.id.hint)
@@ -125,14 +125,18 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
             if (remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
             // Azkar behind the current one are read; the current one counts once its repeats are done.
-            Tracking.record(key, i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0, items.size)
+            val finished = i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0
+            Tracking.record(key, finished, items.size)
+            // Widgets on this folder follow along (redrawn when the app goes to the background).
+            WidgetStore.syncFolderProgress(ctx, key, finished, if (finished == i) rn.count else 0)
         }
 
         ring.setOnClickListener {
             if (rn.tapRing()) render()
         }
 
-        (view as SwipeLayout).apply {
+        val swipe = view as SwipeLayout
+        swipe.apply {
             card = view.findViewById(R.id.card)
             tapEnabled = AppPrefs.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
@@ -140,6 +144,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             onFinish = {
                 Tracking.record(key, items.size, items.size)
                 AppPrefs.clearPosition(key)
+                WidgetStore.syncFolderProgress(ctx, key, items.size, 0)
                 // finishReading() removes this fragment at once, so keep the activity before calling it.
                 val main = nav()
                 main.finishReading()
@@ -150,6 +155,14 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 arScroll.scrollTo(0, 0)
                 render()
             }
+        }
+        // Screen readers can't swipe: the card offers next / previous as actions, and a double tap moves on.
+        view.findViewById<View>(R.id.card).apply {
+            isFocusable = true
+            ViewCompat.replaceAccessibilityAction(this, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+                getString(R.string.next_zikr)) { _, _ -> swipe.next(); true }
+            ViewCompat.addAccessibilityAction(this, getString(R.string.next_zikr)) { _, _ -> swipe.next(); true }
+            ViewCompat.addAccessibilityAction(this, getString(R.string.previous_zikr)) { _, _ -> swipe.previous(); true }
         }
         render()
     }
@@ -167,6 +180,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     override fun onDestroyView() { immersive(false); super.onDestroyView() }
 
     companion object {
-        fun of(key: String, start: Int = -1) = ReaderFragment().apply { arguments = bundleOf("key" to key, "start" to start) }
+        fun of(key: String, start: Int = -1) = ReaderFragment().apply { arguments = Bundle().apply { putString("key", key); putInt("start", start) } }
     }
 }

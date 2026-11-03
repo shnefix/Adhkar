@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): the logo's beads and star in one colour, drawn from docs/images/logo.svg.
+     The 768-unit artwork is scaled into the adaptive icon's central 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.09375" android:scaleY="0.09375" android:translateX="18" android:translateY="18">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M420,131a25,25 0 1,0 50,0a25,25 0 1,0 -50,0zM288,164a33,33 0 1,0 66,0a33,33 0 1,0 -66,0zM189,255a41,41 0 1,0 82,0a41,41 0 1,0 -82,0zM150,380a46,46 0 1,0 92,0a46,46 0 1,0 -92,0zM184,504a46,46 0 1,0 92,0a46,46 0 1,0 -92,0zM280,596a41,41 0 1,0 82,0a41,41 0 1,0 -82,0zM412,629a33,33 0 1,0 66,0a33,33 0 1,0 -66,0zM545,596a25,25 0 1,0 50,0a25,25 0 1,0 -50,0z"/>
+        <path android:fillColor="#FFFFFFFF" android:strokeColor="#FFFFFFFF" android:strokeWidth="10"
+            android:strokeLineJoin="round" android:pathData="M548.0,233.0 L563.3,251.0 L586.9,249.1 L585.0,272.7 L603.0,288.0 L585.0,303.3 L586.9,326.9 L563.3,325.0 L548.0,343.0 L532.7,325.0 L509.1,326.9 L511.0,303.3 L493.0,288.0 L511.0,272.7 L509.1,249.1 L532.7,251.0z"/>
+    </group>
+</vector>

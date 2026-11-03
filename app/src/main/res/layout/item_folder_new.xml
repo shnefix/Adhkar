@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orientation="vertical" android:paddingTop="14dp" android:paddingBottom="14dp" android:paddingHorizontal="12dp" android:background="@drawable/bg_dashgold18" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
-<ImageView android:layout_width="24dp" android:layout_height="24dp" app:tint="@color/gold" android:src="@drawable/ic_plus_2"/>
+<ImageView android:importantForAccessibility="no" android:layout_width="24dp" android:layout_height="24dp" app:tint="@color/gold" android:src="@drawable/ic_plus_2"/>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="@string/new_folder_line1" android:textSize="15sp" android:textColor="@color/gold" android:lineHeight="20sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="@string/new_folder_line2" android:textSize="12sp" android:textColor="@color/gold" android:lineHeight="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>

@@ -20,6 +20,8 @@ object AppPrefs {
     private const val K_LAT = "loc_lat"
     private const val K_LNG = "loc_lng"
     private const val K_LOC_ASKED = "loc_asked"
+    private const val K_LOC_MANUAL = "loc_manual"     // true: the user set the location; the phone's is ignored
+    private const val K_LOC_CITY = "loc_city"         // Cities id of a hand-picked city; absent for typed coordinates
     private const val K_DELAY = "session_delay_"   // session_delay_<scheduleId> = minutes after Fajr / Asr
 
     const val SESSION_DELAY_DEFAULT = 10
@@ -90,6 +92,22 @@ object AppPrefs {
 
     fun setLocation(lat: Double, lng: Double) =
         sp.edit().putString(K_LAT, lat.toString()).putString(K_LNG, lng.toString()).apply()
+
+    /** True while the location was set by hand (a city or typed coordinates). */
+    fun locationManual(): Boolean = ::sp.isInitialized && sp.getBoolean(K_LOC_MANUAL, false)
+
+    /** The hand-picked city's id, or null for typed coordinates or an automatic location. */
+    fun locationCity(): String? = if (locationManual()) sp.getString(K_LOC_CITY, null) else null
+
+    fun setManualLocation(lat: Double, lng: Double, cityId: String?) {
+        sp.edit().putString(K_LAT, lat.toString()).putString(K_LNG, lng.toString())
+            .putBoolean(K_LOC_MANUAL, true).putString(K_LOC_CITY, cityId).apply()
+    }
+
+    /** Back to the phone's location: the hand-set one is forgotten, so nothing stale is used until a new fix. */
+    fun useAutomaticLocation() {
+        sp.edit().putBoolean(K_LOC_MANUAL, false).remove(K_LOC_CITY).remove(K_LAT).remove(K_LNG).apply()
+    }
 
     /**
      * Minutes after Fajr (morning, "m") or Asr (evening, "e") when that session's azkar start.

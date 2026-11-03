@@ -12,7 +12,6 @@
     <color name="nav_bg">#000000</color>
     <color name="nav_border">#1A1A1A</color>
     <color name="track">#2E2E2E</color>
-    <color name="icon_bg">#0B0B0B</color>
     <color name="hint">#7A7A7A</color>
     <color name="dialog_bg">#121212</color>
 </resources>

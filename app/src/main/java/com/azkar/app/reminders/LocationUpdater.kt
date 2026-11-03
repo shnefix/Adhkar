@@ -23,10 +23,10 @@ object LocationUpdater {
     fun hasPermission(ctx: Context) =
         ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    /** Uses the newest cached fix right away, then asks for a fresh one. No-op without permission. */
+    /** Uses the newest cached fix right away, then asks for a fresh one. No-op without permission or with a hand-set location. */
     @SuppressLint("MissingPermission")
     fun refresh(ctx: Context) {
-        if (!hasPermission(ctx)) return
+        if (!hasPermission(ctx) || AppPrefs.locationManual()) return
         val app = ctx.applicationContext
         val lm = app.getSystemService(LocationManager::class.java) ?: return
         val providers = lm.getProviders(true)
@@ -49,6 +49,7 @@ object LocationUpdater {
     }
 
     private fun save(ctx: Context, loc: Location) {
+        if (AppPrefs.locationManual()) return   // a fix that arrives after the user set the location by hand
         val old = AppPrefs.location()
         AppPrefs.setLocation(loc.latitude, loc.longitude)
         val moved = old == null || FloatArray(1).also {

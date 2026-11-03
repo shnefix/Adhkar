@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#0D2124</color>
-    <color name="amiri_black">#000000</color>
     <color name="text">#EDF4F1</color>
-    <color name="text_primary">#EDF4F1</color>
     <color name="card">#153237</color>
     <color name="border">#234A4B</color>
     <color name="card2">#1B3E43</color>
@@ -17,7 +15,6 @@
     <color name="nav_border">#1F4143</color>
     <color name="track">#24504F</color>
     <color name="danger">#F4A59B</color>
-    <color name="icon_bg">#153237</color>
     <color name="danger_border">#7A3F3A</color>
     <color name="gold_highlight">#55E8B44A</color>
     <color name="hint">#757575</color>

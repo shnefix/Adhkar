@@ -2,7 +2,6 @@ package com.azkar.app.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -14,9 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /** Compatibility facade over Room content and lightweight SharedPreferences settings. */
 object Store {
@@ -33,10 +30,6 @@ object Store {
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
     /** Before version 7 the before-sleep reminder pointed at "sleep", which is no folder id. */
     private const val OLD_SLEEP_OPEN = "sleep"
-    private const val K_ORDER = "home_order"
-    private const val K_HIDDEN = "home_hidden"
-    private const val K_PLACE = "home_place"
-    private const val K_HZ = "hidden_zikrs"
     private const val K_SCHED = "schedules"
     private const val K_SCHEDULES_INITIALIZED = "schedules_initialized"
     private const val K_SCHEMA = "schema_version"
@@ -50,12 +43,10 @@ object Store {
     private var fCache: List<Folder> = emptyList()
     private var sCache: List<Schedule> = emptyList()
     private var defaultFolderIds: Set<String> = emptySet()
-    private val hzState = MutableStateFlow<Set<String>>(emptySet())
-    private val hzCache: Set<String> get() = hzState.value
+    /** Home layout and hidden azkar (SharedPreferences); the functions below keep their old names for callers. */
+    private val home = HomePrefs()
+    private val hzCache: Set<String> get() = home.hiddenZikrs.value
     private var cacheGeneration = 0L
-    // Parsed once from SharedPreferences, then kept in step by their setters (Home renders read them often).
-    @Volatile private var savedOrderCache: List<String>? = null
-    @Volatile private var hiddenCache: Set<String>? = null
     private lateinit var repository: AzkarRepository
     private val widgetRefreshPending = AtomicBoolean(false)
     private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -68,6 +59,7 @@ object Store {
         appCtx = context.applicationContext
         sp = appCtx.getSharedPreferences("azkar", Context.MODE_PRIVATE)
         AppPrefs.attach(sp)
+        home.attach(sp)
         Tracking.attach(appCtx.getSharedPreferences("azkar_tracking", Context.MODE_PRIVATE))
         repository = AzkarRepository(AzkarDatabaseProvider.get(appCtx).azkarDao())
         val result = CompletableDeferred<Result<Unit>>()
@@ -133,7 +125,7 @@ object Store {
             fCache = emptyList()
             sCache = emptyList()
         }
-        hzState.value = try { LegacyJson.parseIds(sp.getString(K_HZ, "[]") ?: "[]") } catch (_: Exception) { emptySet() }
+        home.loadHiddenZikrs()
         if (recovered) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).putBoolean(K_RECOVERED, true).commit()
         else migrateSchema()
         syncDefaults()
@@ -502,45 +494,17 @@ object Store {
     // ---------- Home customisation ----------
     val defaultOrder: List<String> get() = fCache.map { it.id }
 
-    private fun savedOrder(): List<String> = savedOrderCache ?: run {
-        val raw: String? = sp.getString(K_ORDER, null)
-        (if (raw == null) emptyList() else LegacyJson.parseIds(raw).toList()).also { savedOrderCache = it }
-    }
-
-    fun homeOrder(): List<String> {
-        val valid = defaultOrder
-        val validSet = valid.toHashSet()
-        val kept = savedOrder().filter { it in validSet }.distinct()
-        val keptSet = kept.toHashSet()
-        return kept + valid.filter { it !in keptSet }
-    }
-
-    fun setHomeOrder(order: List<String>) {
-        savedOrderCache = order.toList()
-        sp.edit().putString(K_ORDER, JSONArray(order).toString()).apply()
-    }
-
-    fun hidden(): Set<String> = hiddenCache ?: try {
-        LegacyJson.parseIds(sp.getString(K_HIDDEN, "[]") ?: "[]")
-    } catch (_: Exception) {
-        emptySet()
-    }.also { hiddenCache = it }
-
-    fun setHidden(set: Set<String>) {
-        hiddenCache = set.toSet()
-        sp.edit().putString(K_HIDDEN, JSONArray(set.toList()).toString()).apply()
-    }
-
-    fun placement(): Placement = Placement.from(sp.getString(K_PLACE, null))
-    fun setPlacement(p: Placement) = sp.edit().putString(K_PLACE, p.key).apply()
+    fun homeOrder(): List<String> = home.order(defaultOrder)
+    fun setHomeOrder(order: List<String>) = home.setOrder(order)
+    fun hidden(): Set<String> = home.hidden()
+    fun setHidden(set: Set<String>) = home.setHidden(set)
+    fun placement(): Placement = home.placement()
+    fun setPlacement(p: Placement) = home.setPlacement(p)
 
     /** Resets order/placement; default folders that are not meant for Home (no "home": true) are hidden again. */
     fun resetHome() {
-        sp.edit().remove(K_ORDER).remove(K_HIDDEN).remove(K_PLACE).apply()
-        savedOrderCache = null
-        hiddenCache = null
         val hide = defaults()?.folders?.filter { it.home != true }?.mapNotNull { it.id }.orEmpty()
-        setHidden(hide.filter { folder(it) != null }.toSet())
+        home.reset(hide.filter { folder(it) != null }.toSet())
     }
 
     // ---------- Per-folder reading position ----------
@@ -555,13 +519,9 @@ object Store {
     fun hiddenZikrs(): Set<String> = hzCache
 
     /** Hidden zikr ids as they change; SharedPreferences-backed, so not part of the Room content flow. */
-    val hiddenZikrsFlow: StateFlow<Set<String>> = hzState.asStateFlow()
+    val hiddenZikrsFlow: StateFlow<Set<String>> get() = home.hiddenZikrs
 
-    @Synchronized
-    fun setZikrsHidden(ids: kotlin.collections.Collection<String>, hide: Boolean) {
-        hzState.value = Visibility.apply(hzCache, ids, hide)
-        sp.edit().putString(K_HZ, JSONArray(hzCache.toList()).toString()).apply()
-    }
+    fun setZikrsHidden(ids: kotlin.collections.Collection<String>, hide: Boolean) = home.setZikrsHidden(ids, hide)
 
 
     // ---------- Notification schedules ----------

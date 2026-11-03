@@ -1,4 +1,4 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-    <ImageView android:id="@+id/azkar_widget_image" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
+    <ImageView android:contentDescription="@string/widget_tap_to_open" android:id="@+id/azkar_widget_image" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
     <FrameLayout android:id="@+id/azkar_widget_hit" android:layout_width="match_parent" android:layout_height="match_parent" />
 </FrameLayout>

@@ -116,7 +116,7 @@ object WidgetUpdater {
         rv.setContentDescription(
             R.id.img,
             if (model.n == 0) ctx.getString(R.string.widget_no_azkar_description)
-            else "${model.folderName}: ${model.shown} of ${model.target}"
+            else "${model.folderName}: " + ctx.getString(R.string.widget_count_of, model.shown, model.target)
         )
         rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
         rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))

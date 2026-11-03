@@ -19,7 +19,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp">
 
-        <ImageView
+        <ImageView android:importantForAccessibility="no"
             android:id="@+id/ic"
             android:src="@drawable/ic_folder_1p75"
             android:layout_width="22dp"
@@ -54,7 +54,7 @@
             android:textColor="@color/text"
             android:maxLines="2"
             android:ellipsize="end"
-            android:gravity="left"
+            android:gravity="start"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 

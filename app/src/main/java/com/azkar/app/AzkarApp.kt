@@ -20,7 +20,7 @@ class AzkarApp : Application() {
         // Night mode isn't persisted by AppCompat. Setting it here, before any activity exists, avoids a
         // recreate during MainActivity's startup, which left Home blank on phones in system light mode.
         ThemeMode.apply(AppPrefs.theme())
-        AzkarNotifier.createChannel(this)
+        ReminderScheduler.createChannel(this)
         appScope.launch {
             runCatching {
                 Store.awaitReady()

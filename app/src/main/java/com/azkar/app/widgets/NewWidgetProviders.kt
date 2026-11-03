@@ -149,7 +149,7 @@ object NewWidgetUpdater {
             rv.setContentDescription(
                 R.id.azkar_widget_image,
                 if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
-                else "${model.folderName}: ${model.shown} of ${model.target}"
+                else "${model.folderName}: " + context.getString(R.string.widget_count_of, model.shown, model.target)
             )
             rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
             if (family == AzkarWidgetFamily.H_LARGE) {

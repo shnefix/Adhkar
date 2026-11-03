@@ -72,9 +72,16 @@ class StoreRollbackTest {
         setField("fCache", content.folders)
         setField("sCache", content.schedules)
         setField("cacheGeneration", 0L)
-        setField("widgetRefreshPending", AtomicBoolean(true))
-        setField("initStarted", AtomicBoolean(true))
+        // These are final fields: newer Android runtimes refuse to replace them, so change their value instead.
+        field<AtomicBoolean>("widgetRefreshPending").set(true)
+        field<AtomicBoolean>("initStarted").set(true)
         setField("initResult", kotlinx.coroutines.CompletableDeferred(Result.success(Unit)))
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> field(name: String): T = Store::class.java.getDeclaredField(name).run {
+        isAccessible = true
+        get(Store) as T
     }
 
     private fun setField(name: String, value: Any?) {

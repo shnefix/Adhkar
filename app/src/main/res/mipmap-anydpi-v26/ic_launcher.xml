@@ -3,4 +3,5 @@
     <background android:drawable="@color/bg"/>
     <!-- Pre-scaled and centered so all artwork stays inside the 66dp safe zone. -->
     <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome"/>
 </adaptive-icon>

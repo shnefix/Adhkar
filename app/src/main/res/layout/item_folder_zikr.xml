@@ -2,10 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="88dp" android:paddingHorizontal="6dp" android:background="@drawable/bg_card20" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_width="44dp" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/up" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="@string/move_up" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_chev_up_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_up_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <FrameLayout android:id="@+id/down" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="@string/move_down" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_chev_dn_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_dn_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_marginStart="6dp" android:layout_marginEnd="6dp" android:layout_height="wrap_content">
@@ -13,14 +13,14 @@
 <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:id="@+id/line" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <FrameLayout android:id="@+id/hide" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/hide_or_show" android:clickable="true" android:focusable="true">
-<ImageView android:id="@+id/hide_ic" android:src="@drawable/ic_eye_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:id="@+id/hide_ic" android:src="@drawable/ic_eye_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold" android:layout_gravity="center"/>
 </FrameLayout>
 <LinearLayout android:orientation="vertical" android:layout_width="44dp" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/edit" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="@string/edit_zikr" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_pencil_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/muted" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_pencil_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/muted" android:layout_gravity="center"/>
 </FrameLayout>
 <FrameLayout android:id="@+id/remove" android:layout_width="44dp" android:layout_height="40dp" android:contentDescription="@string/remove_zikr" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_trash_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/danger" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_trash_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/danger" android:layout_gravity="center"/>
 </FrameLayout>
 </LinearLayout>
 </LinearLayout>

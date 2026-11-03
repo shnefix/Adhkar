@@ -5,7 +5,6 @@ import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -120,6 +119,6 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
     }
 
     companion object {
-        fun of(id: String) = FolderFragment().apply { arguments = bundleOf("id" to id) }
+        fun of(id: String) = FolderFragment().apply { arguments = Bundle().apply { putString("id", id) } }
     }
 }

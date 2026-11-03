@@ -20,7 +20,7 @@ data class ReaderItem(
     val title: String = "", val titleBelow: Boolean = false, val note: String = ""
 )
 
-enum class Placement(val key: String, @androidx.annotation.StringRes val label: Int) {
+enum class Placement(val key: String, @param:androidx.annotation.StringRes val label: Int) {
     TOP("top", com.azkar.app.R.string.placement_top),
     MIXED("mixed", com.azkar.app.R.string.placement_mixed),
     BOTTOM("bottom", com.azkar.app.R.string.placement_bottom);

@@ -10,7 +10,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -139,6 +138,6 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
     }
 
     companion object {
-        fun of(id: String) = EditFolderFragment().apply { arguments = bundleOf("id" to id) }
+        fun of(id: String) = EditFolderFragment().apply { arguments = Bundle().apply { putString("id", id) } }
     }
 }

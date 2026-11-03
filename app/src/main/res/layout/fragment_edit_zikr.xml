@@ -3,7 +3,7 @@
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/btn_close" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="@string/cancel" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_close_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_close_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <TextView style="@style/TB" android:text="@string/edit_zikr" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <View android:layout_width="44dp" android:layout_height="44dp"/>
@@ -31,11 +31,11 @@
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="48dp" android:gravity="center_vertical" android:background="@drawable/bg_in24">
 <FrameLayout android:id="@+id/btn_dec" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="@string/fewer_repeats" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_minus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <EditText style="@style/TB" android:id="@+id/n" android:text="1" android:textSize="20sp" android:textColor="@color/text" android:gravity="center" android:inputType="number" android:maxLength="3" android:selectAllOnFocus="true" android:singleLine="true" android:imeOptions="actionDone" android:background="@null" android:padding="0dp" android:minWidth="56dp" android:layout_width="wrap_content" android:layout_height="match_parent"/>
 <FrameLayout android:id="@+id/btn_inc" android:layout_width="48dp" android:layout_height="46dp" android:contentDescription="@string/more_repeats" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_plus_2p25" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 </LinearLayout>
 </LinearLayout>
@@ -53,11 +53,11 @@
 </LinearLayout>
 <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:minHeight="16dp"/>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_save" android:layout_height="56dp" android:gravity="center" android:background="@drawable/bg_gold28" android:clickable="true" android:focusable="true" android:layout_marginTop="16dp" android:layout_width="match_parent">
-<ImageView android:src="@drawable/ic_check_2p25" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/bg"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_check_2p25" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/bg"/>
 <TextView style="@style/TB" android:text="@string/save_changes" android:textSize="17sp" android:textColor="@color/bg" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:id="@+id/btn_delete" android:layout_height="48dp" android:gravity="center" android:background="@drawable/bg_danger24" android:clickable="true" android:focusable="true" android:layout_marginTop="12dp" android:layout_width="match_parent">
-<ImageView android:src="@drawable/ic_trash_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/danger"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_trash_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/danger"/>
 <TextView style="@style/TB" android:text="@string/delete_zikr" android:textSize="16sp" android:textColor="@color/danger" android:layout_marginStart="8dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>

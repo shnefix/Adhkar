@@ -3,7 +3,6 @@ package com.azkar.app.ui
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.azkar.app.R
@@ -43,6 +42,6 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
     }
 
     companion object {
-        fun of(id: String) = EditZikrFragment().apply { arguments = bundleOf("id" to id) }
+        fun of(id: String) = EditZikrFragment().apply { arguments = Bundle().apply { putString("id", id) } }
     }
 }

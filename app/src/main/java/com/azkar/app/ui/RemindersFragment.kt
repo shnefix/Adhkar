@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import com.azkar.app.ThemeMode
 import com.azkar.app.R
@@ -27,6 +28,8 @@ import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
+import com.azkar.app.reminders.Cities
+import com.azkar.app.reminders.LocationUpdater
 import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.WidgetUpdater
@@ -101,22 +104,76 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         callback?.invoke(granted)
     }
 
+    private var onLocationResult: (() -> Unit)? = null
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) LocationUpdater.refresh(requireContext())
+        else Toast.makeText(requireContext(), R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+        onLocationResult?.invoke()
+        onLocationResult = null
+    }
+
+    /** The runtime permission (Android 13+) and the app's notification switch in system settings. */
     private fun hasNotificationPermission(): Boolean =
-        Build.VERSION.SDK_INT < 33 ||
-            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+        (Build.VERSION.SDK_INT < 33 ||
+            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
+            NotificationManagerCompat.from(requireContext()).areNotificationsEnabled()
 
     private fun requestNotifications(callback: (Boolean) -> Unit) {
         if (hasNotificationPermission()) {
             callback(true)
             return
         }
-        onPermissionResult = callback
-        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        val askable = Build.VERSION.SDK_INT >= 33 &&
+            requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        when {
+            // Granted, but switched off in system settings (any Android version): only Settings can turn it back on.
+            !askable -> { showBlockedDialog(); callback(false) }
+            // Denied once before: explain why, then ask again.
+            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) ->
+                AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.notif_rationale_title)
+                    .setMessage(R.string.notif_rationale_message)
+                    .setPositiveButton(R.string.allow) { _, _ ->
+                        onPermissionResult = callback
+                        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    .setNegativeButton(R.string.not_now) { _, _ -> callback(false) }
+                    .setOnCancelListener { callback(false) }
+                    .show()
+            else -> {
+                onPermissionResult = callback
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
+    /**
+     * After a refusal: a first "no" gets a short note; once Android stops showing the prompt ("don't ask again"),
+     * the only way back is the app's notification settings, so offer to open them.
+     */
     private fun showPermissionDenied() {
-        Toast.makeText(requireContext(), R.string.notif_denied_toast, Toast.LENGTH_SHORT).show()
+        if (Build.VERSION.SDK_INT >= 33 && !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+            showBlockedDialog()
+        } else {
+            Toast.makeText(requireContext(), R.string.notif_denied_toast, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showBlockedDialog() {
+        val ctx = requireContext()
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.notif_denied_title)
+            .setMessage(R.string.notif_denied_message)
+            .setPositiveButton(R.string.open_settings) { _, _ ->
+                val settings = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                try {
+                    startActivity(settings)
+                } catch (e: android.content.ActivityNotFoundException) {
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)))
+                }
+            }
+            .setNegativeButton(R.string.not_now, null)
+            .show()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -160,10 +217,22 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             }
         }
 
-        // Prayer times: method and Asr school. A change moves the prayer-based reminders and the widgets' times.
+        // Prayer times: location, method and Asr school. A change moves the prayer-based reminders and the widgets' times.
+        val locSub = view.findViewById<TextView>(R.id.loc_sub)
         val calcSub = view.findViewById<TextView>(R.id.calc_sub)
         val asrSub = view.findViewById<TextView>(R.id.asr_sub)
+        val arabicUi = resources.configuration.locales[0].language == "ar"
         fun renderPrayer() {
+            val loc = AppPrefs.location()
+            locSub.text = when {
+                AppPrefs.locationManual() && loc != null -> getString(
+                    R.string.location_manual,
+                    Cities.byId(AppPrefs.locationCity())?.name(arabicUi)
+                        ?: String.format(java.util.Locale.US, "%.4f, %.4f", loc.first, loc.second)
+                )
+                loc != null -> getString(R.string.location_auto)
+                else -> getString(R.string.location_none)
+            }
             calcSub.text = getString(CALC_METHODS.firstOrNull { it.first == AppPrefs.calcMethod() }?.second ?: R.string.calc_egyptian)
             asrSub.text = getString(if (AppPrefs.asrHanafi()) R.string.asr_hanafi else R.string.asr_standard)
         }
@@ -174,6 +243,29 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             renderList()
         }
         renderPrayer()
+        view.findViewById<View>(R.id.loc_row).setOnClickListener {
+            val choices = arrayOf(
+                getString(R.string.location_use_phone), getString(R.string.location_choose_city), getString(R.string.location_enter_coords)
+            )
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.location)
+                .setItems(choices) { _, which ->
+                    when (which) {
+                        0 -> {
+                            AppPrefs.useAutomaticLocation()
+                            prayerChanged()
+                            if (LocationUpdater.hasPermission(ctx)) LocationUpdater.refresh(ctx)   // the fix reschedules on arrival
+                            else {
+                                onLocationResult = { prayerChanged() }
+                                locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                            }
+                        }
+                        1 -> chooseCity(arabicUi) { prayerChanged() }
+                        else -> enterCoordinates { prayerChanged() }
+                    }
+                }
+                .show()
+        }
         view.findViewById<View>(R.id.calc_row).setOnClickListener {
             val current = CALC_METHODS.indexOfFirst { it.first == AppPrefs.calcMethod() }.coerceAtLeast(0)
             AlertDialog.Builder(ctx)
@@ -305,6 +397,68 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         }
     }
 
+    /** Picks one of [Cities.ALL], sorted by its name in the app's language. */
+    private fun chooseCity(arabic: Boolean, onSet: () -> Unit) {
+        val cities = Cities.ALL.sortedWith(compareBy(java.text.Collator.getInstance()) { it.name(arabic) })
+        val current = cities.indexOfFirst { it.id == AppPrefs.locationCity() }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.location_choose_city)
+            .setSingleChoiceItems(cities.map { it.name(arabic) }.toTypedArray(), current) { d, which ->
+                val c = cities[which]
+                AppPrefs.setManualLocation(c.lat, c.lng, c.id)
+                d.dismiss()
+                onSet()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Latitude / longitude typed by hand, for places the city list doesn't have. */
+    private fun enterCoordinates(onSet: () -> Unit) {
+        val ctx = requireContext()
+        fun field(hint: Int, value: Double?) = EditText(ctx).apply {
+            setHint(hint)
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
+            setSingleLine(true)
+            textDirection = View.TEXT_DIRECTION_LTR
+            value?.let { setText(String.format(java.util.Locale.US, "%.4f", it)) }
+        }
+        val loc = AppPrefs.location().takeIf { AppPrefs.locationManual() }
+        val lat = field(R.string.latitude_hint, loc?.first)
+        val lng = field(R.string.longitude_hint, loc?.second)
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = Ui.pxi(ctx, 20f)
+            setPadding(p, Ui.pxi(ctx, 8f), p, 0)
+            addView(lat)
+            addView(lng, Ui.lp(top = 8, ctx = ctx))
+        }
+        val dlg = AlertDialog.Builder(ctx)
+            .setTitle(R.string.location_enter_coords)
+            .setView(box)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        dlg.setOnShowListener {
+            dlg.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                // Accept a comma as the decimal mark too, as some keyboards type one.
+                val a = lat.text.toString().trim().replace(',', '.').toDoubleOrNull()
+                val b = lng.text.toString().trim().replace(',', '.').toDoubleOrNull()
+                when {
+                    a == null || a !in -90.0..90.0 -> lat.error = getString(R.string.location_out_of_range)
+                    b == null || b !in -180.0..180.0 -> lng.error = getString(R.string.location_out_of_range)
+                    else -> {
+                        AppPrefs.setManualLocation(a, b, null)
+                        dlg.dismiss()
+                        onSet()
+                    }
+                }
+            }
+        }
+        dlg.show()
+    }
+
     private fun renderList() {
         val root = view ?: return
         val ctx = requireContext()
@@ -315,7 +469,11 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         list.visibility = if (all.isEmpty()) View.GONE else View.VISIBLE
         root.findViewById<View>(R.id.rem_empty).visibility = if (all.isEmpty()) View.VISIBLE else View.GONE
         root.findViewById<TextView>(R.id.notif_sub).text =
-            if (!globalOn) getString(R.string.reminders_paused) else getString(R.string.reminders_on_count, all.count { it.enabled }, all.size)
+            when {
+                !hasNotificationPermission() -> getString(R.string.notif_blocked_sub)
+                !globalOn -> getString(R.string.reminders_paused)
+                else -> getString(R.string.reminders_on_count, all.count { it.enabled }, all.size)
+            }
 
         all.forEachIndexed { idx, s ->
             val v = layoutInflater.inflate(R.layout.item_reminder, list, false)

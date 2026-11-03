@@ -3,7 +3,6 @@ package com.azkar.app.ui
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.Tracking
@@ -24,6 +23,6 @@ class CompleteFragment : Fragment(R.layout.fragment_complete) {
     }
 
     companion object {
-        fun of(name: String, key: String) = CompleteFragment().apply { arguments = bundleOf("name" to name, "key" to key) }
+        fun of(name: String, key: String) = CompleteFragment().apply { arguments = Bundle().apply { putString("name", name); putString("key", key) } }
     }
 }

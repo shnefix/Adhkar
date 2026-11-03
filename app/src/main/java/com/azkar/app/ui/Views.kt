@@ -19,6 +19,7 @@ class RingView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nu
     private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.track) }
     private val arc = Paint(Paint.ANTI_ALIAS_FLAG)
     private val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.bg) }
+    private val oval = RectF()
 
     init { setWillNotDraw(false) }
 
@@ -34,13 +35,17 @@ class RingView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nu
         canvas.drawCircle(cx, cy, r, track)
         if (deg > 0f) {
             arc.color = arcColor
-            canvas.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -90f, deg, true, arc)
+            oval.set(cx - r, cy - r, cx + r, cy + r)
+            canvas.drawArc(oval, -90f, deg, true, arc)
         }
         canvas.drawCircle(cx, cy, 61f * d, inner)
     }
 }
 
-/** Card-follows-finger swipe layout. dir: +1 = next (swipe left), -1 = previous (swipe right). */
+/**
+ * Card-follows-finger swipe layout. dir: +1 = next, -1 = previous. Next is a swipe left, or a swipe right in a
+ * right-to-left (Arabic) layout, the way pages turn in an Arabic book.
+ */
 class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : LinearLayout(ctx, attrs) {
     var card: View? = null
     var canPage: ((Int) -> Boolean)? = null
@@ -98,7 +103,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     }
 
     private fun finishTap(e: MotionEvent) {
-        if (tapEnabled && tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) next()
+        if (tapEnabled && tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) performClick()
         tapOk = false
     }
 
@@ -143,7 +148,19 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         return true
     }
 
-    private fun dirOf(t: Float) = if (t < 0f) 1 else -1   // finger moved left -> next
+    private val rtl get() = layoutDirection == View.LAYOUT_DIRECTION_RTL
+
+    private fun dirOf(t: Float) = if ((t < 0f) != rtl) 1 else -1   // finger moved left (right in RTL) -> next
+
+    /** Sign of the screen side the card leaves toward when moving [dir]. */
+    private fun outSide(dir: Int) = if (rtl) dir else -dir
+
+    /** Screen readers can't swipe: tapping the card is reported as a click, which moves to the next zikr. */
+    override fun performClick(): Boolean {
+        super.performClick()
+        next()
+        return true
+    }
 
     private fun drag(dx: Float) {
         val c = card ?: return
@@ -186,18 +203,25 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         if (busy || finishing) return
         if (canPage?.invoke(1) == true) commit(c, 1)
         else if (canFinish?.invoke() == true) fireFinish()
-        else c.animate().translationX(-12 * dp).setDuration(90)
+        else c.animate().translationX(outSide(1) * 12 * dp).setDuration(90)
             .withEndAction { c.animate().translationX(0f).setDuration(160).start() }.start()
+    }
+
+    /** Previous zikr, if there is one (never finishes). */
+    fun previous() {
+        val c = card ?: return
+        if (busy || finishing) return
+        if (canPage?.invoke(-1) == true) commit(c, -1)
     }
 
     private fun commit(c: View, dir: Int) {
         busy = true
         val w = width.toFloat()
-        c.animate().translationX(-dir * w).alpha(0f).setDuration(140)
+        c.animate().translationX(outSide(dir) * w).alpha(0f).setDuration(140)
             .setInterpolator(android.view.animation.AccelerateInterpolator())
             .withEndAction {
                 onPage?.invoke(dir)
-                c.translationX = dir * w * 0.35f   // new card enters from the side you swiped toward
+                c.translationX = -outSide(dir) * w * 0.35f   // new card enters from the side you swiped toward
                 c.alpha = 0f
                 c.animate().translationX(0f).alpha(1f).setDuration(220)
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
@@ -212,6 +236,7 @@ class ToggleSwitch @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? 
         set(v) { field = v; invalidate() }
     var onToggle: ((Boolean) -> Unit)? = null
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val trackRect = RectF()
 
     init {
         isClickable = true
@@ -224,10 +249,20 @@ class ToggleSwitch @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? 
         val left = width - 52f * d
         val top = (height - 32f * d) / 2f
         p.color = context.getColor(if (on) R.color.gold else R.color.track)
-        c.drawRoundRect(RectF(left, top, left + 52f * d, top + 32f * d), 16f * d, 16f * d, p)
+        trackRect.set(left, top, left + 52f * d, top + 32f * d)
+        c.drawRoundRect(trackRect, 16f * d, 16f * d, p)
         p.color = context.getColor(if (on) R.color.bg else R.color.muted)
         val kx = left + (if (on) 24f else 4f) * d + 12f * d
         c.drawCircle(kx, top + 4f * d + 12f * d, 12f * d, p)
+    }
+
+    /** TalkBack announces it as a switch and reads whether it is on. */
+    override fun onInitializeAccessibilityNodeInfo(info: android.view.accessibility.AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = android.widget.Switch::class.java.name
+        info.isCheckable = true
+        @Suppress("DEPRECATION")   // the replacement, setChecked(int), only exists on Android 16+
+        info.isChecked = on
     }
 }
 

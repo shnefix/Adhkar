@@ -3,7 +3,7 @@
 <LinearLayout android:orientation="vertical" android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:paddingTop="56dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
 <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="@string/back_to_home" android:clickable="true" android:focusable="true">
-<ImageView android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
 <TextView style="@style/TB" android:text="@string/customize" android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <TextView style="@style/TB" android:text="@string/done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>

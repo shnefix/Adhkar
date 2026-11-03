@@ -14,7 +14,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.azkar.app.AzkarNotifier
 import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.data.Schedule
@@ -139,26 +138,22 @@ object ReminderScheduler {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
-        if (s.id == PrayerSessions.SLEEP_SCHEDULE) {
-            // Opens the reminder's folder; older installs saved "sleep", which is no folder, so use the default one.
-            val folder = s.open?.takeIf { Store.folder(it) != null }
-                ?: PrayerSessions.SLEEP_FOLDER.takeIf { Store.folder(it) != null }
-            AzkarNotifier.showBeforeSleep(ctx, folder)
-            return
-        }
         // A morning / evening reminder only lives until Dhuhr / Maghrib; one arriving after that is dropped.
         val now = System.currentTimeMillis()
         val endsAt = PrayerSessions.forSchedule(s.id)?.let { PrayerSessions.endAfter(it, now) }
         val nid = 100 + (s.id.hashCode() and 0xFFFF)
+        // A deleted folder just opens the app; a before-sleep reminder without a folder opens the sleep azkar.
+        val folder = s.open?.takeIf { Store.folder(it) != null }
+            ?: PrayerSessions.SLEEP_FOLDER.takeIf { s.id == PrayerSessions.SLEEP_SCHEDULE && Store.folder(it) != null }
         val open = PendingIntent.getActivity(
             ctx, nid,
             Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                .apply { s.open?.let { putExtra("open", it) } },
+                .apply { folder?.let { putExtra("open", it) } },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         // Android's own template (no custom view): Android 12+ always draws a system frame around custom
         // views, so a custom dark box can't fill the notification. The folder's Arabic name joins the title.
-        val ar = s.open?.let { Store.folder(it)?.name }   // no folder (or a deleted one): title alone
+        val ar = folder?.let { Store.folder(it)?.name }   // no folder (or a deleted one): title alone
         val title = if (ar.isNullOrEmpty()) s.title else "${s.title} · $ar"
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_bell_1p75)

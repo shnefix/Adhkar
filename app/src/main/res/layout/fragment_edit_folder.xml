@@ -33,7 +33,7 @@
                 android:clickable="true"
                 android:focusable="true">
 
-                <ImageView
+                <ImageView android:importantForAccessibility="no"
                     android:src="@drawable/ic_chev_l_2"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
@@ -80,7 +80,7 @@
                 android:layout_marginTop="8dp"
                 android:layout_width="match_parent">
 
-                <ImageView
+                <ImageView android:importantForAccessibility="no"
                     android:src="@drawable/ic_folder_1p75"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
@@ -318,7 +318,7 @@
             android:layout_marginTop="16dp"
             android:layout_width="match_parent">
 
-            <ImageView
+            <ImageView android:importantForAccessibility="no"
                 android:src="@drawable/ic_plus_2p25"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
