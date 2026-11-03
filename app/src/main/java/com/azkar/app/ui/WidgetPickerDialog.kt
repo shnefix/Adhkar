@@ -217,7 +217,9 @@ internal class WidgetPickerDialog(
                 context,
                 item.kind.ordinal,
                 Intent(context, WidgetPinReceiver::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                // Mutable so the launcher can add EXTRA_APPWIDGET_ID; safe because the intent is explicit.
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
             )
             try {
                 manager.requestPinAppWidget(ComponentName(context, provider), null, callback)

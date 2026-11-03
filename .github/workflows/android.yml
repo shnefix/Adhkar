@@ -15,6 +15,6 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - name: Check and build
-        run: ./gradlew testDebugUnitTest assembleDebugAndroidTest
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest
       - name: Check release build
         run: ./gradlew assembleRelease

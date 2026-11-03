@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,15 +20,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    val hasReleaseSigning = providers.gradleProperty("AZKAR_STORE_FILE").isPresent
+    // Release signing comes from the git-ignored keystore.properties (see keystore.properties.example).
+    // Without it, assembleRelease still works and produces an unsigned APK.
+    val keystoreFile = rootProject.file("keystore.properties")
+    val keystore = Properties().apply { if (keystoreFile.exists()) keystoreFile.inputStream().use { load(it) } }
+    val hasReleaseSigning = keystore.getProperty("storeFile") != null
     signingConfigs {
-        create("release") {
-            val storeFilePath = providers.gradleProperty("AZKAR_STORE_FILE").orNull
-            if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
-                storePassword = providers.gradleProperty("AZKAR_STORE_PASSWORD").orNull
-                keyAlias = providers.gradleProperty("AZKAR_KEY_ALIAS").orNull
-                keyPassword = providers.gradleProperty("AZKAR_KEY_PASSWORD").orNull
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(keystore.getProperty("storeFile"))
+                storePassword = keystore.getProperty("storePassword")
+                keyAlias = keystore.getProperty("keyAlias")
+                keyPassword = keystore.getProperty("keyPassword")
             }
         }
     }
@@ -38,13 +43,27 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // CI can verify the shrunk artifact without storing production credentials.
-            signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
         }
+    }
+    lint {
+        // Release blockers fail the build; everything else stays a warning.
+        abortOnError = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+// Adhkar-<versionName>.apk for release, Adhkar-<versionName>-debug.apk for debug.
+androidComponents {
+    onVariants { variant ->
+        val suffix = if (variant.buildType == "release") "" else "-${variant.buildType}"
+        variant.outputs.forEach { output ->
+            (output as com.android.build.api.variant.impl.VariantOutputImpl)
+                .outputFileName.set("Adhkar-${output.versionName.get()}$suffix.apk")
+        }
     }
 }
 

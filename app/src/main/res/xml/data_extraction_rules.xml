@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: what Android's own backup and device transfer copy. Widget settings are keyed by
+     launcher widget ids, which differ on another device, so they are left out. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="azkar_widgets.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="azkar_widgets.xml" />
+    </device-transfer>
+</data-extraction-rules>

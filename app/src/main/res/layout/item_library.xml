@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="horizontal" android:layout_height="64dp" android:paddingHorizontal="16dp" android:gravity="center_vertical" android:background="@drawable/bg_card18" android:clickable="true" android:focusable="true" android:layout_width="match_parent">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orientation="horizontal" android:layout_height="64dp" android:paddingHorizontal="16dp" android:gravity="center_vertical" android:background="@drawable/bg_card18" android:clickable="true" android:focusable="true" android:layout_width="match_parent">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon20">
-<ImageView android:src="@drawable/ic_sun_1p75" android:layout_width="22dp" android:layout_height="22dp" android:tint="@color/teal" android:id="@+id/ic" android:layout_gravity="center"/>
+<ImageView android:src="@drawable/ic_sun_1p75" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/teal" android:id="@+id/ic" android:layout_gravity="center"/>
 <TextView android:id="@+id/emoji" android:visibility="gone" android:textSize="20sp" android:includeFontPadding="false" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_marginStart="14dp" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:text="" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/Ar" android:text="" android:textSize="18sp" android:textColor="@color/muted" android:lineHeight="25.2sp" android:textDirection="rtl" android:gravity="left" android:id="@+id/sub_ar" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
-<ImageView android:src="@drawable/ic_chev_r_2" android:layout_width="20dp" android:layout_height="20dp" android:tint="@color/muted"/>
+<ImageView android:src="@drawable/ic_chev_r_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/muted"/>
 </LinearLayout>

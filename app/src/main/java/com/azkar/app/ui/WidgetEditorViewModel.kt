@@ -104,8 +104,9 @@ class WidgetEditorViewModel @Inject constructor(
             if (previousFolder == placed.config.folder) {
                 WidgetStore.saveProgress(context, id, progress.first, progress.second)
             }
-            // update() also (re)schedules the refresh alarm, or cancels it when refreshMinutes <= 0.
             NewWidgetUpdater.update(context, AppWidgetManager.getInstance(context), family, id)
+            // (Re)arms the refresh alarm, or cancels it when refreshMinutes <= 0.
+            NewWidgetUpdater.scheduleRefresh(context, family, id)
             return
         }
         WidgetStore.setConfig(context, id, placed.config.style, placed.config.folder, placed.config.appearance)

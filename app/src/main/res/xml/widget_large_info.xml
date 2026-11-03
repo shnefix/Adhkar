@@ -4,7 +4,7 @@
     android:minResizeWidth="250dp" android:minResizeHeight="250dp"
     android:targetCellWidth="4" android:targetCellHeight="4"
     android:resizeMode="horizontal|vertical"
-    android:updatePeriodMillis="1800000"
+    android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_plain"
     android:configure="com.azkar.app.widgets.WidgetConfigActivity"
     android:widgetCategory="home_screen"

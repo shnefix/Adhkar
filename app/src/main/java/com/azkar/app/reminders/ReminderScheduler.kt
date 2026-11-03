@@ -21,9 +21,7 @@ import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.azkar.app.launchWhenReady
 
 object ReminderScheduler {
     const val CHANNEL = "azkar_reminders_v2"
@@ -160,7 +158,7 @@ object ReminderScheduler {
         )
         // Android's own template (no custom view): Android 12+ always draws a system frame around custom
         // views, so a custom dark box can't fill the notification. The folder's Arabic name joins the title.
-        val ar = s.open?.let { Store.folderName(it).takeUnless { name -> name == "Anytime" } }
+        val ar = s.open?.let { Store.folder(it)?.name }   // no folder (or a deleted one): title alone
         val title = if (ar.isNullOrEmpty()) s.title else "${s.title} · $ar"
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_bell_1p75)
@@ -180,48 +178,36 @@ object ReminderScheduler {
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
-        Store.init(ctx)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Store.awaitReady()
-                ReminderScheduler.createChannel(ctx)
-                val id = intent.getStringExtra("id") ?: return@launch
-                ReminderScheduler.nudgeSession(id)?.let { session ->
-                    // Only while that session is still running; the check for "finished" is in notifyNudge.
-                    if (AppPrefs.notificationsOn() && AppPrefs.nudgeOn() && Tracking.isTracked(session.folderId) &&
-                        PrayerSessions.inSession(session, System.currentTimeMillis()) == true
-                    ) ReminderScheduler.notifyNudge(ctx, session)
-                    ReminderScheduler.scheduleNudges(ctx)
-                    return@launch
-                }
-                val s = Store.schedule(id) ?: return@launch
-                if (!AppPrefs.notificationsOn() || !s.enabled) return@launch
-                // A delayed alarm that lands after Dhuhr / Maghrib skips today's reminder.
-                val late = PrayerSessions.forSchedule(id)?.let { PrayerSessions.inSession(it, System.currentTimeMillis()) } == false
-                if (!late) ReminderScheduler.notify(ctx, s)
-                ReminderScheduler.schedule(ctx, s)
-            } finally {
-                pending.finish()
+        launchWhenReady(ctx) {
+            ReminderScheduler.createChannel(ctx)
+            val id = intent.getStringExtra("id") ?: return@launchWhenReady
+            ReminderScheduler.nudgeSession(id)?.let { session ->
+                // Only while that session is still running; the check for "finished" is in notifyNudge.
+                if (AppPrefs.notificationsOn() && AppPrefs.nudgeOn() && Tracking.isTracked(session.folderId) &&
+                    PrayerSessions.inSession(session, System.currentTimeMillis()) == true
+                ) ReminderScheduler.notifyNudge(ctx, session)
+                ReminderScheduler.scheduleNudges(ctx)
+                return@launchWhenReady
             }
+            val s = Store.schedule(id) ?: return@launchWhenReady
+            if (!AppPrefs.notificationsOn() || !s.enabled) return@launchWhenReady
+            // A delayed alarm that lands after Dhuhr / Maghrib skips today's reminder.
+            val late = PrayerSessions.forSchedule(id)?.let { PrayerSessions.inSession(it, System.currentTimeMillis()) } == false
+            if (!late) ReminderScheduler.notify(ctx, s)
+            ReminderScheduler.schedule(ctx, s)
         }
     }
 }
 
+/** Re-arms every reminder after a reboot, or as exact alarms once that permission is granted. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Store.init(ctx)
-            val pending = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    Store.awaitReady()
-                    ReminderScheduler.createChannel(ctx)
-                    ReminderScheduler.rescheduleAll(ctx)
-                } finally {
-                    pending.finish()
-                }
-            }
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+        ) return
+        launchWhenReady(ctx) {
+            ReminderScheduler.createChannel(ctx)
+            ReminderScheduler.rescheduleAll(ctx)
         }
     }
 }

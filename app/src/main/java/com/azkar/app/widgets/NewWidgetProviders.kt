@@ -11,9 +11,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.widget.RemoteViews
 import com.azkar.app.R
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.azkar.app.launchWhenReady
 
 /** [tracking] families draw [TrackingModel] and are only offered while a folder is tracked. */
 enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKind, val tracking: Boolean = false) {
@@ -39,35 +37,19 @@ enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKin
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        com.azkar.app.data.Store.init(context)
         WidgetClockReceiver.scheduleMidnight(context)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                com.azkar.app.data.Store.awaitReady()
-                // Widgets that show a countdown would be up to an hour out of date with the usual hourly refresh.
-                if (family in NewWidgetUpdater.COUNTDOWN_FAMILIES) {
-                    ids.forEach { WidgetStore.setDefaultRefresh(context, it, NewWidgetUpdater.COUNTDOWN_REFRESH_MINUTES) }
-                }
-                NewWidgetUpdater.updateIds(context, manager, family, ids)
-                ids.forEach { NewWidgetUpdater.scheduleRefresh(context, family, it) }
-            } finally {
-                pending.finish()
+        launchWhenReady(context) {
+            // Widgets that show a countdown would be up to an hour out of date with the usual hourly refresh.
+            if (family in NewWidgetUpdater.COUNTDOWN_FAMILIES) {
+                ids.forEach { WidgetStore.setDefaultRefresh(context, it, NewWidgetUpdater.COUNTDOWN_REFRESH_MINUTES) }
             }
+            NewWidgetUpdater.updateIds(context, manager, family, ids)
+            ids.forEach { NewWidgetUpdater.scheduleRefresh(context, family, it) }
         }
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: android.os.Bundle) {
-        com.azkar.app.data.Store.init(context)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                com.azkar.app.data.Store.awaitReady()
-                NewWidgetUpdater.update(context, manager, family, id)
-            } finally {
-                pending.finish()
-            }
-        }
+        launchWhenReady(context) { NewWidgetUpdater.update(context, manager, family, id) }
     }
 
     override fun onDeleted(context: Context, ids: IntArray) {
@@ -76,27 +58,10 @@ abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : 
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        // Only redraws are accepted here: this provider is exported, so taps go to WidgetActionReceiver.
         if (intent.action in setOf(ACTION_REFRESH, ACTION_BOUNDARY) && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            NewWidgetUpdater.update(context, AppWidgetManager.getInstance(context), family, id)
-        } else if (intent.action in setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO) &&
-            id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            val pending = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    com.azkar.app.data.Store.init(context)
-                    com.azkar.app.data.Store.awaitReady()
-                    when (intent.action) {
-                        ACTION_COUNT -> WidgetLogic.tap(context, id, family.kind)
-                        ACTION_RESET -> WidgetLogic.reset(context, id)
-                        ACTION_NEXT -> WidgetLogic.next(context, id, family.kind)
-                        ACTION_UNDO -> WidgetLogic.undo(context, id, family.kind)
-                    }
-                    NewWidgetUpdater.updateAll(context)
-                } finally {
-                    pending.finish()
-                }
-            }
-        } else {
+            launchWhenReady(context) { NewWidgetUpdater.update(context, AppWidgetManager.getInstance(context), family, id) }
+        } else if (intent.action !in WidgetActionReceiver.ACTIONS) {
             super.onReceive(context, intent)
         }
     }
@@ -191,7 +156,6 @@ object NewWidgetUpdater {
                 rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
             }
         }
-        scheduleRefresh(context, family, id)
         manager.updateAppWidget(id, rv)
     }
 
@@ -213,9 +177,11 @@ object NewWidgetUpdater {
     }
 
     private fun action(context: Context, family: AzkarWidgetFamily, id: Int, action: String): PendingIntent {
-        val intent = Intent(context, providers.getValue(family)).setAction(action)
+        val target = if (action in WidgetActionReceiver.ACTIONS) WidgetActionReceiver::class.java else providers.getValue(family)
+        val intent = Intent(context, target).setAction(action)
             .setData(Uri.parse("azkar://new-widget/${family.name}/$id/$action"))
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            .putExtra(WidgetActionReceiver.EXTRA_FAMILY, family.name)
         return PendingIntent.getBroadcast(context, id * 1000 + family.ordinal * 10 + action.hashCode().and(7), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }

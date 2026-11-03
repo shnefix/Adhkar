@@ -5,10 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.azkar.app.data.Store
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.azkar.app.launchWhenReady
 import java.util.Calendar
 
 /**
@@ -18,17 +15,8 @@ import java.util.Calendar
 class WidgetClockReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in HANDLED) return
-        Store.init(context)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Store.awaitReady()
-                WidgetUpdater.updateAll(context)
-            } finally {
-                scheduleMidnight(context)
-                pending.finish()
-            }
-        }
+        scheduleMidnight(context)
+        launchWhenReady(context) { WidgetUpdater.updateAll(context) }
     }
 
     companion object {

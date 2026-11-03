@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Azkar</string>
+    <string name="app_name" translatable="false">Adhkar</string>
+    <string name="widget_config_label">Configure Adhkar widget</string>
+    <string name="data_load_failed">Azkar data could not be loaded.</string>
+    <string name="anytime">Anytime</string>
     <string name="widget_done">Done</string>
     <string name="widget_tasbih">Tasbih</string>
     <string name="widget_reset">Reset</string>
@@ -51,8 +54,8 @@
     <string name="reminders_on_count">%1$d of %2$d reminders on</string>
     <string name="channel_name">Daily reminders</string>
     <string name="channel_description">Your azkar reminders</string>
-    <string name="before_sleep_en">Before sleep</string>
-    <string name="before_sleep_ar">أذكار النوم</string>
+    <string name="before_sleep_en" translatable="false">Before sleep</string>
+    <string name="before_sleep_ar" translatable="false">أذكار النوم</string>
     <string name="azkar_widget_b_small_label">Azkar tap disc small</string><string name="azkar_widget_b_small_desc">Azkar tap disc, small</string>
     <string name="azkar_widget_b_medium_label">Azkar tap disc medium</string><string name="azkar_widget_b_medium_desc">Azkar tap disc, medium</string>
     <string name="azkar_widget_d_small_label">Azkar morning and evening small</string><string name="azkar_widget_d_small_desc">Morning and evening azkar, small</string>

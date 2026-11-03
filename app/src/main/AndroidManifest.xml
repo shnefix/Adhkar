@@ -9,8 +9,10 @@
     <application
         android:name=".AzkarApp"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="Azkar"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Azkar">
@@ -30,6 +32,7 @@
         <receiver android:name=".reminders.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
         <receiver android:name=".widgets.WidgetClockReceiver" android:exported="true">
@@ -39,7 +42,7 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Azkar - Small">
+        <receiver android:name=".widgets.SmallWidgetProvider" android:exported="true" android:label="Adhkar - Small">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -47,7 +50,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_small_info" />
         </receiver>
-        <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Azkar - Wide">
+        <receiver android:name=".widgets.MediumWidgetProvider" android:exported="true" android:label="Adhkar - Wide">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -55,7 +58,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_medium_info" />
         </receiver>
-        <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Azkar - Large">
+        <receiver android:name=".widgets.LargeWidgetProvider" android:exported="true" android:label="Adhkar - Large">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -83,11 +86,13 @@
         <receiver android:name=".widgets.FBentoSmallWidgetProvider" android:enabled="false" android:exported="true" android:label="@string/azkar_widget_f_bento_small_label"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/azkar_widget_f_bento_small_info" /></receiver>
         <receiver android:name=".widgets.TTodayMediumWidgetProvider" android:enabled="false" android:exported="true" android:label="@string/azkar_widget_t_today_medium_label"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/azkar_widget_t_today_medium_info" /></receiver>
         <receiver android:name=".widgets.WidgetPinReceiver" android:exported="false" />
+        <!-- Widget taps that change counts: not exported, so other apps can't send them. -->
+        <receiver android:name=".widgets.WidgetActionReceiver" android:exported="false" />
         <!-- Widget config activity -->
         <activity
             android:name=".widgets.WidgetConfigActivity"
             android:exported="true"
-            android:label="Configure Azkar Widget"
+            android:label="@string/widget_config_label"
             android:theme="@style/Theme.Azkar.Config">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />

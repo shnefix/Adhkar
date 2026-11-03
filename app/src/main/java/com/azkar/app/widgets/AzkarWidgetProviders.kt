@@ -12,10 +12,7 @@ import android.os.Bundle
 import android.widget.RemoteViews
 import com.azkar.app.MainActivity
 import com.azkar.app.R
-import com.azkar.app.data.Store
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.azkar.app.launchWhenReady
 
 const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
@@ -27,30 +24,17 @@ const val ACTION_BOUNDARY = "com.azkar.app.widget.BOUNDARY"   // tracking widget
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {
 
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
-        Store.init(ctx)
         WidgetClockReceiver.scheduleMidnight(ctx)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Store.awaitReady()
-                ids.forEach { WidgetUpdater.update(ctx, mgr, it, kind) }
-            } finally {
-                pending.finish()
+        launchWhenReady(ctx) {
+            ids.forEach {
+                WidgetUpdater.update(ctx, mgr, it, kind)
+                WidgetUpdater.scheduleRefresh(ctx, it, kind)
             }
         }
     }
 
     override fun onAppWidgetOptionsChanged(ctx: Context, mgr: AppWidgetManager, id: Int, newOptions: Bundle) {
-        Store.init(ctx)
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Store.awaitReady()
-                WidgetUpdater.update(ctx, mgr, id, kind)
-            } finally {
-                pending.finish()
-            }
-        }
+        launchWhenReady(ctx) { WidgetUpdater.update(ctx, mgr, id, kind) }
     }
 
     override fun onDeleted(ctx: Context, ids: IntArray) {
@@ -62,33 +46,14 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
 
     override fun onReceive(ctx: Context, intent: Intent) {
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        // Only redraws are accepted here: this provider is exported, so taps go to WidgetActionReceiver.
         when (intent.action) {
-            ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_REFRESH -> {
+            ACTION_REFRESH -> {
                 if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
-                Store.init(ctx)
-                dispatch(ctx) {
-                    when (intent.action) {
-                        ACTION_COUNT -> WidgetLogic.tap(ctx, id, kind)
-                        ACTION_NEXT -> WidgetLogic.next(ctx, id, kind)
-                        ACTION_RESET -> WidgetLogic.reset(ctx, id)
-                    }
-                    WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind)
-                }
-                WidgetUpdater.scheduleRefresh(ctx, id, kind)
+                launchWhenReady(ctx) { WidgetUpdater.update(ctx, AppWidgetManager.getInstance(ctx), id, kind) }
             }
+            in WidgetActionReceiver.ACTIONS -> Unit
             else -> super.onReceive(ctx, intent)
-        }
-    }
-
-    private fun dispatch(ctx: Context, block: suspend () -> Unit) {
-        val pending = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                Store.awaitReady()
-                block()
-            } finally {
-                pending.finish()
-            }
         }
     }
 }
@@ -224,9 +189,11 @@ object WidgetUpdater {
     }
 
     private fun action(ctx: Context, id: Int, kind: WidgetKind, action: String): PendingIntent {
-        val i = Intent(ctx, providerClass(kind)).setAction(action)
+        val target = if (action in WidgetActionReceiver.ACTIONS) WidgetActionReceiver::class.java else providerClass(kind)
+        val i = Intent(ctx, target).setAction(action)
             .setData(Uri.parse("azkar://widget/$id/$action"))
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+            .putExtra(WidgetActionReceiver.EXTRA_KIND, kind.name)
         return PendingIntent.getBroadcast(ctx, id * 2 + (if (action == ACTION_COUNT) 0 else 1), i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }

@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
         }
+        setContentView(R.layout.activity_main)
         var contentShown = false
         lifecycleScope.launch {
             try {
@@ -59,8 +60,9 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
                     }
                     com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(this@MainActivity)
-                    setContentView(R.layout.activity_main)
-                    if (savedInstanceState == null) {
+                    // The container is set in onCreate so restored fragments have somewhere to attach;
+                    // show Home only when nothing was restored (fresh start or empty state).
+                    if (supportFragmentManager.findFragmentById(R.id.container) == null) {
                         showRoot(HomeFragment())
                         handleIntent(intent)
                     }
@@ -73,7 +75,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Azkar", "Unable to initialize application data", e)
-                Toast.makeText(this@MainActivity, "Azkar data could not be loaded.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, R.string.data_load_failed, Toast.LENGTH_LONG).show()
             }
         }
     }

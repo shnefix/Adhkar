@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="widget_config_label">إعداد ويدجت الأذكار</string>
+    <string name="data_load_failed">تعذّر تحميل بيانات الأذكار.</string>
+    <string name="anytime">أي وقت</string>
     <string name="widget_done">تم</string>
     <string name="widget_tasbih">تسبيح</string>
     <string name="widget_reset">إعادة ضبط</string>
@@ -195,4 +198,30 @@
     <string name="nudge_setting_off">متوقف</string>
     <string name="nudge_lead_title">قبل كم؟</string>
     <string name="nudge_lead_option">قبل الظهر / المغرب بـ %1$d دقيقة</string>
+    <string name="data_recovered">تعذّرت استعادة بعض البيانات المحفوظة لتلفها. حُمّلت الأذكار الافتراضية؛ يُرجى استيراد نسخة احتياطية إن وُجدت.</string>
+    <string name="exact_alarm_help">التوقيت الدقيق غير متاح، لذا قد تتأخر التذكيرات. اسمح بالوصول إلى المنبّهات للحصول على أوقات دقيقة؛ وبعض الهواتف تتطلب أيضًا إزالة قيود البطارية.</string>
+    <string name="settings">الإعدادات</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="reminders">التذكيرات</string>
+    <string name="reading">القراءة</string>
+    <string name="appearance">المظهر</string>
+    <string name="add_reminder">إضافة تذكير</string>
+    <string name="no_reminders">لا توجد تذكيرات بعد. أضف أول تذكير بالأسفل.</string>
+    <string name="completion_screen">شاشة الإتمام</string>
+    <string name="completion_screen_summary">عرض ملخص عند إتمام مجموعة</string>
+    <string name="tap_to_advance">اضغط للتقدّم</string>
+    <string name="tap_to_advance_summary">الضغط على البطاقة ينقلك إلى الذكر التالي</string>
+    <string name="keep_screen_on">إبقاء الشاشة مضاءة</string>
+    <string name="keep_screen_on_summary">أثناء القراءة</string>
+    <string name="arabic_text_size">حجم النص العربي</string>
+    <string name="theme">السمة</string>
+    <string name="back">رجوع</string>
+    <string name="all_notifications">كل الإشعارات</string>
+    <string name="completion_screen_description">شاشة الإتمام</string>
+    <string name="widget_preview_unavailable">المعاينة غير متاحة</string>
+    <string name="widget_small_desc">الأذكار · صغير</string>
+    <string name="widget_medium_desc">الأذكار · عريض</string>
+    <string name="widget_large_desc">الأذكار · كبير</string>
+    <string name="widget_folder_title">أي مجلد؟</string>
+    <string name="widget_style_title">نمط الويدجت</string>
 </resources>

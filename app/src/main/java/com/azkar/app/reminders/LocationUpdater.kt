@@ -55,11 +55,14 @@ object LocationUpdater {
             Location.distanceBetween(old.first, old.second, loc.latitude, loc.longitude, it)
         }[0] > RESCHEDULE_METERS
         if (moved) {
-            ReminderScheduler.rescheduleAll(ctx)
-            // Widgets drawn with the old (or no) location show the wrong prayer windows until their next refresh.
+            // Off the main thread: rescheduling reads Store, and the location callback runs on the main executor.
             CoroutineScope(Dispatchers.IO).launch {
-                runCatching { Store.awaitReady(); WidgetUpdater.updateAll(ctx) }
-                    .onFailure { android.util.Log.w("Azkar", "Widget refresh after location change failed", it) }
+                runCatching {
+                    Store.awaitReady()
+                    ReminderScheduler.rescheduleAll(ctx)
+                    // Widgets drawn with the old (or no) location show the wrong prayer windows until their next refresh.
+                    WidgetUpdater.updateAll(ctx)
+                }.onFailure { android.util.Log.w("Azkar", "Reschedule after location change failed", it) }
             }
         }
     }

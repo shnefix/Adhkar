@@ -135,7 +135,12 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 }
             view.findViewById<View>(R.id.exact_row).setOnClickListener {
             if (Build.VERSION.SDK_INT >= 31) {
-                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
+                // Some devices ship without this settings screen.
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName)))
+                } catch (e: android.content.ActivityNotFoundException) {
+                    android.util.Log.w("Azkar", "No exact alarm settings screen", e)
+                }
             }
         }
 
