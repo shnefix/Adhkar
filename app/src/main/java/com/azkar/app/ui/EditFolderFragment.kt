@@ -12,16 +12,25 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
+    private val viewModel: FolderViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
-        val id = requireArguments().getString("id") ?: ""
-        val folder = Store.folder(id)
+        // The Store snapshot is updated synchronously, so it can seed the form before Room emits.
+        val folder = Store.folder(viewModel.id)
         if (folder == null) { nav().pop(); return }
+        var current: FolderState? = null
 
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
 
@@ -33,89 +42,90 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val t = s?.toString()?.trim().orEmpty()
-                if (t.isNotEmpty()) Store.renameFolder(id, t)
+                if (t.isNotEmpty()) viewModel.rename(t)
             }
         })
 
         // Show on Home
         val sw = view.findViewById<ToggleSwitch>(R.id.sw_home)
-        sw.on = id !in Store.hidden()
-        sw.onToggle = { on -> Store.setHidden(if (on) Store.hidden() - id else Store.hidden() + id) }
-
-// Library position
-        // Note: libUp and lib_down were removed from the UI, but Store.moveFolder stays
-        // because Customize Home still uses it.
+        sw.on = viewModel.isOnHome()
+        sw.onToggle = { on -> viewModel.setOnHome(on) }
 
         val iconBtn = view.findViewById<TextView>(R.id.icon_btn)
-        fun renderIcon() {
-            val e = Store.folder(id)?.icon
-            iconBtn.text = e ?: "Default"
-            iconBtn.textSize = if (e == null) 14f else 24f
+        fun renderIcon(icon: String?) {
+            iconBtn.text = icon ?: "Default"
+            iconBtn.textSize = if (icon == null) 14f else 24f
         }
-        iconBtn.setOnClickListener { pickEmoji(Store.folder(id)?.icon) { Store.setFolderIcon(id, it); renderIcon() } }
-        renderIcon()
+        iconBtn.setOnClickListener {
+            pickEmoji(Store.folder(viewModel.id)?.icon) { viewModel.setIcon(it); renderIcon(it) }
+        }
+        renderIcon(folder.icon)
 
         val swRem = view.findViewById<ToggleSwitch>(R.id.sw_remember)
         val remSub = view.findViewById<TextView>(R.id.remember_sub)
         fun renderRem() {
             remSub.text = if (swRem.on) "Resumes where you stopped in this folder" else "This folder always starts from the beginning"
         }
-        swRem.on = Store.rememberPosition(id)
+        swRem.on = viewModel.remembersPosition()
         renderRem()
-        swRem.onToggle = { on -> Store.setFolderRemember(id, on); renderRem() }
+        swRem.onToggle = { on -> viewModel.setRemember(on); renderRem() }
 
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
         val empty = view.findViewById<View>(R.id.empty)
         val label = view.findViewById<TextView>(R.id.order_label)
 
-        fun renderRows() {
-            val list = Store.zikrsIn(id)
+        fun renderRows(state: FolderState) {
+            val list = state.zikrs
             label.text = "Order · " + list.size + if (list.size == 1) " zikr" else " azkar"
             empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
             rows.removeAllViews()
             val last = list.size - 1
             list.forEachIndexed { idx, z ->
+                val hid = z.id in state.hidden
                 val v = layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
                 v.findViewById<TextView>(R.id.ar).text = z.arabic
-                v.findViewById<TextView>(R.id.line).text = "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (Store.hiddenZikrs().contains(z.id)) " · Hidden" else "")
-val hid = Store.hiddenZikrs().contains(z.id)
-v.findViewById<ImageView>(R.id.hide_ic).apply {
-    setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
-    imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
-}
-v.alpha = if (hid) 0.55f else 1f
-v.findViewById<View>(R.id.hide).setOnClickListener { Store.setZikrsHidden(listOf(z.id), !hid); renderRows() }
+                v.findViewById<TextView>(R.id.line).text =
+                    "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · Hidden" else "")
+                v.findViewById<ImageView>(R.id.hide_ic).apply {
+                    setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
+                    imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
+                }
+                v.alpha = if (hid) 0.55f else 1f
+                v.findViewById<View>(R.id.hide).setOnClickListener { viewModel.setHidden(listOf(z.id), !hid) }
                 val up = v.findViewById<View>(R.id.up)
                 val down = v.findViewById<View>(R.id.down)
                 up.alpha = if (idx == 0) 0.35f else 1f
                 down.alpha = if (idx == last) 0.35f else 1f
-                fun move(d: Int) {
-                    val ids = list.map { it.id }.toMutableList()
-                    val t = ids[idx]; ids[idx] = ids[idx + d]; ids[idx + d] = t
-                    Store.reorderFolder(id, ids)
-                    renderRows()
-                }
-                up.setOnClickListener { if (idx > 0) move(-1) }
-                down.setOnClickListener { if (idx < last) move(1) }
+                up.setOnClickListener { viewModel.move(z.id, -1) }
+                down.setOnClickListener { viewModel.move(z.id, 1) }
                 v.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
-                v.findViewById<View>(R.id.remove).setOnClickListener { Store.unfile(z.id); renderRows() }
+                v.findViewById<View>(R.id.remove).setOnClickListener { viewModel.unfile(z.id) }
                 rows.addView(v, Ui.lp(top = if (idx > 0) 8 else 0, ctx = ctx))
             }
         }
-        renderRows()
 
-        view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(id)) }
+        view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(viewModel.id)) }
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {
-            val n = Store.zikrsIn(id).size
-            val doDelete = { Store.deleteFolder(id); nav().pop() }
+            val n = current?.zikrs?.size ?: Store.zikrsIn(viewModel.id).size
+            val doDelete = { viewModel.delete(); nav().pop() }
             if (n == 0) doDelete()
             else AlertDialog.Builder(ctx)
-                .setTitle("Delete \"${Store.folderName(id)}\"?")
+                .setTitle("Delete \"${Store.folderName(viewModel.id)}\"?")
                 .setMessage("This folder has $n azkar. They are not lost: they stay saved under Anytime.")
                 .setPositiveButton("Delete") { _, _ -> doDelete() }
                 .setNegativeButton("Cancel", null)
                 .show()
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.state.collect { state ->
+                    if (state == null || !state.exists) return@collect
+                    current = state
+                    renderRows(state)
+                }
+            }
         }
     }
 

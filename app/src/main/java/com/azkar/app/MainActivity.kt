@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
@@ -46,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                 repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                     if (contentShown) return@repeatOnLifecycle
                     Store.awaitReady()
-                    ThemeMode.apply(Store.theme())
+                    ThemeMode.apply(AppPrefs.theme())
                     if (Store.consumeRecoveryNotice()) {
                         Toast.makeText(this@MainActivity, R.string.data_recovered, Toast.LENGTH_LONG).show()
                     }

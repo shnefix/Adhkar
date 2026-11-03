@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.azkar.app.ThemeMode
 import com.azkar.app.R
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,7 +44,7 @@ class WidgetRendererTest {
         )
 
         for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
-            Store.setTheme(theme)
+            AppPrefs.setTheme(theme)
             for ((style, kind) in cases) {
                 val (width, height) = when (kind) {
                     WidgetKind.SMALL -> 158f to 158f
@@ -82,7 +83,7 @@ class WidgetRendererTest {
         Store.init(context)
         val empty = WidgetModel("Empty", emptyList(), emptyList(), 0, 0, "")
         for (theme in intArrayOf(ThemeMode.CURRENT, ThemeMode.OLED)) {
-            Store.setTheme(theme)
+            AppPrefs.setTheme(theme)
             val bitmap = WidgetRenderer(context).render(
                 WidgetStyle.CLASSIC, WidgetKind.SMALL, empty, -10f, 0f, 1f
             )
@@ -103,7 +104,7 @@ class WidgetRendererTest {
             0,
             ""
         )
-        Store.setTheme(ThemeMode.OLED)
+        AppPrefs.setTheme(ThemeMode.OLED)
         val bitmap = WidgetRenderer(context).render(
             WidgetStyle.CALLIGRAPHY, WidgetKind.MEDIUM, model, 338f, 158f, 1f
         )

@@ -7,26 +7,32 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
-import com.azkar.app.data.Store
 import com.azkar.app.data.Visibility
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 /** Lists a folder's azkar. Tap = read from there. Long-press or Select = hide or show several at once. */
+@AndroidEntryPoint
 class FolderFragment : Fragment(R.layout.fragment_folder_view) {
-    private var selecting = false
-    private val selected = LinkedHashSet<String>()
+    private val viewModel: FolderViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
-        val id = requireArguments().getString("id") ?: "anytime"
-        if (id != "anytime" && Store.folder(id) == null) { nav().pop(); return }   // deleted from the editor
+        val id = viewModel.id
+        val selected = viewModel.selected
+        var current: FolderState? = null
 
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
-        view.findViewById<TextView>(R.id.title).text = Store.folderName(id)
+        val title = view.findViewById<TextView>(R.id.title)
         view.findViewById<View>(R.id.btn_edit).apply {
-            if (id == "anytime") visibility = View.INVISIBLE
+            if (id == FolderState.ANYTIME) visibility = View.INVISIBLE
             else setOnClickListener { nav().push(EditFolderFragment.of(id)) }
         }
 
@@ -39,30 +45,32 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
         val btnHide = view.findViewById<View>(R.id.btn_hide)
         val btnShow = view.findViewById<View>(R.id.btn_show)
 
-        fun items() = if (id == "anytime") Store.zikrs().filter { it.folderId == null } else Store.zikrsIn(id)
-
         var refresh: () -> Unit = {}
         // While selecting, Back leaves selection mode instead of leaving the folder.
         val backCb = object : OnBackPressedCallback(false) {
-            override fun handleOnBackPressed() { selecting = false; selected.clear(); refresh() }
+            override fun handleOnBackPressed() { viewModel.selecting = false; selected.clear(); refresh() }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCb)
 
         val adapter = ZikrAdapter(
             onTap = { row ->
-                if (selecting) { if (!selected.remove(row.id)) selected.add(row.id); refresh() }
+                val state = current
+                if (viewModel.selecting) { if (!selected.remove(row.id)) selected.add(row.id); refresh() }
                 else if (row.hidden) Toast.makeText(ctx, "Hidden azkar are skipped while reading. Tap Select, then Show.", Toast.LENGTH_SHORT).show()
-                else nav().push(ReaderFragment.of(id, Visibility.readerIndex(items(), Store.hiddenZikrs(), row.id).coerceAtLeast(0)))
+                else if (state != null) nav().push(ReaderFragment.of(id, Visibility.readerIndex(state.zikrs, state.hidden, row.id).coerceAtLeast(0)))
             },
-            onLong = { row -> if (!selecting) { selecting = true; selected.add(row.id); refresh() } },
+            onLong = { row -> if (!viewModel.selecting) { viewModel.selecting = true; selected.add(row.id); refresh() } },
             onEdit = { zid -> nav().push(EditZikrFragment.of(zid)) }
         )
 
-        refresh = {
-            val hidden = Store.hiddenZikrs()
-            val list = items()
+        refresh = refresh@{
+            val state = current ?: return@refresh
+            val selecting = viewModel.selecting
+            val list = state.zikrs
+            val hidden = state.hidden
             selected.retainAll(list.map { it.id }.toSet())
             val nHidden = list.count { it.id in hidden }
+            title.text = state.name
             empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
             info.text = when (nHidden) { 0 -> ""; 1 -> "1 hidden"; else -> "$nHidden hidden" }
             btnSelect.text = if (selecting) "Cancel" else "Select"
@@ -75,19 +83,20 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
             adapter.submitList(list.map { ZRow(it.id, it.arabic, it.repeat, it.note, it.id in hidden, selecting, it.id in selected) })
         }
 
-        btnSelect.setOnClickListener { selecting = !selecting; selected.clear(); refresh() }
+        fun endSelection() { viewModel.selecting = false; selected.clear(); refresh() }
+        btnSelect.setOnClickListener { viewModel.selecting = !viewModel.selecting; selected.clear(); refresh() }
         btnAll.setOnClickListener {
-            val ids = items().map { it.id }
+            val ids = current?.zikrs?.map { it.id }.orEmpty()
             val all = selected.size == ids.size
             selected.clear()
             if (!all) selected.addAll(ids)
             refresh()
         }
         btnHide.setOnClickListener {
-            if (selected.isNotEmpty()) { Store.setZikrsHidden(selected.toList(), true); selecting = false; selected.clear(); refresh() }
+            if (selected.isNotEmpty()) { viewModel.setHidden(selected.toList(), true); endSelection() }
         }
         btnShow.setOnClickListener {
-            if (selected.isNotEmpty()) { Store.setZikrsHidden(selected.toList(), false); selecting = false; selected.clear(); refresh() }
+            if (selected.isNotEmpty()) { viewModel.setHidden(selected.toList(), false); endSelection() }
         }
 
         view.findViewById<RecyclerView>(R.id.list).apply {
@@ -97,7 +106,17 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
             addItemDecoration(Gap(8))
             itemAnimator = null
         }
-        refresh()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.state.collect { state ->
+                    if (state == null || current?.exists == false) return@collect
+                    if (!state.exists) { current = state; nav().pop(); return@collect }   // deleted from the editor
+                    current = state
+                    refresh()
+                }
+            }
+        }
     }
 
     companion object {

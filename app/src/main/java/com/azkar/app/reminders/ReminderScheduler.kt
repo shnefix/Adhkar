@@ -21,6 +21,7 @@ import com.azkar.app.MainActivity
 import com.azkar.app.R
 import com.azkar.app.ThemeMode
 import com.azkar.app.data.Schedule
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +67,7 @@ object ReminderScheduler {
 
     /** Schedules or cancels one reminder according to the global and individual switches. */
     fun apply(ctx: Context, s: Schedule) {
-        if (Store.notificationsOn() && s.enabled) schedule(ctx, s) else cancel(ctx, s.id)
+        if (AppPrefs.notificationsOn() && s.enabled) schedule(ctx, s) else cancel(ctx, s.id)
     }
 
     fun schedule(ctx: Context, s: Schedule) {
@@ -100,7 +101,7 @@ object ReminderScheduler {
         val ar = s.open?.let { Store.folderName(it).takeUnless { name -> name == "Anytime" } } ?: ""
         // The system UI inflates RemoteViews with the device's night setting, not ours,
         // so each theme has its own layout built only from colours that never flip.
-        val layout = if (Store.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
+        val layout = if (AppPrefs.theme() == ThemeMode.OLED) R.layout.notification_reminder_oled else R.layout.notification_reminder
         val rv = RemoteViews(ctx.packageName, layout).apply {
             setTextViewText(R.id.n_title, s.title)
             setTextViewText(R.id.n_body, s.message)
@@ -134,7 +135,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 ReminderScheduler.createChannel(ctx)
                 val id = intent.getStringExtra("id") ?: return@launch
                 val s = Store.schedule(id) ?: return@launch
-                if (!Store.notificationsOn() || !s.enabled) return@launch
+                if (!AppPrefs.notificationsOn() || !s.enabled) return@launch
                 ReminderScheduler.notify(ctx, s)
                 ReminderScheduler.schedule(ctx, s)
             } finally {

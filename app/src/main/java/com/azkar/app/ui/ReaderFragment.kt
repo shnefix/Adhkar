@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.ReaderResume
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 
 class ReaderFragment : Fragment(R.layout.fragment_reader) {
@@ -29,7 +30,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
-        view.keepScreenOn = Store.keepScreenOn()   // a view flag: released automatically when the reader goes away
+        view.keepScreenOn = AppPrefs.keepScreenOn()   // a view flag: released automatically when the reader goes away
         view.isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.ring).isHapticFeedbackEnabled = false
         view.findViewById<View>(R.id.btn_back).isHapticFeedbackEnabled = false
@@ -43,7 +44,7 @@ val (startIdx, startCount) = when {
     savedInstanceState != null -> savedInstanceState.getInt("i") to savedInstanceState.getInt("count")
     explicit >= 0 -> explicit to 0
     remember -> {
-        val sv = Store.savedPosition(key)
+        val sv = AppPrefs.savedPosition(key)
         ReaderResume.start(items.map { it.id }, items.map { it.target }, sv?.first, sv?.second ?: 0)
     }
     else -> 0 to 0
@@ -51,7 +52,7 @@ val (startIdx, startCount) = when {
 rn = ReaderNav(items.map { it.target }, startIdx, startCount)
         val folderTitle = Store.folderName(key)
         val title = if (Store.isDefaultFolder(key)) "$folderTitle azkar" else folderTitle
-        val sizeSp = Store.arabicSp()
+        val sizeSp = AppPrefs.arabicSp()
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)
         val track = ctx.getColor(R.color.track)
@@ -109,7 +110,7 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             hint.text = if (rn.isLast && cur.target > 1)
                 (if (done) "You have finished this collection" else "Tap the circle to count") else ""
-            if (remember && items[rn.index].id.isNotEmpty()) Store.savePosition(key, items[rn.index].id, rn.count)
+            if (remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
         }
 
         ring.setOnClickListener {
@@ -118,11 +119,11 @@ rn = ReaderNav(items.map { it.target }, startIdx, startCount)
 
         (view as SwipeLayout).apply {
             card = view.findViewById(R.id.card)
-            tapEnabled = Store.tapAdvance()
+            tapEnabled = AppPrefs.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
             onFinish = {
-                Store.clearPosition(key)
+                AppPrefs.clearPosition(key)
                 nav().finishReading()
             }
             onPage = { dir ->

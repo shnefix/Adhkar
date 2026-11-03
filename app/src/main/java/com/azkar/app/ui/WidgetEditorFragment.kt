@@ -1,51 +1,28 @@
 package com.azkar.app.ui
 
-import android.app.Dialog
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.content.Intent
-import android.app.PendingIntent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
-import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.SeekBar
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Store
-import com.azkar.app.widgets.AzkarWidgetFamily
 import com.azkar.app.widgets.AzkarWidgetSizes
-import com.azkar.app.widgets.LargeWidgetProvider
 import com.azkar.app.widgets.NewWidgetRenderer
-import com.azkar.app.widgets.MediumWidgetProvider
-import com.azkar.app.widgets.SmallWidgetProvider
 import com.azkar.app.widgets.WidgetKind
 import com.azkar.app.widgets.WidgetModel
 import com.azkar.app.widgets.WidgetStore
 import com.azkar.app.widgets.WidgetStyle
-import com.azkar.app.widgets.WidgetUpdater
-import com.azkar.app.widgets.WidgetPinReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -56,7 +33,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private var selected: PlacedWidget? = null
     private var activeTab = EditorTab.CONTENT
     private var tabs: List<TextView> = emptyList()
-    private var activePickerAdapter: PickerAdapter? = null
+    private var picker: WidgetPickerDialog? = null
     private var tabsInFamilyMode: Boolean? = null
     private val customHours = HashMap<Int, Boolean>()
 
@@ -68,7 +45,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         Store.init(requireContext())
         val placed = viewModel.load(requireContext())
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
-        view.findViewById<View>(R.id.btn_choose_widget).setOnClickListener { showPicker() }
+        view.findViewById<View>(R.id.btn_choose_widget).setOnClickListener {
+            picker?.release()
+            picker = WidgetPickerDialog(requireContext(), viewModel).also { it.show() }
+        }
         view.findViewById<View>(R.id.btn_apply).setOnClickListener {
             selected?.let {
                 viewModel.apply(requireContext(), it.id)
@@ -219,7 +199,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private fun styleCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
         val styles = WidgetStyle.values().filter { item.kind in it.kinds }
-        val card = sectionCard(ctx, "Design", "How this ${sizeName(item.kind).lowercase()} widget is laid out.")
+        val card = sectionCard(ctx, "Design", "How this ${widgetSizeName(ctx, item.kind).lowercase()} widget is laid out.")
         card.addSpaced(chipGroup(ctx, styles.map { it to it.label }, item.config.style) { s ->
             updateConfig(view) { cfg -> cfg.copy(style = s) }
         })
@@ -300,159 +280,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         column.addCard(refresh)
     }
 
-    private fun showPicker() {
-        val dialog = Dialog(requireContext())
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        val root = vertical().apply {
-            background = roundedBackground(R.color.widget_editor_surface1, R.color.widget_editor_border, 28f)
-            setPadding(Ui.pxi(requireContext(), 20f), Ui.pxi(requireContext(), 18f), Ui.pxi(requireContext(), 20f), Ui.pxi(requireContext(), 12f))
-        }
-        val container = FrameLayout(requireContext())
-        container.setBackgroundColor(Color.TRANSPARENT)
-        container.addView(root, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        ).also {
-            val margin = Ui.pxi(requireContext(), 12f)
-            it.setMargins(margin, margin, margin, margin)
-        })
-        val catalog = WidgetKind.values().flatMap { kind ->
-            WidgetStyle.values().filter { kind in it.kinds }.map { style -> PickerItem(kind, style) } +
-                AzkarWidgetFamily.values().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
-        }
-        var selectedItem = catalog.first()
-        val title = horizontal()
-        title.addView(TextView(requireContext(), null, 0, R.style.TB).apply {
-            text = getString(R.string.available_widgets)
-            textSize = 18f
-            setTextColor(requireContext().getColor(R.color.widget_editor_text))
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        title.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-            text = "×"
-            textSize = 26f
-            gravity = Gravity.CENTER
-            background = roundedBackground(R.color.widget_editor_surface2, R.color.widget_editor_border, 22f)
-            setOnClickListener { dialog.dismiss() }
-        }, LinearLayout.LayoutParams(Ui.pxi(requireContext(), 44f), Ui.pxi(requireContext(), 44f)))
-        root.addView(title)
-        root.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorBody).apply {
-            text = getString(R.string.pick_widget_subtitle)
-            textSize = 11f
-            setTextColor(requireContext().getColor(R.color.widget_editor_muted))
-        })
-        lateinit var pickerAdapter: PickerAdapter
-        lateinit var addButton: TextView
-        val filters = horizontal()
-        val filterButtons = mutableListOf<TextView>()
-        listOf(
-            getString(R.string.all),
-            getString(R.string.small),
-            getString(R.string.medium),
-            getString(R.string.large)
-        ).forEachIndexed { index, text ->
-            filters.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-                this.text = text
-                gravity = Gravity.CENTER
-                filterButtons += this
-                updateFilterAppearance(this, index == 0)
-                setOnClickListener {
-                    val filter = WidgetKind.values().getOrNull(index - 1)
-                    viewModel.setPickerFilter(filter)
-                    catalog.firstOrNull { filter == null || it.kind == filter }?.let { selectedItem = it }
-                    pickerAdapter.setFilter(filter)
-                    addButton.text = addLabel(selectedItem)
-                    filterButtons.forEachIndexed { buttonIndex, button ->
-                        updateFilterAppearance(button, buttonIndex == index)
-                    }
-                }
-            }, LinearLayout.LayoutParams(Ui.pxi(requireContext(), 72f), Ui.pxi(requireContext(), 36f)).also {
-                it.marginEnd = Ui.pxi(requireContext(), 8f)
-            })
-        }
-        root.addView(HorizontalScrollView(requireContext()).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(filters)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 36f)).also {
-            it.topMargin = Ui.pxi(requireContext(), 16f)
-        })
-        val recycler = RecyclerView(requireContext()).apply {
-            setHasFixedSize(true)
-            isNestedScrollingEnabled = true
-            overScrollMode = View.OVER_SCROLL_NEVER
-            clipToPadding = false
-            setPadding(0, 0, 0, Ui.pxi(requireContext(), 64f))
-            layoutManager = GridLayoutManager(requireContext(), 2).also { manager ->
-                manager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                    override fun getSpanSize(position: Int) =
-                        if (adapter?.getItemViewType(position) == PickerAdapter.HEADER ||
-                            adapter?.getItemViewType(position) == PickerAdapter.FULL) 2 else 1
-                }
-            }
-        }
-        pickerAdapter = PickerAdapter(requireContext(), catalog, selectedItem, viewModel.pickerFilter) { item ->
-            selectedItem = item
-            addButton.text = addLabel(selectedItem)
-        }
-        activePickerAdapter = pickerAdapter
-        recycler.adapter = pickerAdapter
-        root.addView(recycler, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        addButton = TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-            text = addLabel(selectedItem)
-            gravity = Gravity.CENTER
-            background = roundedBackground(R.color.widget_editor_gold, 0, 16f)
-            setTextColor(Color.BLACK)
-            setOnClickListener { dialog.dismiss(); requestPin(selectedItem) }
-        }
-        root.addView(addButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 52f)).also {
-            it.topMargin = Ui.pxi(requireContext(), 12f)
-        })
-        dialog.setContentView(container)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        dialog.show()
-        dialog.window?.apply {
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            attributes = attributes.apply { dimAmount = 0.72f }
-        }
-        dialog.setOnDismissListener {
-            pickerAdapter.clearCache()
-            if (activePickerAdapter === pickerAdapter) activePickerAdapter = null
-        }
-    }
 
-    private fun addLabel(item: PickerItem): String {
-        val name = item.family?.let { FAMILY_LABELS[it] }?.let { getString(it) } ?: item.style.label
-        return getString(R.string.add_style_to_home, name, sizeName(item.kind))
-    }
 
-    private fun updateFilterAppearance(button: TextView, selected: Boolean) {
-        button.setTextColor(requireContext().getColor(
-            if (selected) R.color.widget_editor_black else R.color.widget_editor_muted
-        ))
-        button.background = roundedBackground(
-            if (selected) R.color.widget_editor_gold else R.color.widget_editor_surface2,
-            if (selected) R.color.widget_editor_gold else R.color.widget_editor_border,
-            18f
-        )
-    }
-
-    private fun sizeName(kind: WidgetKind) = when (kind) {
-        WidgetKind.SMALL -> getString(R.string.small)
-        WidgetKind.MEDIUM -> getString(R.string.medium)
-        WidgetKind.LARGE -> getString(R.string.large)
-    }
-
-    private fun showChoiceDialog(title: String, values: List<String>, selectedIndex: Int, onSelected: (Int) -> Unit) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(title)
-            .setSingleChoiceItems(values.toTypedArray(), selectedIndex) { dialog, which ->
-                onSelected(which)
-                dialog.dismiss()
-            }
-            .show()
-    }
 
     private fun tapLabel(action: WidgetStore.TapAction) = when (action) {
         WidgetStore.TapAction.INCREMENT -> getString(R.string.increment_counter)
@@ -461,47 +290,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         WidgetStore.TapAction.NEXT_ZIKR -> getString(R.string.next_zikr)
     }
 
-    private fun refreshLabel(minutes: Int) = when (minutes) {
-        0 -> getString(R.string.manual_only)
-        15 -> getString(R.string.every_15_minutes)
-        30 -> getString(R.string.every_30_minutes)
-        60 -> getString(R.string.every_hour)
-        360 -> getString(R.string.every_6_hours)
-        else -> getString(R.string.daily)
-    }
 
-    private fun requestPin(item: PickerItem) {
-        item.family?.let { pinNewWidget(requireContext(), it); return }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            Toast.makeText(requireContext(), R.string.widget_pin_unsupported, Toast.LENGTH_LONG).show()
-            return
-        }
-        val provider = when (item.kind) {
-            WidgetKind.SMALL -> SmallWidgetProvider::class.java
-            WidgetKind.MEDIUM -> MediumWidgetProvider::class.java
-            WidgetKind.LARGE -> LargeWidgetProvider::class.java
-        }
-        val manager = AppWidgetManager.getInstance(requireContext())
-        if (manager.isRequestPinAppWidgetSupported) {
-            WidgetStore.savePendingPin(requireContext(), item.kind, item.style)
-            val callback = PendingIntent.getBroadcast(
-                requireContext(),
-                item.kind.ordinal,
-                Intent(requireContext(), WidgetPinReceiver::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            try {
-                manager.requestPinAppWidget(ComponentName(requireContext(), provider), null, callback)
-            } catch (error: RuntimeException) {
-                WidgetStore.clearPendingPin(requireContext())
-                Toast.makeText(requireContext(), R.string.widget_pin_failed, Toast.LENGTH_LONG).show()
-                return
-            }
-            Toast.makeText(requireContext(), R.string.widget_pin_requested, Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(requireContext(), R.string.widget_pin_unsupported, Toast.LENGTH_LONG).show()
-        }
-    }
 
     /** [rebuild] = false while a slider is being dragged, so the slider is not recreated under the finger. */
     private fun update(view: View, rebuild: Boolean = true, change: (WidgetStore.Appearance) -> WidgetStore.Appearance) {
@@ -589,30 +378,12 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     }
 
     override fun onDestroyView() {
-        activePickerAdapter?.clearCache()
-        activePickerAdapter = null
+        picker?.release()
+        picker = null
         super.onDestroyView()
     }
 
     private fun vertical() = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
-    private fun horizontal() = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL }
-    private fun panel() = vertical().apply {
-        background = roundedBackground(R.color.widget_editor_surface1, R.color.widget_editor_border, 20f)
-        setPadding(Ui.pxi(requireContext(), 16f), Ui.pxi(requireContext(), 16f), Ui.pxi(requireContext(), 16f), Ui.pxi(requireContext(), 16f))
-    }
-    private fun body(id: Int) = TextView(requireContext(), null, 0, R.style.WidgetEditorBody).apply { setText(id) }
-    private fun label(id: Int) = TextView(requireContext(), null, 0, R.style.WidgetEditorLabel).apply { setText(id) }
-    private fun labelText(value: String) = TextView(requireContext(), null, 0, R.style.WidgetEditorLabel).apply { text = value }
-    private fun addValueRow(parent: LinearLayout, titleId: Int, value: String, onClick: (() -> Unit)? = null) {
-        val row = horizontal()
-        row.setOnClickListener { onClick?.invoke() }
-        row.addView(body(titleId), LinearLayout.LayoutParams(0, Ui.pxi(requireContext(), 40f), 1f))
-        row.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorMedium).apply {
-            text = value
-            setTextColor(requireContext().getColor(R.color.widget_editor_muted))
-        })
-        parent.addView(row)
-    }
     private fun sizeLabel(kind: WidgetKind) = when (kind) {
         WidgetKind.SMALL -> getString(R.string.small_grid)
         WidgetKind.MEDIUM -> getString(R.string.medium_grid)
@@ -623,159 +394,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         if (stroke != 0) setStroke(Ui.pxi(requireContext(), 1f), requireContext().getColor(stroke))
         cornerRadius = Ui.px(requireContext(), radius)
     }
-    private fun roundedBackground(fill: Int, strokeColor: Int, radius: Float, direct: Boolean = false) =
-        roundedBackground(fill, if (direct) 0 else strokeColor, radius)
     private fun chipBackground(on: Boolean) = roundedBackground(
         if (on) R.color.widget_editor_surface2 else R.color.widget_editor_surface1,
         if (on) R.color.widget_editor_gold else R.color.widget_editor_border, 20f
     )
-    private fun swatchBackground(color: Int, selected: Boolean) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(color)
-        if (selected) setStroke(Ui.pxi(requireContext(), 2f), requireContext().getColor(R.color.widget_editor_gold))
-        else setStroke(Ui.pxi(requireContext(), 1f), requireContext().getColor(R.color.widget_editor_border))
-    }
 }
 
 private const val FAMILY_PREVIEW_TAG = "family_preview"
-
-private data class PickerItem(val kind: WidgetKind, val style: WidgetStyle, val family: AzkarWidgetFamily? = null)
-
-
-private class PickerAdapter(
-        private val context: android.content.Context,
-        private val catalog: List<PickerItem>,
-        private var selected: PickerItem,
-        initialFilter: WidgetKind?,
-        private val onSelected: (PickerItem) -> Unit
-    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        companion object {
-            const val HEADER = 1
-            const val CARD = 2
-            const val FULL = 3
-        }
-
-        private var filter = initialFilter
-        private var rows = buildRows(filter)
-        private val previewCache = HashMap<PickerItem, android.graphics.Bitmap>()
-
-        override fun getItemCount() = rows.size
-        override fun getItemViewType(position: Int) = when (rows[position]) {
-            is PickerRow.Header -> HEADER
-            is PickerRow.Card -> if ((rows[position] as PickerRow.Card).item.kind == WidgetKind.SMALL) CARD else FULL
-        }
-        override fun onCreateViewHolder(parent: ViewGroup, type: Int): RecyclerView.ViewHolder =
-            if (type == HEADER) HeaderHolder(TextView(context, null, 0, R.style.WidgetEditorLabel))
-            else CardHolder(FrameLayout(context))
-
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            when (val row = rows[position]) {
-                is PickerRow.Header -> (holder as HeaderHolder).bind(row)
-                is PickerRow.Card -> (holder as CardHolder).bind(row.item)
-            }
-        }
-
-        fun clearCache() {
-            previewCache.clear()
-        }
-
-        fun setFilter(value: WidgetKind?) {
-            val old = rows
-            filter = value
-            rows = buildRows(value)
-            DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = old.size
-                override fun getNewListSize() = rows.size
-                override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                    old[oldItemPosition].toString() == rows[newItemPosition].toString()
-                override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                    areItemsTheSame(oldItemPosition, newItemPosition)
-            }).dispatchUpdatesTo(this)
-        }
-
-        private fun buildRows(value: WidgetKind?) = catalog.filter { value == null || it.kind == value }
-            .groupBy { it.kind }.flatMap { (kind, items) ->
-                listOf(PickerRow.Header(kind, items.size)) + items.map { PickerRow.Card(it) }
-            }
-
-        private sealed interface PickerRow {
-            data class Header(val kind: WidgetKind, val count: Int) : PickerRow
-            data class Card(val item: PickerItem) : PickerRow
-        }
-
-        private class HeaderHolder(private val text: TextView) : RecyclerView.ViewHolder(text) {
-            fun bind(row: PickerRow.Header) {
-                text.text = "${pickerSizeLabel(text.context, row.kind)}    ${row.count} ${text.context.getString(R.string.widgets)}"
-                text.setTextColor(text.context.getColor(R.color.widget_editor_muted))
-                text.textSize = 11f
-                text.letterSpacing = 0f
-                text.setPadding(0, Ui.pxi(text.context, 16f), 0, Ui.pxi(text.context, 8f))
-            }
-        }
-
-        private inner class CardHolder(private val frame: FrameLayout) : RecyclerView.ViewHolder(frame) {
-            fun bind(item: PickerItem) {
-                val height = if (item.kind == WidgetKind.SMALL) 132 else if (item.kind == WidgetKind.MEDIUM) 104 else 190
-                frame.removeAllViews()
-                frame.setPadding(Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f))
-                frame.background = rounded(item == selected)
-                val bitmap = previewCache[item] ?: try {
-                    val folder = Store.folders().firstOrNull()?.id ?: "anytime"
-                    val family = item.family
-                    (if (family != null) {
-                        val (dw, dh) = AzkarWidgetSizes.design(family)
-                        val model = WidgetModel.load(context, AppWidgetManager.INVALID_APPWIDGET_ID, folder)
-                        NewWidgetRenderer(context).render(family, model, dw, dh)
-                    } else {
-                        WidgetUpdater.previewBitmap(context, item.kind, item.style, folder)
-                    }).also { previewCache[item] = it }
-                } catch (error: Exception) {
-                    Log.e("WidgetPicker", "Unable to render ${item.kind}/${item.style.label} preview", error)
-                    null
-                }
-                val preview: View = if (bitmap != null) {
-                    android.widget.ImageView(context).apply {
-                        setImageBitmap(bitmap)
-                        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-                        adjustViewBounds = true
-                    }
-                } else {
-                    TextView(context).apply {
-                        text = context.getString(R.string.widget_preview_unavailable)
-                        gravity = Gravity.CENTER
-                        setTextColor(context.getColor(R.color.widget_editor_muted))
-                    }
-                }
-                frame.addView(preview, FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    Ui.pxi(context, height.toFloat() - 12f)
-                ))
-                frame.setOnClickListener {
-                    val previous = selected
-                    selected = item
-                    onSelected(item)
-                    rows.indexOfFirst { it is PickerRow.Card && it.item == previous }
-                        .takeIf { it >= 0 }
-                        ?.let { notifyItemChanged(it) }
-                    rows.indexOfFirst { it is PickerRow.Card && it.item == item }
-                        .takeIf { it >= 0 }
-                        ?.let { notifyItemChanged(it) }
-                }
-            }
-
-            private fun rounded(selected: Boolean) = GradientDrawable().apply {
-                setColor(context.getColor(R.color.widget_editor_surface2))
-                setStroke(
-                    Ui.pxi(context, 1f),
-                    context.getColor(if (selected) R.color.widget_editor_gold else R.color.widget_editor_border)
-                )
-                cornerRadius = Ui.px(context, 20f)
-            }
-        }
-    }
-
-private fun pickerSizeLabel(context: android.content.Context, kind: WidgetKind) = when (kind) {
-    WidgetKind.SMALL -> context.getString(R.string.small_grid)
-    WidgetKind.MEDIUM -> context.getString(R.string.medium_grid)
-    WidgetKind.LARGE -> context.getString(R.string.large_grid)
-}

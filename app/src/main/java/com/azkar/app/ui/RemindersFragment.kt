@@ -24,6 +24,7 @@ import androidx.fragment.app.Fragment
 import com.azkar.app.ThemeMode
 import com.azkar.app.R
 import com.azkar.app.data.Schedule
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.WidgetUpdater
@@ -67,14 +68,14 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
 
         view.findViewById<ToggleSwitch>(R.id.sw_all).apply {
-            on = Store.notificationsOn() && hasNotificationPermission()
+            on = AppPrefs.notificationsOn() && hasNotificationPermission()
             onToggle = { v ->
             if (!syncing) {
                 if (v) requestNotifications { granted ->
-                    if (granted) { Store.setNotificationsOn(true); ReminderScheduler.rescheduleAll(ctx) }
+                    if (granted) { AppPrefs.setNotificationsOn(true); ReminderScheduler.rescheduleAll(ctx) }
                     renderList()
                 } else {
-                    Store.setNotificationsOn(false)
+                    AppPrefs.setNotificationsOn(false)
                     ReminderScheduler.rescheduleAll(ctx)
                     renderList()
                 }
@@ -99,8 +100,8 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         }
 
 // Reading switches
-        view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = Store.tapAdvance(); onToggle = { Store.setTapAdvance(it) } }
-        view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = Store.keepScreenOn(); onToggle = { Store.setKeepScreenOn(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
 
         // Arabic text size slider (the preview updates while you drag; the reader uses it on its next open)
         val slider = view.findViewById<android.widget.SeekBar>(R.id.size_slider)
@@ -113,13 +114,13 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             androidx.core.widget.TextViewCompat.setLineHeight(preview, lh.toInt())   // same 1.85 line height as the reader
         }
         slider.max = com.azkar.app.data.ReaderPrefs.FONT_MAX - com.azkar.app.data.ReaderPrefs.FONT_MIN
-        slider.progress = Store.arabicSp() - com.azkar.app.data.ReaderPrefs.FONT_MIN
-        showSize(Store.arabicSp())
+        slider.progress = AppPrefs.arabicSp() - com.azkar.app.data.ReaderPrefs.FONT_MIN
+        showSize(AppPrefs.arabicSp())
         slider.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
                 val sp = com.azkar.app.data.ReaderPrefs.FONT_MIN + p
                 showSize(sp)
-                if (fromUser) Store.setArabicSp(sp)
+                if (fromUser) AppPrefs.setArabicSp(sp)
             }
             override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
             override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
@@ -129,7 +130,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         val themeNames = arrayOf("Teal", "OLED black")
         fun renderThemes() {
             themes.removeAllViews()
-            val sel = Store.theme()
+            val sel = AppPrefs.theme()
             themeNames.forEachIndexed { idx, name ->
                 val on = idx == sel
                 val b = TextView(ctx, null, 0, R.style.TB).apply {
@@ -143,8 +144,8 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
-                        if (Store.theme() != idx) {
-                            Store.setTheme(idx)
+                        if (AppPrefs.theme() != idx) {
+                            AppPrefs.setTheme(idx)
                             WidgetUpdater.updateAll(ctx)
                             ThemeMode.apply(idx)   // recreates the activity; this screen is restored from the back stack
                         }
@@ -174,7 +175,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         val list = root.findViewById<LinearLayout>(R.id.reminders)
         list.removeAllViews()
         val all = Store.schedules()
-        val globalOn = Store.notificationsOn()
+        val globalOn = AppPrefs.notificationsOn()
         list.visibility = if (all.isEmpty()) View.GONE else View.VISIBLE
         root.findViewById<View>(R.id.rem_empty).visibility = if (all.isEmpty()) View.VISIBLE else View.GONE
         root.findViewById<TextView>(R.id.notif_sub).text =

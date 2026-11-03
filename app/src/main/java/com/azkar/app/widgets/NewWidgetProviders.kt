@@ -38,6 +38,7 @@ enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKin
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         com.azkar.app.data.Store.init(context)
+        WidgetClockReceiver.scheduleMidnight(context)
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -69,10 +70,7 @@ abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : 
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-        if (intent.action == Intent.ACTION_DATE_CHANGED || intent.action == Intent.ACTION_TIME_CHANGED ||
-            intent.action == Intent.ACTION_TIMEZONE_CHANGED || intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            NewWidgetUpdater.updateAll(context)
-        } else if (intent.action == ACTION_REFRESH && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+        if (intent.action == ACTION_REFRESH && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
             NewWidgetUpdater.update(context, AppWidgetManager.getInstance(context), family, id)
         } else if (intent.action in setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO) &&
             id != AppWidgetManager.INVALID_APPWIDGET_ID) {

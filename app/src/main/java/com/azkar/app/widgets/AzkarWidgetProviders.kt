@@ -27,6 +27,7 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
 
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
         Store.init(ctx)
+        WidgetClockReceiver.scheduleMidnight(ctx)
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -59,15 +60,6 @@ abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvi
     }
 
     override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_DATE_CHANGED ||
-            intent.action == Intent.ACTION_TIME_CHANGED ||
-            intent.action == Intent.ACTION_TIMEZONE_CHANGED ||
-            intent.action == Intent.ACTION_BOOT_COMPLETED
-        ) {
-            Store.init(ctx)
-            dispatch(ctx) { WidgetUpdater.updateAll(ctx) }
-            return
-        }
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         when (intent.action) {
             ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_REFRESH -> {

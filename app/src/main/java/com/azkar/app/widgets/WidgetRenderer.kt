@@ -15,6 +15,7 @@ import android.text.TextUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.PathParser
 import com.azkar.app.R
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import kotlin.math.cos
 import kotlin.math.floor
@@ -33,7 +34,7 @@ class WidgetRenderer(ctx: Context) {
         Store.init(ctx)
     }
 
-    private val palette = WidgetPalette.from(ctx, Store.theme() == com.azkar.app.ThemeMode.OLED)
+    private val palette = WidgetPalette.from(ctx, AppPrefs.theme() == com.azkar.app.ThemeMode.OLED)
     private val strings = WidgetStrings(ctx)
     private val amiriBold = ResourcesCompat.getFont(ctx, R.font.amiri_bold) ?: Typeface.SERIF
     private val amiriReg = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.SERIF
