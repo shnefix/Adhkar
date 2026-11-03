@@ -130,4 +130,27 @@
     <string name="small">Small</string>
     <string name="medium">Medium</string>
     <string name="large">Large</string>
+    <string name="widget_today">Today</string>
+    <string name="widget_morning">Morning</string>
+    <string name="widget_evening">Evening</string>
+    <string name="widget_morning_azkar">Morning azkar</string>
+    <string name="widget_evening_azkar">Evening azkar</string>
+    <string name="widget_next">Next</string>
+    <string name="widget_next_label">Next: %1$s</string>
+    <string name="widget_now">Now</string>
+    <string name="widget_completed">Completed</string>
+    <string name="widget_counter">Counter</string>
+    <string name="widget_next_dhikr">Next dhikr</string>
+    <string name="widget_tap_hint">tap to count</string>
+    <string name="widget_tap_caps">TAP</string>
+    <string name="widget_tap_plus">tap +1</string>
+    <string name="widget_of_tap">of %1$d · tap</string>
+    <string name="widget_round_short">Round %1$d of %2$d</string>
+    <string name="widget_beads_round">Round %1$d of %2$d · %3$d beads each</string>
+    <string name="widget_recited">%1$d of %2$d recited</string>
+    <string name="widget_n_done">%1$d done</string>
+    <string name="widget_now_of">%1$d of %2$d now</string>
+    <string name="widget_i_status">%1$d done · %2$d in progress · %3$d to go</string>
+    <string name="widget_azkar_word">azkar</string>
+    <string name="widget_new_designs">New designs</string>
 </resources>

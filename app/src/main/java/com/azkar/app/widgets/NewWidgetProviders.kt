@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.widget.RemoteViews
 import com.azkar.app.R
@@ -119,6 +120,8 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.B_LARGE to BLargeWidgetProvider::class.java
     )
 
+    fun providerClass(family: AzkarWidgetFamily): Class<*> = providers.getValue(family)
+
     fun updateAll(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         providers.forEach { (family, provider) ->
@@ -136,18 +139,30 @@ object NewWidgetUpdater {
         com.azkar.app.data.Store.init(context)
         val config = WidgetStore.config(context, id, family.kind)
         val model = WidgetModel.load(context, id, config.folder)
-        val options = manager.getAppWidgetOptions(id)
-        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).takeIf { it > 0 }?.toFloat()
-            ?: if (family.kind == WidgetKind.SMALL) 158f else 338f
-        val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT).takeIf { it > 0 }?.toFloat()
-            ?: if (family == AzkarWidgetFamily.J_TALL_RING || family == AzkarWidgetFamily.J_TALL_TIMELINE) 354f else if (family.kind == WidgetKind.LARGE) 354f else 158f
+
+        val o = manager.getAppWidgetOptions(id)
+        val land = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val def = AzkarWidgetSizes.design(family)
+        val width = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH))
+            .takeIf { it > 0 }?.toFloat() ?: def.first
+        val height = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
+            .takeIf { it > 0 }?.toFloat() ?: def.second
+
         val rv = RemoteViews(context.packageName, family.layout)
         rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height))
+        rv.setContentDescription(
+            R.id.azkar_widget_image,
+            if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
+            else "${model.folderName}: ${model.shown} of ${model.target}"
+        )
         rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
         if (family == AzkarWidgetFamily.B_LARGE) {
             rv.setOnClickPendingIntent(R.id.azkar_widget_reset, action(context, family, id, ACTION_RESET))
             rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
             rv.setOnClickPendingIntent(R.id.azkar_widget_next, action(context, family, id, ACTION_NEXT))
+        }
+        if (family == AzkarWidgetFamily.H_LARGE) {
+            rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
         }
         scheduleRefresh(context, family, id)
         manager.updateAppWidget(id, rv)

@@ -19,6 +19,7 @@ import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.ScrollView
@@ -32,7 +33,9 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import com.azkar.app.widgets.AzkarWidgetSizes
 import com.azkar.app.widgets.LargeWidgetProvider
+import com.azkar.app.widgets.NewWidgetRenderer
 import com.azkar.app.widgets.MediumWidgetProvider
 import com.azkar.app.widgets.SmallWidgetProvider
 import com.azkar.app.widgets.WidgetKind
@@ -50,6 +53,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private var activeTab = EditorTab.CONTENT
     private var tabs: List<TextView> = emptyList()
     private var activePickerAdapter: PickerAdapter? = null
+    private var tabsInFamilyMode: Boolean? = null
 
     private enum class EditorTab(val title: String) {
         CONTENT("Content"), STYLE("Style"), TEXT("Text"), COLORS("Colors"), BEHAVIOR("Behavior")
@@ -88,6 +92,15 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             return
         }
         val ctx = requireContext()
+        val familyMode = item.family != null
+        if (familyMode != tabsInFamilyMode) {
+            tabsInFamilyMode = familyMode
+            if (activeTab !in visibleTabs()) {
+                activeTab = EditorTab.CONTENT
+                viewModel.setActiveTab(activeTab.ordinal)
+            }
+            renderTabs(view)
+        }
         val model = WidgetModel.load(ctx, item.id, item.config.folder)
         val appearance = item.config.appearance
         view.findViewById<TextView>(R.id.preview_size).text = sizeLabel(item.kind)
@@ -103,10 +116,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }
         view.findViewById<TextView>(R.id.preview_meta).text =
             "${model.folderName} · ${model.shown} / ${model.target}"
-        view.findViewById<View>(R.id.preview_face).layoutParams =
-            view.findViewById<View>(R.id.preview_face).layoutParams.apply {
-                height = Ui.pxi(ctx, if (item.kind == WidgetKind.LARGE) 170f else 128f)
-            }
+        applyPreview(view, item, model)
         renderTabContent(view)
     }
 
@@ -115,7 +125,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         root.removeAllViews()
         placed.forEach { item ->
             val chip = TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-                text = "${item.config.style.label} · ${item.kind.name.lowercase().replaceFirstChar { it.uppercase() }.first()}"
+                text = item.family?.let { f -> FAMILY_LABELS[f] }?.let { getString(it) }
+                    ?: "${item.config.style.label} · ${item.kind.name.lowercase().replaceFirstChar { it.uppercase() }.first()}"
                 setTextColor(requireContext().getColor(R.color.widget_editor_muted))
                 textSize = 13f
                 gravity = Gravity.CENTER
@@ -137,7 +148,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private fun renderTabs(view: View) {
         val root = view.findViewById<LinearLayout>(R.id.editor_tabs)
         root.removeAllViews()
-        tabs = EditorTab.values().map { tab ->
+        val shownTabs = visibleTabs()
+        tabs = shownTabs.map { tab ->
             TextView(requireContext(), null, 0, R.style.WidgetEditorMedium).apply {
                 text = tab.title
                 gravity = Gravity.CENTER
@@ -155,9 +167,9 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }
         tabs.forEachIndexed { index, text ->
             text.setTextColor(requireContext().getColor(
-                if (EditorTab.values()[index] == activeTab) R.color.widget_editor_gold else R.color.widget_editor_muted
+                if (shownTabs[index] == activeTab) R.color.widget_editor_gold else R.color.widget_editor_muted
             ))
-            text.background = if (EditorTab.values()[index] == activeTab) requireContext().getDrawable(R.drawable.widget_editor_tab_selected) else null
+            text.background = if (shownTabs[index] == activeTab) requireContext().getDrawable(R.drawable.widget_editor_tab_selected) else null
         }
     }
 
@@ -169,8 +181,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         when (activeTab) {
             EditorTab.CONTENT -> {
                 val column = vertical()
-                addSwitchRow(column, R.string.show_counter, null, appearance.showCounter) {
-                    update(view) { it.copy(showCounter = !it.showCounter) }
+                column.addView(folderPanel(view, item.config.folder), LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = Ui.pxi(requireContext(), 8f) })
+                // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
+                if (item.family == null) {
+                    addSwitchRow(column, R.string.show_counter, null, appearance.showCounter) {
+                        update(view) { it.copy(showCounter = !it.showCounter) }
+                    }
                 }
                 root.addView(column)
             }
@@ -178,7 +196,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             EditorTab.COLORS -> root.addView(colorsPanel(view, appearance))
             EditorTab.BEHAVIOR -> {
                 val column = vertical()
-                column.addView(optionPanel(
+                if (item.family == null) column.addView(optionPanel(
                     R.string.tap_action,
                     R.string.tap_action_description,
                     WidgetStore.TapAction.values().map { it to tapLabel(it) },
@@ -201,10 +219,18 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         options: List<Pair<T, String>>,
         selectedValue: T,
         onSelected: (T) -> Unit
+    ): View = optionPanelText(getString(titleId), getString(descriptionId), options, selectedValue, onSelected)
+
+    private fun <T> optionPanelText(
+        title: String,
+        description: String,
+        options: List<Pair<T, String>>,
+        selectedValue: T,
+        onSelected: (T) -> Unit
     ): View {
         val panel = panel()
-        panel.addView(body(titleId).apply { textSize = 14f })
-        panel.addView(body(descriptionId).apply {
+        panel.addView(bodyText(title).apply { textSize = 14f })
+        panel.addView(bodyText(description).apply {
             textSize = 12f
             setTextColor(requireContext().getColor(R.color.widget_editor_muted))
         })
@@ -373,6 +399,15 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             textSize = 11f
             setTextColor(requireContext().getColor(R.color.widget_editor_muted))
         })
+        root.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
+            text = getString(R.string.widget_new_designs)
+            gravity = Gravity.CENTER
+            setTextColor(requireContext().getColor(R.color.widget_editor_gold))
+            background = roundedBackground(R.color.widget_editor_surface2, R.color.widget_editor_gold, 18f)
+            setOnClickListener { dialog.dismiss(); showNewWidgetPicker(requireContext()) }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 44f)).also {
+            it.topMargin = Ui.pxi(requireContext(), 12f)
+        })
         lateinit var pickerAdapter: PickerAdapter
         lateinit var addButton: TextView
         val filters = horizontal()
@@ -531,6 +566,78 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         render(view)
     }
 
+    private fun visibleTabs(): List<EditorTab> =
+        if (selected?.family != null) listOf(EditorTab.CONTENT, EditorTab.BEHAVIOR) else EditorTab.values().toList()
+
+    private fun folderPanel(view: View, current: String): View =
+        optionPanelText(
+            "Folder",
+            "Which azkar folder this widget shows.",
+            Store.folders().map { it.id to Store.folderName(it.id) },
+            current
+        ) { id -> updateConfig(view) { it.copy(folder = id) } }
+
+    private fun updateConfig(view: View, change: (WidgetStore.Config) -> WidgetStore.Config) {
+        val item = selected ?: return
+        viewModel.update(item.id, change(item.config))
+        selected = viewModel.load(requireContext()).firstOrNull { it.id == item.id }
+        selected?.let { viewModel.setSelectedId(it.id) }
+        render(view)
+    }
+
+    /** Live preview: the real OLED bitmap for the new designs, the Arabic text mock-up for the old ones. */
+    private fun applyPreview(view: View, item: PlacedWidget, model: WidgetModel) {
+        val ctx = requireContext()
+        val family = item.family
+        if (family == null) {
+            showTextPreview(view, item)
+            return
+        }
+        val (dw, dh) = AzkarWidgetSizes.design(family)
+        val bitmap = try {
+            NewWidgetRenderer(ctx).render(family, model, dw, dh)
+        } catch (e: Exception) {
+            Log.e("WidgetEditor", "preview failed for $family", e)
+            null
+        }
+        if (bitmap == null) {
+            showTextPreview(view, item)
+            return
+        }
+        val face = view.findViewById<LinearLayout>(R.id.preview_face)
+        val innerWidth = ctx.resources.displayMetrics.widthPixels - Ui.pxi(ctx, 104f)
+        val wanted = (innerWidth * dh / dw).toInt() + Ui.pxi(ctx, 32f)
+        face.layoutParams = face.layoutParams.apply {
+            height = wanted.coerceIn(Ui.pxi(ctx, 128f), Ui.pxi(ctx, 380f))
+        }
+        val existing: ImageView? = face.findViewWithTag(FAMILY_PREVIEW_TAG)
+        val image = existing ?: ImageView(ctx).apply {
+            tag = FAMILY_PREVIEW_TAG
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            face.addView(this, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+        }
+        image.setImageBitmap(bitmap)
+        view.findViewById<View>(R.id.preview_arabic).visibility = View.GONE
+        view.findViewById<View>(R.id.preview_meta).visibility = View.GONE
+    }
+
+    private fun showTextPreview(view: View, item: PlacedWidget) {
+        val ctx = requireContext()
+        val face = view.findViewById<LinearLayout>(R.id.preview_face)
+        val existing: ImageView? = face.findViewWithTag(FAMILY_PREVIEW_TAG)
+        existing?.let { face.removeView(it) }
+        view.findViewById<View>(R.id.preview_arabic).visibility = View.VISIBLE
+        view.findViewById<View>(R.id.preview_meta).visibility = View.VISIBLE
+        face.layoutParams = face.layoutParams.apply {
+            height = Ui.pxi(ctx, if (item.kind == WidgetKind.LARGE) 170f else 128f)
+        }
+    }
+
+    private fun bodyText(value: String) =
+        TextView(requireContext(), null, 0, R.style.WidgetEditorBody).apply { text = value }
+
     override fun onResume() {
         super.onResume()
         val root = view ?: return
@@ -593,6 +700,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         else setStroke(Ui.pxi(requireContext(), 1f), requireContext().getColor(R.color.widget_editor_border))
     }
 }
+
+private const val FAMILY_PREVIEW_TAG = "family_preview"
 
 private data class PickerItem(val kind: WidgetKind, val style: WidgetStyle)
 

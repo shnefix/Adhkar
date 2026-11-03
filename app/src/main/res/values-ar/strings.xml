@@ -106,4 +106,27 @@
     <string name="small">صغيرة</string>
     <string name="medium">متوسطة</string>
     <string name="large">كبيرة</string>
+    <string name="widget_today">اليوم</string>
+    <string name="widget_morning">الصباح</string>
+    <string name="widget_evening">المساء</string>
+    <string name="widget_morning_azkar">أذكار الصباح</string>
+    <string name="widget_evening_azkar">أذكار المساء</string>
+    <string name="widget_next">التالي</string>
+    <string name="widget_next_label">التالي: %1$s</string>
+    <string name="widget_now">الآن</string>
+    <string name="widget_completed">مكتمل</string>
+    <string name="widget_counter">العداد</string>
+    <string name="widget_next_dhikr">الذكر التالي</string>
+    <string name="widget_tap_hint">اضغط للعد</string>
+    <string name="widget_tap_caps">اضغط</string>
+    <string name="widget_tap_plus">اضغط +1</string>
+    <string name="widget_of_tap">من %1$d · اضغط</string>
+    <string name="widget_round_short">الجولة %1$d من %2$d</string>
+    <string name="widget_beads_round">الجولة %1$d من %2$d · %3$d حبات لكل جولة</string>
+    <string name="widget_recited">%1$d من %2$d تمت قراءتها</string>
+    <string name="widget_n_done">تم %1$d</string>
+    <string name="widget_now_of">%1$d من %2$d الآن</string>
+    <string name="widget_i_status">تم %1$d · قيد القراءة %2$d · متبقٍ %3$d</string>
+    <string name="widget_azkar_word">أذكار</string>
+    <string name="widget_new_designs">تصاميم جديدة</string>
 </resources>
