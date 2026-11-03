@@ -26,9 +26,11 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 4
+    private const val DEFAULTS_VERSION = 5
     private const val HOME_FOLDER_ID = "d_15"                   // الواجهة, added in defaults version 4
     private const val WAKE_FOLDER_ID = "d_9"
+    private const val MORNING_FOLDER_ID = "d_14"
+    private const val EVENING_FOLDER_ID = "d_11"
     private const val WAKE_FOLDER_NAME = "أذكار الإستقاظ"
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????")
     /** Default folders shown first on Home, in this order. */
@@ -196,6 +198,7 @@ object Store {
         if (fresh) mergeDefaults(p)
         else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == HOME_FOLDER_ID }))
         if (from < 4) applyHomeDefaults()
+        if (from in 1 until 5) applySessionDefaults()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -208,6 +211,18 @@ object Store {
         val present = HOME_DEFAULTS.filter { folder(it) != null }
         setHidden(hidden() - present.toSet())
         setHomeOrder(present + homeOrder().filter { it !in present })
+    }
+
+    /**
+     * Version 5 (upgrades only; fresh installs get the same from the JSON and [migrateSchedules]):
+     * morning / evening remember their position, and their reminders open those folders.
+     */
+    private fun applySessionDefaults() {
+        listOf(MORNING_FOLDER_ID, EVENING_FOLDER_ID).filter { folder(it) != null }.forEach { setFolderRemember(it, true) }
+        mapOf("m" to MORNING_FOLDER_ID, "e" to EVENING_FOLDER_ID).forEach { (sid, fid) ->
+            val s = schedule(sid) ?: return@forEach
+            if (folder(fid) != null && (s.open == null || folder(s.open) == null)) upsertSchedule(s.copy(open = fid))
+        }
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
@@ -224,8 +239,8 @@ object Store {
         if (sp.getBoolean(K_SCHEDULES_INITIALIZED, false)) return
         saveSchedules(
             listOf(
-                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, AppPrefs.reminderOn("m", true), "morning"),
-                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, AppPrefs.reminderOn("e", true), "evening"),
+                Schedule("m", "Morning azkar", "Time for your morning azkar · tap to read", 6, 0, AppPrefs.reminderOn("m", true), MORNING_FOLDER_ID),
+                Schedule("e", "Evening azkar", "Time for your evening azkar · tap to read", 17, 0, AppPrefs.reminderOn("e", true), EVENING_FOLDER_ID),
                 Schedule("s", "Before sleep", "Time for your before sleep azkar · tap to read", 22, 0, AppPrefs.reminderOn("s", false), "sleep")
             )
         )

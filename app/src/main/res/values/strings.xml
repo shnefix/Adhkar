@@ -148,4 +148,7 @@
     <string name="editor_tab_content">Content</string>
     <string name="editor_tab_style">Style</string>
     <string name="editor_tab_behavior">Behavior</string>
+    <string name="reminder_after_fajr">10 min after Fajr</string>
+    <string name="reminder_after_asr">10 min after Asr</string>
+    <string name="reminder_follows_prayer">Set by the prayer times for your location</string>
 </resources>

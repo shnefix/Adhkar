@@ -26,12 +26,27 @@ import com.azkar.app.R
 import com.azkar.app.data.Schedule
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
+import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.reminders.ReminderScheduler
 import com.azkar.app.widgets.WidgetUpdater
 
 fun timeLabel(ctx: Context, h: Int, m: Int): String =
     if (DateFormat.is24HourFormat(ctx)) "%02d:%02d".format(h, m)
     else "%d:%02d %s".format(if (h % 12 == 0) 12 else h % 12, m, if (h < 12) "AM" else "PM")
+
+/**
+ * "10 min after Fajr · 4:52 AM" for a reminder that follows prayer times, or null when it uses its
+ * fixed time (not a morning / evening reminder, or no location yet).
+ */
+fun prayerTimeLabel(ctx: Context, s: Schedule): String? {
+    val session = PrayerSessions.forSchedule(s.id) ?: return null
+    val at = PrayerSessions.nextReminder(session, System.currentTimeMillis()) ?: return null
+    val c = java.util.Calendar.getInstance().apply { timeInMillis = at }
+    val after = ctx.getString(
+        if (session == PrayerSessions.Session.MORNING) R.string.reminder_after_fajr else R.string.reminder_after_asr
+    )
+    return "$after · " + timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+}
 
 class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
@@ -185,7 +200,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             val v = layoutInflater.inflate(R.layout.item_reminder, list, false)
             v.findViewById<View>(R.id.divider).setBackgroundColor(if (idx == 0) 0 else ctx.getColor(R.color.border))
             v.findViewById<TextView>(R.id.title).text = s.title
-            v.findViewById<TextView>(R.id.time).text = timeLabel(ctx, s.hour, s.minute) + " · Every day"
+            v.findViewById<TextView>(R.id.time).text = prayerTimeLabel(ctx, s) ?: (timeLabel(ctx, s.hour, s.minute) + " · Every day")
             v.findViewById<View>(R.id.row).apply {
                 alpha = if (globalOn) 1f else 0.5f
                 setOnClickListener { edit(s) }
@@ -226,10 +241,13 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         var m = existing?.minute ?: 0
         title.setText(existing?.title ?: "")
         msg.setText(existing?.message ?: "")
-        fun showTime() { timeTv.text = timeLabel(ctx, h, m) }
+        // Morning / evening follow the prayer times while a location is known, so their time isn't editable.
+        val prayerLabel = existing?.let { prayerTimeLabel(ctx, it) }
+        fun showTime() { timeTv.text = prayerLabel ?: timeLabel(ctx, h, m) }
         showTime()
         timeTv.setOnClickListener {
-            TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
+            if (prayerLabel != null) Toast.makeText(ctx, R.string.reminder_follows_prayer, Toast.LENGTH_SHORT).show()
+            else TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
         }
 
         var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"

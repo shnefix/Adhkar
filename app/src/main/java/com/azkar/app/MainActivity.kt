@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.Fragment
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
+import com.azkar.app.reminders.LocationUpdater
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
 import com.azkar.app.ui.MyAzkarFragment
@@ -26,6 +28,11 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private var currentTab: Tab = Tab.HOME
+
+    // Prayer-time reminders: approximate location is enough. Asked once; denying keeps the fixed times.
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) LocationUpdater.refresh(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +64,11 @@ class MainActivity : AppCompatActivity() {
                         handleIntent(intent)
                     }
                     contentShown = true
+                    if (LocationUpdater.hasPermission(this@MainActivity)) LocationUpdater.refresh(this@MainActivity)
+                    else if (!AppPrefs.locationAsked()) {
+                        AppPrefs.setLocationAsked()
+                        locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Azkar", "Unable to initialize application data", e)

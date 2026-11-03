@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import com.azkar.app.R
 import com.azkar.app.data.ReaderResume
 import com.azkar.app.data.AppPrefs
+import com.azkar.app.reminders.PrayerSessions
 import com.azkar.app.data.Store
 
 class ReaderFragment : Fragment(R.layout.fragment_reader) {
@@ -44,6 +45,8 @@ val (startIdx, startCount) = when {
     savedInstanceState != null -> savedInstanceState.getInt("i") to savedInstanceState.getInt("count")
     explicit >= 0 -> explicit to 0
     remember -> {
+        // Morning / evening positions only last until Dhuhr / Maghrib; after that, start from the first zikr.
+        if (PrayerSessions.positionExpired(key, AppPrefs.savedPositionTime(key))) AppPrefs.clearPosition(key)
         val sv = AppPrefs.savedPosition(key)
         ReaderResume.start(items.map { it.id }, items.map { it.target }, sv?.first, sv?.second ?: 0)
     }

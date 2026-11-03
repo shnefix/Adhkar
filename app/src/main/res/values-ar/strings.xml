@@ -124,4 +124,7 @@
     <string name="editor_tab_content">المحتوى</string>
     <string name="editor_tab_style">النمط</string>
     <string name="editor_tab_behavior">السلوك</string>
+    <string name="reminder_after_fajr">بعد الفجر بعشر دقائق</string>
+    <string name="reminder_after_asr">بعد العصر بعشر دقائق</string>
+    <string name="reminder_follows_prayer">يتبع مواقيت الصلاة في موقعك</string>
 </resources>

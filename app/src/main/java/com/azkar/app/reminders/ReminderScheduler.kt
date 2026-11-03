@@ -69,7 +69,9 @@ object ReminderScheduler {
 
     fun schedule(ctx: Context, s: Schedule) {
         val am = alarms(ctx)
-        val at = ReminderTime.next(s.hour, s.minute)
+        // Morning / evening follow Fajr / Asr when a location is known; otherwise the fixed time.
+        val at = PrayerSessions.forSchedule(s.id)?.let { PrayerSessions.nextReminder(it, System.currentTimeMillis()) }
+            ?: ReminderTime.next(s.hour, s.minute)
         if (canExact(ctx)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, s.id))
     }
@@ -88,6 +90,9 @@ object ReminderScheduler {
             AzkarNotifier.showBeforeSleep(ctx)
             return
         }
+        // A morning / evening reminder only lives until Dhuhr / Maghrib; one arriving after that is dropped.
+        val now = System.currentTimeMillis()
+        val endsAt = PrayerSessions.forSchedule(s.id)?.let { PrayerSessions.endAfter(it, now) }
         val nid = 100 + (s.id.hashCode() and 0xFFFF)
         val open = PendingIntent.getActivity(
             ctx, nid,
@@ -109,6 +114,7 @@ object ReminderScheduler {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(open)
             .setAutoCancel(true)
+            .apply { endsAt?.let { setTimeoutAfter(it - now) } }
             .build()
         NotificationManagerCompat.from(ctx).notify(nid, n)
     }
@@ -125,7 +131,9 @@ class ReminderReceiver : BroadcastReceiver() {
                 val id = intent.getStringExtra("id") ?: return@launch
                 val s = Store.schedule(id) ?: return@launch
                 if (!AppPrefs.notificationsOn() || !s.enabled) return@launch
-                ReminderScheduler.notify(ctx, s)
+                // A delayed alarm that lands after Dhuhr / Maghrib skips today's reminder.
+                val late = PrayerSessions.forSchedule(id)?.let { PrayerSessions.inSession(it, System.currentTimeMillis()) } == false
+                if (!late) ReminderScheduler.notify(ctx, s)
                 ReminderScheduler.schedule(ctx, s)
             } finally {
                 pending.finish()

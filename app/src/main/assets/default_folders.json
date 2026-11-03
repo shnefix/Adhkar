@@ -638,7 +638,8 @@
         }
       ],
       "id": "d_11",
-      "home": true
+      "home": true,
+      "remember": true
     },
     {
       "name": "أذكار المسجد",
@@ -858,7 +859,8 @@
         }
       ],
       "id": "d_14",
-      "home": true
+      "home": true,
+      "remember": true
     }
   ]
 }
