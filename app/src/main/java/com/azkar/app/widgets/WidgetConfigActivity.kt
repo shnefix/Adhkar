@@ -28,7 +28,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun chooseStyle(id: Int, kind: WidgetKind) {
-        val styles = WidgetStyle.values().filter { kind in it.kinds }
+        val styles = WidgetStyle.values().filter { kind in it.offered }
         AlertDialog.Builder(this)
             .setTitle(R.string.widget_style_title)
             .setItems(styles.map { it.label }.toTypedArray()) { _, i -> chooseFolder(id, kind, styles[i]) }

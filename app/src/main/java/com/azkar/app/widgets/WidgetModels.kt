@@ -12,10 +12,13 @@ enum class WidgetKind { SMALL, MEDIUM, LARGE }
 
 private val ALL_KINDS = setOf(WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE)
 
-/** The four available designs. [kinds] = which sizes exist for that design. */
-enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>) {
-    CLASSIC("Classic", ALL_KINDS),
-    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE)),
+/**
+ * The four designs. [kinds] = sizes the renderer can draw (widgets already placed keep working);
+ * [offered] = sizes the pickers still offer for new widgets.
+ */
+enum class WidgetStyle(val label: String, val kinds: Set<WidgetKind>, val offered: Set<WidgetKind> = kinds) {
+    CLASSIC("Classic", ALL_KINDS, setOf(WidgetKind.SMALL)),
+    CHECKLIST("Checklist", setOf(WidgetKind.MEDIUM, WidgetKind.LARGE), setOf(WidgetKind.MEDIUM)),
     TASBIH("Tasbih beads", setOf(WidgetKind.SMALL, WidgetKind.LARGE)),
     CALLIGRAPHY("Calligraphy", setOf(WidgetKind.SMALL, WidgetKind.MEDIUM));
 }

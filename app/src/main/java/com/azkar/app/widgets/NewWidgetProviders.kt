@@ -18,21 +18,15 @@ enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKin
     H_SMALL(R.layout.azkar_widget_h_small, R.xml.azkar_widget_h_small_info, WidgetKind.SMALL),
     H_MEDIUM(R.layout.azkar_widget_h_medium, R.xml.azkar_widget_h_medium_info, WidgetKind.MEDIUM),
     H_LARGE(R.layout.azkar_widget_h_large, R.xml.azkar_widget_h_large_info, WidgetKind.LARGE),
-    I_SMALL(R.layout.azkar_widget_i_small, R.xml.azkar_widget_i_small_info, WidgetKind.SMALL),
-    I_MEDIUM(R.layout.azkar_widget_i_medium, R.xml.azkar_widget_i_medium_info, WidgetKind.MEDIUM),
-    I_LARGE(R.layout.azkar_widget_i_large, R.xml.azkar_widget_i_large_info, WidgetKind.LARGE),
     J_STRIP_DHIKR(R.layout.azkar_widget_j_strip_dhikr, R.xml.azkar_widget_j_strip_dhikr_info, WidgetKind.MEDIUM),
     J_STRIP_PROGRESS(R.layout.azkar_widget_j_strip_progress, R.xml.azkar_widget_j_strip_progress_info, WidgetKind.MEDIUM),
-    J_STRIP_DOTS(R.layout.azkar_widget_j_strip_dots, R.xml.azkar_widget_j_strip_dots_info, WidgetKind.MEDIUM),
-    J_STRIP_NEXT(R.layout.azkar_widget_j_strip_next, R.xml.azkar_widget_j_strip_next_info, WidgetKind.MEDIUM),
     J_TALL_RING(R.layout.azkar_widget_j_tall_ring, R.xml.azkar_widget_j_tall_ring_info, WidgetKind.LARGE),
     J_TALL_TIMELINE(R.layout.azkar_widget_j_tall_timeline, R.xml.azkar_widget_j_tall_timeline_info, WidgetKind.LARGE),
     D_SMALL(R.layout.azkar_widget_d_small, R.xml.azkar_widget_d_small_info, WidgetKind.SMALL),
     D_MEDIUM(R.layout.azkar_widget_d_medium, R.xml.azkar_widget_d_medium_info, WidgetKind.MEDIUM),
     D_LARGE(R.layout.azkar_widget_d_large, R.xml.azkar_widget_d_large_info, WidgetKind.LARGE),
     B_SMALL(R.layout.azkar_widget_b_small, R.xml.azkar_widget_b_small_info, WidgetKind.SMALL),
-    B_MEDIUM(R.layout.azkar_widget_b_medium, R.xml.azkar_widget_b_medium_info, WidgetKind.MEDIUM),
-    B_LARGE(R.layout.azkar_widget_b_large, R.xml.azkar_widget_b_large_info, WidgetKind.LARGE)
+    B_MEDIUM(R.layout.azkar_widget_b_medium, R.xml.azkar_widget_b_medium_info, WidgetKind.MEDIUM)
 }
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
@@ -101,21 +95,15 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.H_SMALL to HSmallWidgetProvider::class.java,
         AzkarWidgetFamily.H_MEDIUM to HMediumWidgetProvider::class.java,
         AzkarWidgetFamily.H_LARGE to HLargeWidgetProvider::class.java,
-        AzkarWidgetFamily.I_SMALL to ISmallWidgetProvider::class.java,
-        AzkarWidgetFamily.I_MEDIUM to IMediumWidgetProvider::class.java,
-        AzkarWidgetFamily.I_LARGE to ILargeWidgetProvider::class.java,
         AzkarWidgetFamily.J_STRIP_DHIKR to JStripDhikrWidgetProvider::class.java,
         AzkarWidgetFamily.J_STRIP_PROGRESS to JStripProgressWidgetProvider::class.java,
-        AzkarWidgetFamily.J_STRIP_DOTS to JStripDotsWidgetProvider::class.java,
-        AzkarWidgetFamily.J_STRIP_NEXT to JStripNextWidgetProvider::class.java,
         AzkarWidgetFamily.J_TALL_RING to JTallRingWidgetProvider::class.java,
         AzkarWidgetFamily.J_TALL_TIMELINE to JTallTimelineWidgetProvider::class.java,
         AzkarWidgetFamily.D_SMALL to DSmallWidgetProvider::class.java,
         AzkarWidgetFamily.D_MEDIUM to DMediumWidgetProvider::class.java,
         AzkarWidgetFamily.D_LARGE to DLargeWidgetProvider::class.java,
         AzkarWidgetFamily.B_SMALL to BSmallWidgetProvider::class.java,
-        AzkarWidgetFamily.B_MEDIUM to BMediumWidgetProvider::class.java,
-        AzkarWidgetFamily.B_LARGE to BLargeWidgetProvider::class.java
+        AzkarWidgetFamily.B_MEDIUM to BMediumWidgetProvider::class.java
     )
 
     fun providerClass(family: AzkarWidgetFamily): Class<*> = providers.getValue(family)
@@ -154,11 +142,6 @@ object NewWidgetUpdater {
             else "${model.folderName}: ${model.shown} of ${model.target}"
         )
         rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
-        if (family == AzkarWidgetFamily.B_LARGE) {
-            rv.setOnClickPendingIntent(R.id.azkar_widget_reset, action(context, family, id, ACTION_RESET))
-            rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
-            rv.setOnClickPendingIntent(R.id.azkar_widget_next, action(context, family, id, ACTION_NEXT))
-        }
         if (family == AzkarWidgetFamily.H_LARGE) {
             rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
         }

@@ -60,7 +60,7 @@ object WidgetStore {
             Log.w("WidgetStore", "Invalid widget style '$savedStyle' for $id", e)
             null
         }
-            ?.takeIf { kind in it.kinds } ?: WidgetStyle.CLASSIC
+            ?.takeIf { kind in it.kinds } ?: defaultStyle(kind)
         val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: "anytime"
         return Config(style, folder, Appearance(
             fontSizeSp = s.getFloat("font_size_$id", 28f),
@@ -98,6 +98,10 @@ object WidgetStore {
         edit.commit()
         saveProgress(ctx, id, 0, 0)
     }
+
+    /** Style a widget of [kind] gets before (or without) a saved choice: the first one the pickers offer. */
+    fun defaultStyle(kind: WidgetKind): WidgetStyle =
+        WidgetStyle.values().firstOrNull { kind in it.offered } ?: WidgetStyle.CLASSIC
 
     private fun kindFor(style: WidgetStyle): WidgetKind =
         style.kinds.firstOrNull() ?: WidgetKind.SMALL

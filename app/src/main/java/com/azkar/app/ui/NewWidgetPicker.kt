@@ -28,25 +28,19 @@ import com.azkar.app.widgets.WidgetModel
 internal val FAMILY_LABELS = linkedMapOf(
     AzkarWidgetFamily.B_SMALL to R.string.azkar_widget_b_small_label,
     AzkarWidgetFamily.B_MEDIUM to R.string.azkar_widget_b_medium_label,
-    AzkarWidgetFamily.B_LARGE to R.string.azkar_widget_b_large_label,
     AzkarWidgetFamily.D_SMALL to R.string.azkar_widget_d_small_label,
     AzkarWidgetFamily.D_MEDIUM to R.string.azkar_widget_d_medium_label,
     AzkarWidgetFamily.D_LARGE to R.string.azkar_widget_d_large_label,
     AzkarWidgetFamily.H_SMALL to R.string.azkar_widget_h_small_label,
     AzkarWidgetFamily.H_MEDIUM to R.string.azkar_widget_h_medium_label,
     AzkarWidgetFamily.H_LARGE to R.string.azkar_widget_h_large_label,
-    AzkarWidgetFamily.I_SMALL to R.string.azkar_widget_i_small_label,
-    AzkarWidgetFamily.I_MEDIUM to R.string.azkar_widget_i_medium_label,
-    AzkarWidgetFamily.I_LARGE to R.string.azkar_widget_i_large_label,
     AzkarWidgetFamily.J_STRIP_DHIKR to R.string.azkar_widget_j_strip_dhikr_label,
     AzkarWidgetFamily.J_STRIP_PROGRESS to R.string.azkar_widget_j_strip_progress_label,
-    AzkarWidgetFamily.J_STRIP_DOTS to R.string.azkar_widget_j_strip_dots_label,
-    AzkarWidgetFamily.J_STRIP_NEXT to R.string.azkar_widget_j_strip_next_label,
     AzkarWidgetFamily.J_TALL_RING to R.string.azkar_widget_j_tall_ring_label,
     AzkarWidgetFamily.J_TALL_TIMELINE to R.string.azkar_widget_j_tall_timeline_label,
 )
 
-/** Full-screen list of the 18 new widget designs with live previews. Tap one to pin it to the home screen. */
+/** Full-screen list of the new widget designs with live previews. Tap one to pin it to the home screen. */
 fun showNewWidgetPicker(context: Context) {
     Store.init(context)
     fun dp(v: Float) = Ui.pxi(context, v)

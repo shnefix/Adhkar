@@ -26,7 +26,13 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 3
+    private const val DEFAULTS_VERSION = 4
+    private const val HOME_FOLDER_ID = "d_15"                   // الواجهة, added in defaults version 4
+    private const val WAKE_FOLDER_ID = "d_9"
+    private const val WAKE_FOLDER_NAME = "أذكار الإستقاظ"
+    private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????")
+    /** Default folders shown first on Home, in this order. */
+    private val HOME_DEFAULTS = listOf(HOME_FOLDER_ID, "d_14", "d_11", WAKE_FOLDER_ID, "d_13", "d_1")
     private const val K_ORDER = "home_order"
     private const val K_HIDDEN = "home_hidden"
     private const val K_PLACE = "home_place"
@@ -179,25 +185,38 @@ object Store {
     /**
      * Gives every user the defaults from the JSON, additively: folders match by id then name,
      * azkar are skipped if the same text already exists in that folder, nothing is overwritten or deleted.
-     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). Users of the previous build already
-     * received everything, so for them it only records the version.
+     * Runs once per DEFAULTS_VERSION (bump it when you add defaults). A full merge only happens on a fresh
+     * install; upgrades receive just the folders added since, so default folders a user deleted stay deleted.
      */
     private fun syncDefaults() {
-        if (sp.getInt(K_DEFAULTS_VER, 0) >= DEFAULTS_VERSION) return
-        val alreadyHave = sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
-        if (!alreadyHave && !mergeDefaults()) return          // asset unreadable: try again next start
+        val from = sp.getInt(K_DEFAULTS_VER, 0)
+        if (from >= DEFAULTS_VERSION) return
+        val p = defaults() ?: return                          // asset unreadable: try again next start
+        val fresh = from == 0 && !sp.getBoolean(K_DEFAULT_FOLDERS_IMPORTED, false)
+        if (fresh) mergeDefaults(p)
+        else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == HOME_FOLDER_ID }))
+        if (from < 4) applyHomeDefaults()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
-    private fun mergeDefaults(): Boolean {
-        val p = defaults() ?: return false
+    /**
+     * Version 4: fixes the wake-up folder's name (it was saved as "?????" by an encoding bug) and puts
+     * the [HOME_DEFAULTS] folders first on Home. Folders the user renamed or deleted are left alone.
+     */
+    private fun applyHomeDefaults() {
+        folder(WAKE_FOLDER_ID)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
+        val present = HOME_DEFAULTS.filter { folder(it) != null }
+        setHidden(hidden() - present.toSet())
+        setHomeOrder(present + homeOrder().filter { it !in present })
+    }
+
+    private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
         val before = fCache.map { it.id }.toSet()
         val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
         saveContent(ns.folders, ns.zikrs, ns.schedules)
         val created = ns.folders.map { it.id }.filter { it !in before }.toSet()
         val hide = p.folders.filter { it.home != true }.mapNotNull { it.id }.filter { it in created }
         if (hide.isNotEmpty()) setHidden(hidden() + hide)      // only brand-new default folders start hidden
-        return true
     }
 
     /** One time: the three fixed reminders become editable schedules (same on/off state). */
@@ -261,7 +280,7 @@ object Store {
 
     private fun notifyWidgets() {
         if (::appCtx.isInitialized && widgetRefreshPending.compareAndSet(false, true)) {
-            appCtx.mainExecutor.execute {
+            androidx.core.content.ContextCompat.getMainExecutor(appCtx).execute {
                 try {
                     WidgetUpdater.updateAll(appCtx)
                 } finally {

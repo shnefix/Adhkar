@@ -16,26 +16,40 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.azkar.app.R
 
-/** Design tokens of the "Customize widget" design (Main / Behavior). */
+/** Editor colors, taken from the app theme (teal or OLED) by [load] each time the editor opens. */
 internal object EditorColors {
-    val Bg = 0xFF0B0B0B.toInt()
-    val Text = 0xFFF2F2F2.toInt()
-    val Muted = 0xFFA8A8A8.toInt()
-    val Gold = 0xFFE0BF6E.toInt()
-    val Card = 0xFF141414.toInt()
-    val Tabs = 0xFF161616.toInt()
-    val Border = 0xFF2A2A2A.toInt()
-    val Chip = 0xFF1E1E1E.toInt()
-    val ChipBorder = 0xFF2F2F2F.toInt()
-    val ChipText = 0xFFD0D0D0.toInt()
-    val Custom = 0xFF0F0F0F.toInt()
-    val Dot = 0xFF3A3A3A.toInt()
+    var Bg = 0; private set          // also the text color on gold
+    var Text = 0; private set
+    var Muted = 0; private set
+    var Gold = 0; private set
+    var Card = 0; private set
+    var Tabs = 0; private set
+    var Border = 0; private set
+    var Chip = 0; private set
+    var ChipBorder = 0; private set
+    var ChipText = 0; private set
+    var Custom = 0; private set
+    var Dot = 0; private set
+
+    fun load(ctx: Context) {
+        Bg = ctx.getColor(R.color.bg)
+        Text = ctx.getColor(R.color.text)
+        Muted = ctx.getColor(R.color.muted)
+        Gold = ctx.getColor(R.color.gold)
+        Card = ctx.getColor(R.color.card)
+        Tabs = ctx.getColor(R.color.card)
+        Border = ctx.getColor(R.color.border)
+        Chip = ctx.getColor(R.color.card2)
+        ChipBorder = ctx.getColor(R.color.border2)
+        ChipText = ctx.getColor(R.color.light)
+        Custom = ctx.getColor(R.color.card2)
+        Dot = ctx.getColor(R.color.border2)
+    }
 }
 
 internal val EditorTextColors = listOf(0xFFEEEEEE.toInt(), 0xFFE0BF6E.toInt(), 0xFFC8A24C.toInt(), 0xFF9A9A9A.toInt())
@@ -65,15 +79,32 @@ internal fun LinearLayout.addSpaced(child: View, topDp: Float = 14f) {
     ).also { it.topMargin = Ui.pxi(context, topDp) })
 }
 
+/** A settings card like the app's own screens: bordered card, bold title, optional muted hint. */
 internal fun sectionCard(ctx: Context, title: String, subtitle: String? = null): LinearLayout =
     LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
-        background = editorShape(EditorColors.Card, 20f, ctx)
+        background = editorShape(EditorColors.Card, 24f, ctx, EditorColors.Border)
         val pad = Ui.pxi(ctx, 18f)
         setPadding(pad, pad, pad, pad)
-        addView(editorText(ctx, title.uppercase(), 12f, EditorColors.Muted, bold = true).apply { letterSpacing = 0.12f })
+        addView(TextView(ctx, null, 0, R.style.TB).apply {
+            text = title
+            textSize = 16f
+            setTextColor(EditorColors.Text)
+        })
         if (subtitle != null) addSpaced(editorText(ctx, subtitle, 13f, EditorColors.Muted), 4f)
     }
+
+/** Muted caps label above a group of cards (the app's "Caps" style). */
+internal fun groupLabel(ctx: Context, text: String): View =
+    TextView(ctx, null, 0, R.style.Caps).apply { this.text = text }
+
+/** 1dp hairline between rows inside a card. */
+internal fun divider(ctx: Context): View = View(ctx).apply { setBackgroundColor(EditorColors.Border) }
+
+internal fun LinearLayout.addDivider() {
+    addView(divider(context), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(context, 1f))
+        .also { it.topMargin = Ui.pxi(context, 14f) })
+}
 
 internal fun <T> chipGroup(ctx: Context, options: List<Pair<T, String>>, selected: T?, onSelect: (T) -> Unit): View {
     val group = FlowLayout(ctx)
@@ -104,8 +135,8 @@ internal fun <T> chipGroup(ctx: Context, options: List<Pair<T, String>>, selecte
 internal fun segmented(ctx: Context, options: List<String>, selected: Int, onSelect: (Int) -> Unit): View =
     LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
-        background = editorShape(EditorColors.Bg, 12f, ctx)
-        val pad = Ui.pxi(ctx, 3f)
+        background = editorShape(EditorColors.Chip, 14f, ctx, EditorColors.Border)
+        val pad = Ui.pxi(ctx, 4f)
         setPadding(pad, pad, pad, pad)
         options.forEachIndexed { i, label ->
             val on = i == selected
@@ -113,8 +144,9 @@ internal fun segmented(ctx: Context, options: List<String>, selected: Int, onSel
                 text = label
                 textSize = 14f
                 gravity = Gravity.CENTER
-                setTextColor(if (on) EditorColors.Gold else EditorColors.Muted)
-                if (on) background = editorShape(EditorColors.Border, 10f, ctx)
+                setTextColor(if (on) EditorColors.Bg else EditorColors.Muted)
+                setTypeface(typeface, if (on) Typeface.BOLD else Typeface.NORMAL)
+                if (on) background = editorShape(EditorColors.Gold, 10f, ctx)
                 setOnClickListener { onSelect(i) }
             }, LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f))
         }
@@ -216,33 +248,12 @@ internal fun toggleRow(ctx: Context, title: String, subtitle: String, checked: B
             addView(editorText(ctx, title, 15f, EditorColors.Text))
             addSpaced(editorText(ctx, subtitle, 13f, EditorColors.Muted), 2f)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(goldSwitch(ctx, checked, onChange), LinearLayout.LayoutParams(Ui.pxi(ctx, 52f), Ui.pxi(ctx, 32f)))
+        addView(ToggleSwitch(ctx).apply {
+            on = checked
+            onToggle = onChange
+            contentDescription = title
+        }, LinearLayout.LayoutParams(Ui.pxi(ctx, 56f), Ui.pxi(ctx, 44f)))
     }
-
-/** The design's switch: gold track + dark knob when on, dark track + grey knob when off. */
-internal fun goldSwitch(ctx: Context, initial: Boolean, onChange: (Boolean) -> Unit): View {
-    val track = FrameLayout(ctx)
-    val knob = View(ctx)
-    track.addView(knob)
-    var on = initial
-    fun render() {
-        track.background = editorShape(if (on) EditorColors.Gold else EditorColors.Border, 16f, ctx)
-        knob.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(if (on) EditorColors.Bg else EditorColors.Muted)
-        }
-        val size = Ui.pxi(ctx, if (on) 24f else 16f)
-        val inset = Ui.pxi(ctx, if (on) 4f else 8f)
-        knob.layoutParams = FrameLayout.LayoutParams(
-            size, size, Gravity.CENTER_VERTICAL or (if (on) Gravity.END else Gravity.START)
-        ).also { if (on) it.marginEnd = inset else it.marginStart = inset }
-    }
-    render()
-    track.isClickable = true
-    track.isFocusable = true
-    track.setOnClickListener { on = !on; render(); onChange(on) }
-    return track
-}
 
 private fun stepperButton(ctx: Context, symbol: String, description: String, onClick: () -> Unit) =
     editorText(ctx, symbol, 26f, EditorColors.Gold).apply {

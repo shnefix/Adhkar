@@ -76,7 +76,7 @@ internal class WidgetPickerDialog(
             it.setMargins(margin, margin, margin, margin)
         })
         val catalog = WidgetKind.values().flatMap { kind ->
-            WidgetStyle.values().filter { kind in it.kinds }.map { style -> PickerItem(kind, style) } +
+            WidgetStyle.values().filter { kind in it.offered }.map { style -> PickerItem(kind, style) } +
                 AzkarWidgetFamily.values().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
         }
         var selectedItem = catalog.first()
@@ -149,7 +149,9 @@ internal class WidgetPickerDialog(
                 }
             }
         }
-        pickerAdapter = PickerAdapter(context, catalog, selectedItem, viewModel.pickerFilter) { item ->
+        // Every open starts on "All" (Small → Medium → Large), matching the highlighted filter button.
+        viewModel.setPickerFilter(null)
+        pickerAdapter = PickerAdapter(context, catalog, selectedItem, null) { item ->
             selectedItem = item
             addButton.text = addLabel(selectedItem)
         }

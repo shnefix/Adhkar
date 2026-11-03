@@ -44,14 +44,13 @@ object AzkarSessionClock {
 /** Design sizes in dp (from the Compose spec). Used when the launcher reports no size and for previews. */
 object AzkarWidgetSizes {
     fun design(f: AzkarWidgetFamily): Pair<Float, Float> = when (f) {
-        AzkarWidgetFamily.H_SMALL, AzkarWidgetFamily.I_SMALL,
+        AzkarWidgetFamily.H_SMALL,
         AzkarWidgetFamily.D_SMALL, AzkarWidgetFamily.B_SMALL -> 158f to 158f
-        AzkarWidgetFamily.H_MEDIUM, AzkarWidgetFamily.I_MEDIUM,
+        AzkarWidgetFamily.H_MEDIUM,
         AzkarWidgetFamily.D_MEDIUM, AzkarWidgetFamily.B_MEDIUM -> 338f to 158f
-        AzkarWidgetFamily.H_LARGE, AzkarWidgetFamily.I_LARGE,
-        AzkarWidgetFamily.D_LARGE, AzkarWidgetFamily.B_LARGE -> 338f to 354f
+        AzkarWidgetFamily.H_LARGE,
+        AzkarWidgetFamily.D_LARGE -> 338f to 354f
         AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS,
-        AzkarWidgetFamily.J_STRIP_DOTS, AzkarWidgetFamily.J_STRIP_NEXT -> 338f to 74f
         AzkarWidgetFamily.J_TALL_RING, AzkarWidgetFamily.J_TALL_TIMELINE -> 158f to 354f
     }
 }
@@ -105,20 +104,14 @@ class NewWidgetRenderer(private val ctx: Context) {
         when (family) {
             AzkarWidgetFamily.B_SMALL -> discSmall(c, w, h, m)
             AzkarWidgetFamily.B_MEDIUM -> discMedium(c, w, h, m)
-            AzkarWidgetFamily.B_LARGE -> discLarge(c, w, h, m)
             AzkarWidgetFamily.D_SMALL -> sessionsSmall(c, w, h, m)
             AzkarWidgetFamily.D_MEDIUM -> sessionsMedium(c, w, h, m)
             AzkarWidgetFamily.D_LARGE -> sessionsLarge(c, w, h, m)
             AzkarWidgetFamily.H_SMALL -> beadsSmall(c, w, h, m)
             AzkarWidgetFamily.H_MEDIUM -> beadsMedium(c, w, h, m)
             AzkarWidgetFamily.H_LARGE -> beadsLarge(c, w, h, m)
-            AzkarWidgetFamily.I_SMALL -> barsSmall(c, w, h, m)
-            AzkarWidgetFamily.I_MEDIUM -> barsMedium(c, w, h, m)
-            AzkarWidgetFamily.I_LARGE -> barsLarge(c, w, h, m)
             AzkarWidgetFamily.J_STRIP_DHIKR -> stripDhikr(c, w, h, m)
             AzkarWidgetFamily.J_STRIP_PROGRESS -> stripProgress(c, w, h, m)
-            AzkarWidgetFamily.J_STRIP_DOTS -> stripDots(c, w, h, m)
-            AzkarWidgetFamily.J_STRIP_NEXT -> stripNext(c, w, h, m)
             AzkarWidgetFamily.J_TALL_RING -> tallRing(c, w, h, m)
             AzkarWidgetFamily.J_TALL_TIMELINE -> tallTimeline(c, w, h, m)
         }
@@ -151,25 +144,6 @@ class NewWidgetRenderer(private val ctx: Context) {
         eyebrow(c, "${m.folderName} · ${str(R.string.widget_count_of, m.position, m.n)}", tx, 16f + 5f, Paint.Align.LEFT, maxW = r - tx)
         arabicBox(c, m.cur!!.arabic, tx, cy - 26f * k, r, cy + 22f * k, 26f * k, cream, Layout.Alignment.ALIGN_NORMAL)
         caption(c, str(R.string.widget_next_label, nextLabel(m)), tx, h - 16f - 5f, Paint.Align.LEFT, maxW = r - tx)
-    }
-
-    private fun discLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val l = 18f; val r = w - 18f; val t = 18f; val b = h - 18f
-        header(c, str(R.string.widget_counter), "${m.folderName} · ${str(R.string.widget_count_of, m.position, m.n)}", "${m.shown} / ${m.target}", l, r, t)
-        val btnTop = b - 44f
-        val top = t + 44f; val bot = btnTop - 12f
-        val d = min(min(bot - top, w - 36f), 200f)
-        val s = d / 200f
-        val cx = w / 2; val cy = (top + bot) / 2
-        disc(c, cx, cy, 92f * s, 8f * s, 76f * s, frac(m))
-        arabicBox(c, m.cur!!.arabic, cx - 62f * s, cy - 56f * s, cx + 62f * s, cy - 12f * s, 26f * s, goldSoft)
-        text(c, "${m.shown}", cx, cy + 14f * s, 46f * s, cream, dmBold, Paint.Align.CENTER)
-        caption(c, str(R.string.widget_tap_hint), cx, cy + 46f * s, Paint.Align.CENTER)
-        val x1 = l + 56f + 10f
-        val each = ((r - x1) - 10f) / 2f
-        ghost(c, RectF(l, btnTop, l + 56f, b), "−1", 15f)
-        ghost(c, RectF(x1, btnTop, x1 + each, b), str(R.string.widget_reset))
-        solid(c, RectF(x1 + each + 10f, btnTop, r, b), str(R.string.widget_next_dhikr), 13f)
     }
 
     private fun disc(c: Canvas, cx: Float, cy: Float, r: Float, sw: Float, innerR: Float, f: Float) {
@@ -314,90 +288,7 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── I · bars ─────────────────────────
 
-    private fun barsSmall(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val k = min(w, h) / 158f
-        val l = 14f; val r = w - 14f; val t = 14f; val b = h - 14f
-        eyebrow(c, m.folderName, l, t + 5f, Paint.Align.LEFT, maxW = r - l - 44f)
-        caption(c, str(R.string.widget_n_done, m.done), r, t + 5f, Paint.Align.RIGHT)
-        val bottom = b - 30f * k
-        bars(c, l, r, bottom - 56f * k, bottom, 4f, m, false)
-        bigWithSuffix(c, l, b - 13f * k, "${m.position}", " / ${m.n}", 26f * k, 12f)
-        caption(c, str(R.string.widget_tap_plus), r, b - 4f, Paint.Align.RIGHT, 10f)
-    }
-
-    private fun barsMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val l = 16f; val r = w - 16f; val t = 16f; val b = h - 16f
-        eyebrow(c, m.folderName, l, t + 5f, Paint.Align.LEFT, maxW = 84f)
-        bigWithSuffix(c, l, b - 30f, "${m.position}", " /${m.n}", 40f, 14f)
-        caption(c, str(R.string.widget_now_of, m.shown, m.target), l, b - 5f, Paint.Align.LEFT, 10f, maxW = 84f)
-        val bl = l + 84f + 16f
-        bars(c, bl, r, t, b - 18f, 5f, m, false)
-        caption(c, "1", bl, b - 5f, Paint.Align.LEFT, 9f)
-        caption(c, "${m.n}", r, b - 5f, Paint.Align.RIGHT, 9f)
-    }
-
-    private fun barsLarge(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val l = 16f; val r = w - 16f; val t = 16f; val b = h - 16f
-        val inProgress = if (!m.finished && m.shown > 0) 1 else 0
-        val left = (m.n - m.done - inProgress).coerceAtLeast(0)
-        header(c, m.folderName, str(R.string.widget_i_status, m.done, inProgress, left), "${m.position} / ${m.n}", l, r, t)
-        val rowTop = b - 64f
-        val barsTop = t + 48f
-        val barsBottom = rowTop - 30f
-        val first = bars(c, l, r, barsTop, barsBottom, 6f, m, true)
-        numberRow(c, l, r, barsBottom + 14f, m, first)
-        val rr = RectF(l, rowTop, r, b)
-        c.drawRoundRect(rr, 18f, 18f, fill(inner))
-        c.drawRoundRect(RectF(rr.left + .5f, rr.top + .5f, rr.right - .5f, rr.bottom - .5f), 18f, 18f, stroke(innerBorder, 1f))
-        val btnW = 64f
-        solid(c, RectF(r - 10f - btnW, rowTop + 10f, r - 10f, b - 10f), "+1")
-        caption(c, "${m.shown}/${m.target}", r - 10f - btnW - 12f, (rowTop + b) / 2, Paint.Align.RIGHT, 12f)
-        arabicBox(c, m.cur!!.arabic, l + 16f, rowTop + 6f, r - 10f - btnW - 70f, b - 6f, 24f, cream, Layout.Alignment.ALIGN_OPPOSITE)
-    }
-
     /** Returns index of the first bar shown. */
-    private fun bars(c: Canvas, l: Float, r: Float, top: Float, bottom: Float, radius: Float, m: WidgetModel, highlight: Boolean): Int {
-        val count = min(m.n, 24).coerceAtLeast(1)
-        val first = (m.curIdx - count / 2).coerceIn(0, max(0, m.n - count))
-        val gap = if (count > 14) 3f else 4f
-        val bw = ((r - l) - gap * (count - 1)) / count
-        for (i in 0 until count) {
-            val idx = first + i
-            val x = l + i * (bw + gap)
-            val f = when {
-                m.finished || idx < m.idx -> 1f
-                idx == m.idx -> m.shown / (m.items[idx].target.toFloat().coerceAtLeast(1f))
-                else -> 0f
-            }
-            val rr = RectF(x, top, x + bw, bottom)
-            val rad = min(radius, bw / 2)
-            c.drawRoundRect(rr, rad, rad, fill(chipC))
-            if (f > 0f) {
-                c.save()
-                val clip = Path().apply { addRoundRect(rr, rad, rad, Path.Direction.CW) }
-                c.clipPath(clip)
-                c.drawRect(x, bottom - (bottom - top) * f.coerceIn(0f, 1f), x + bw, bottom, fill(gold))
-                c.restore()
-            }
-            if (highlight && idx == m.curIdx) {
-                c.drawRoundRect(RectF(rr.left + .5f, rr.top + .5f, rr.right - .5f, rr.bottom - .5f), rad, rad, stroke(gold, 1f))
-            }
-        }
-        return first
-    }
-
-    private fun numberRow(c: Canvas, l: Float, r: Float, cy: Float, m: WidgetModel, first: Int) {
-        val count = min(m.n, 24).coerceAtLeast(1)
-        val gap = if (count > 14) 3f else 4f
-        val bw = ((r - l) - gap * (count - 1)) / count
-        for (i in 0 until count) {
-            val idx = first + i
-            val cur = idx == m.curIdx
-            if (bw < 13f && !cur && i != 0 && i != count - 1) continue
-            text(c, "${idx + 1}", l + i * (bw + gap) + bw / 2, cy, 9f, if (cur) gold else muted, if (cur) dmBold else dmReg, Paint.Align.CENTER)
-        }
-    }
-
     // ───────────────────────── J · strips ─────────────────────────
 
     private fun stripDhikr(c: Canvas, w: Float, h: Float, m: WidgetModel) {
@@ -416,42 +307,6 @@ class NewWidgetRenderer(private val ctx: Context) {
         eyebrow(c, "${m.folderName} ${str(R.string.widget_azkar_word)}", l, h / 2 - 9f, Paint.Align.LEFT, maxW = r - l - 60f)
         caption(c, str(R.string.widget_count_of, m.position, m.n), r, h / 2 - 9f, Paint.Align.RIGHT)
         bar(c, l, h / 2 + 5f, r, 4f, overall(m))
-    }
-
-    private fun stripDots(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val cy = h / 2
-        val l = 20f
-        val label = "${m.position} / ${m.n}"
-        text(c, label, w - 20f, cy, 12f, gold, dmBold, Paint.Align.RIGHT)
-        val avail = (w - 20f - measure(label, 12f, dmBold) - 14f) - l
-        val n = m.n
-        val stride = min(14f, avail / max(1, n))
-        val dr = if (stride < 14f) max(1.5f, stride * 0.28f) else 4f
-        for (i in 0 until n) {
-            val x = l + i * stride + stride / 2
-            val done = m.finished || i < m.idx
-            val cur = !m.finished && i == m.idx
-            when {
-                cur -> {
-                    c.drawCircle(x, cy, dr * 2 - 1f, stroke(gold, 2f))
-                    c.drawCircle(x, cy, dr / 2 + 0.5f, fill(gold))
-                }
-                done -> c.drawCircle(x, cy, dr, fill(gold))
-                else -> c.drawCircle(x, cy, dr, fill(track))
-            }
-        }
-    }
-
-    private fun stripNext(c: Canvas, w: Float, h: Float, m: WidgetModel) {
-        val cy = h / 2
-        val label = str(R.string.widget_next).uppercase()
-        val pw = measure(label, 9f, dmBold) + 18f
-        c.drawRoundRect(RectF(14f, cy - 10f, 14f + pw, cy + 10f), 10f, 10f, fill(chipC))
-        text(c, label, 14f + pw / 2, cy, 9f, gold, dmBold, Paint.Align.CENTER, spaced(0.1f))
-        val ni = if (m.curIdx + 1 < m.n) m.curIdx + 1 else m.curIdx
-        val aw = min(120f, w * 0.34f)
-        arabicLine(c, m.items[ni].arabic, w - 20f - aw, w - 20f, cy, 19f, muted, Layout.Alignment.ALIGN_NORMAL)
-        text(c, m.labels[ni], 14f + pw + 10f, cy, 13f, cream, dmReg, Paint.Align.LEFT, 0f, (w - 20f - aw - 8f) - (14f + pw + 10f))
     }
 
     // ───────────────────────── J · tall ─────────────────────────

@@ -55,20 +55,16 @@
     <string name="before_sleep_ar">أذكار النوم</string>
     <string name="azkar_widget_b_small_label">Azkar tap disc small</string><string name="azkar_widget_b_small_desc">Azkar tap disc, small</string>
     <string name="azkar_widget_b_medium_label">Azkar tap disc medium</string><string name="azkar_widget_b_medium_desc">Azkar tap disc, medium</string>
-    <string name="azkar_widget_b_large_label">Azkar tap disc large</string><string name="azkar_widget_b_large_desc">Azkar tap disc, large</string>
     <string name="azkar_widget_d_small_label">Azkar morning and evening small</string><string name="azkar_widget_d_small_desc">Morning and evening azkar, small</string>
     <string name="azkar_widget_d_medium_label">Azkar morning and evening medium</string><string name="azkar_widget_d_medium_desc">Morning and evening azkar, medium</string>
     <string name="azkar_widget_d_large_label">Azkar morning and evening large</string><string name="azkar_widget_d_large_desc">Morning and evening azkar, large</string>
     <string name="azkar_widget_h_small_label">Azkar beads small</string><string name="azkar_widget_h_small_desc">Bead string azkar, small</string>
     <string name="azkar_widget_h_medium_label">Azkar beads medium</string><string name="azkar_widget_h_medium_desc">Bead string azkar, medium</string>
     <string name="azkar_widget_h_large_label">Azkar beads large</string><string name="azkar_widget_h_large_desc">Bead string azkar, large</string>
-    <string name="azkar_widget_i_small_label">Azkar bars small</string><string name="azkar_widget_i_small_desc">Progress bars azkar, small</string>
-    <string name="azkar_widget_i_medium_label">Azkar bars medium</string><string name="azkar_widget_i_medium_desc">Progress bars azkar, medium</string>
-    <string name="azkar_widget_i_large_label">Azkar bars large</string><string name="azkar_widget_i_large_desc">Progress bars azkar, large</string>
+    
     <string name="azkar_widget_j_strip_dhikr_label">Azkar dhikr strip</string><string name="azkar_widget_j_strip_dhikr_desc">Dhikr count strip</string>
     <string name="azkar_widget_j_strip_progress_label">Azkar progress strip</string><string name="azkar_widget_j_strip_progress_desc">Azkar progress strip</string>
-    <string name="azkar_widget_j_strip_dots_label">Azkar dots strip</string><string name="azkar_widget_j_strip_dots_desc">Azkar dots strip</string>
-    <string name="azkar_widget_j_strip_next_label">Azkar next strip</string><string name="azkar_widget_j_strip_next_desc">Next dhikr strip</string>
+    
     <string name="azkar_widget_j_tall_ring_label">Azkar tall ring</string><string name="azkar_widget_j_tall_ring_desc">Tall azkar progress ring</string>
     <string name="azkar_widget_j_tall_timeline_label">Azkar tall timeline</string><string name="azkar_widget_j_tall_timeline_desc">Tall azkar timeline</string>
     <string name="widget_editor_title">Widget editor</string>
@@ -99,7 +95,7 @@
     <string name="small_grid">SMALL · 2×2</string>
     <string name="medium_grid">MEDIUM · 4×2</string>
     <string name="large_grid">LARGE · 4×4</string>
-    <string name="typography">TYPOGRAPHY</string>
+    <string name="typography">Typography</string>
     <string name="arabic_font">Arabic font</string>
     <string name="line_height">Line height: %1$.1f</string>
     <string name="alignment">Alignment</string>
@@ -139,9 +135,6 @@
     <string name="widget_next_label">Next: %1$s</string>
     <string name="widget_now">Now</string>
     <string name="widget_completed">Completed</string>
-    <string name="widget_counter">Counter</string>
-    <string name="widget_next_dhikr">Next dhikr</string>
-    <string name="widget_tap_hint">tap to count</string>
     <string name="widget_tap_caps">TAP</string>
     <string name="widget_tap_plus">tap +1</string>
     <string name="widget_of_tap">of %1$d · tap</string>
@@ -150,7 +143,9 @@
     <string name="widget_recited">%1$d of %2$d recited</string>
     <string name="widget_n_done">%1$d done</string>
     <string name="widget_now_of">%1$d of %2$d now</string>
-    <string name="widget_i_status">%1$d done · %2$d in progress · %3$d to go</string>
     <string name="widget_azkar_word">azkar</string>
     <string name="widget_new_designs">New designs</string>
+    <string name="editor_tab_content">Content</string>
+    <string name="editor_tab_style">Style</string>
+    <string name="editor_tab_behavior">Behavior</string>
 </resources>

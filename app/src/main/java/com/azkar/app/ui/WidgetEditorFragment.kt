@@ -37,11 +37,13 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     private var tabsInFamilyMode: Boolean? = null
     private val customHours = HashMap<Int, Boolean>()
 
-    private enum class EditorTab(val title: String) {
-        CONTENT("Content"), STYLE("Style"), LOOK("Look"), BEHAVIOR("Behavior")
+    /** Style holds both the design choice and its look (typography, colors, corners). */
+    private enum class EditorTab(val titleRes: Int) {
+        CONTENT(R.string.editor_tab_content), STYLE(R.string.editor_tab_style), BEHAVIOR(R.string.editor_tab_behavior)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        EditorColors.load(requireContext())
         Store.init(requireContext())
         val placed = viewModel.load(requireContext())
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
@@ -134,14 +136,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         val ctx = requireContext()
         val root = view.findViewById<LinearLayout>(R.id.editor_tabs)
         root.removeAllViews()
-        root.background = editorShape(EditorColors.Tabs, 14f, ctx)
+        root.background = editorShape(EditorColors.Chip, 16f, ctx, EditorColors.Border)
         val pad = Ui.pxi(ctx, 4f)
         root.setPadding(pad, pad, pad, pad)
         val shownTabs = visibleTabs()
         tabs = shownTabs.mapIndexed { index, tab ->
             val on = tab == activeTab
             TextView(ctx, null, 0, R.style.WidgetEditorMedium).apply {
-                text = tab.title
+                text = getString(tab.titleRes)
                 gravity = Gravity.CENTER
                 textSize = 14f
                 setTextColor(if (on) EditorColors.Bg else EditorColors.Muted)
@@ -173,8 +175,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         val column = vertical()
         when (activeTab) {
             EditorTab.CONTENT -> contentCards(view, item, column)
-            EditorTab.STYLE -> styleCards(view, item, column)
-            EditorTab.LOOK -> lookCards(view, item, column)
+            EditorTab.STYLE -> { styleCards(view, item, column); lookCards(view, item, column) }
             EditorTab.BEHAVIOR -> behaviorCards(view, item, column)
         }
         root.addView(column)
@@ -198,7 +199,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
 
     private fun styleCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
-        val styles = WidgetStyle.values().filter { item.kind in it.kinds }
+        val styles = WidgetStyle.values().filter { item.kind in it.offered }
         val card = sectionCard(ctx, "Design", "How this ${widgetSizeName(ctx, item.kind).lowercase()} widget is laid out.")
         card.addSpaced(chipGroup(ctx, styles.map { it to it.label }, item.config.style) { s ->
             updateConfig(view) { cfg -> cfg.copy(style = s) }

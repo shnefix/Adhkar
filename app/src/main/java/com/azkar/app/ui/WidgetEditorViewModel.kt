@@ -117,6 +117,5 @@ class WidgetEditorViewModel @Inject constructor(
         WidgetUpdater.update(context, AppWidgetManager.getInstance(context), id, placed.kind)
     }
 
-    fun defaultStyle(kind: WidgetKind): WidgetStyle =
-        WidgetStyle.values().firstOrNull { kind in it.kinds } ?: WidgetStyle.CLASSIC
+    fun defaultStyle(kind: WidgetKind): WidgetStyle = WidgetStore.defaultStyle(kind)
 }
