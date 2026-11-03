@@ -33,6 +33,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import com.azkar.app.widgets.AzkarWidgetFamily
 import com.azkar.app.widgets.AzkarWidgetSizes
 import com.azkar.app.widgets.LargeWidgetProvider
 import com.azkar.app.widgets.NewWidgetRenderer
@@ -377,7 +378,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             it.setMargins(margin, margin, margin, margin)
         })
         val catalog = WidgetKind.values().flatMap { kind ->
-            WidgetStyle.values().filter { kind in it.kinds }.map { style -> PickerItem(kind, style) }
+            WidgetStyle.values().filter { kind in it.kinds }.map { style -> PickerItem(kind, style) } +
+                AzkarWidgetFamily.values().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
         }
         var selectedItem = catalog.first()
         val title = horizontal()
@@ -399,15 +401,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             textSize = 11f
             setTextColor(requireContext().getColor(R.color.widget_editor_muted))
         })
-        root.addView(TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-            text = getString(R.string.widget_new_designs)
-            gravity = Gravity.CENTER
-            setTextColor(requireContext().getColor(R.color.widget_editor_gold))
-            background = roundedBackground(R.color.widget_editor_surface2, R.color.widget_editor_gold, 18f)
-            setOnClickListener { dialog.dismiss(); showNewWidgetPicker(requireContext()) }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(requireContext(), 44f)).also {
-            it.topMargin = Ui.pxi(requireContext(), 12f)
-        })
         lateinit var pickerAdapter: PickerAdapter
         lateinit var addButton: TextView
         val filters = horizontal()
@@ -428,7 +421,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
                     viewModel.setPickerFilter(filter)
                     catalog.firstOrNull { filter == null || it.kind == filter }?.let { selectedItem = it }
                     pickerAdapter.setFilter(filter)
-                    addButton.text = getString(R.string.add_style_to_home, selectedItem.style.label, sizeName(selectedItem.kind))
+                    addButton.text = addLabel(selectedItem)
                     filterButtons.forEachIndexed { buttonIndex, button ->
                         updateFilterAppearance(button, buttonIndex == index)
                     }
@@ -454,13 +447,13 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         }
         pickerAdapter = PickerAdapter(requireContext(), catalog, selectedItem, viewModel.pickerFilter) { item ->
             selectedItem = item
-            addButton.text = getString(R.string.add_style_to_home, selectedItem.style.label, sizeName(selectedItem.kind))
+            addButton.text = addLabel(selectedItem)
         }
         activePickerAdapter = pickerAdapter
         recycler.adapter = pickerAdapter
         root.addView(recycler, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addButton = TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-            text = getString(R.string.add_style_to_home, selectedItem.style.label, sizeName(selectedItem.kind))
+            text = addLabel(selectedItem)
             gravity = Gravity.CENTER
             background = roundedBackground(R.color.widget_editor_gold, 0, 16f)
             setTextColor(Color.BLACK)
@@ -481,6 +474,11 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
             pickerAdapter.clearCache()
             if (activePickerAdapter === pickerAdapter) activePickerAdapter = null
         }
+    }
+
+    private fun addLabel(item: PickerItem): String {
+        val name = item.family?.let { FAMILY_LABELS[it] }?.let { getString(it) } ?: item.style.label
+        return getString(R.string.add_style_to_home, name, sizeName(item.kind))
     }
 
     private fun updateFilterAppearance(button: TextView, selected: Boolean) {
@@ -527,6 +525,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
     }
 
     private fun requestPin(item: PickerItem) {
+        item.family?.let { pinNewWidget(requireContext(), it); return }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             Toast.makeText(requireContext(), R.string.widget_pin_unsupported, Toast.LENGTH_LONG).show()
             return
@@ -703,7 +702,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
 
 private const val FAMILY_PREVIEW_TAG = "family_preview"
 
-private data class PickerItem(val kind: WidgetKind, val style: WidgetStyle)
+private data class PickerItem(val kind: WidgetKind, val style: WidgetStyle, val family: AzkarWidgetFamily? = null)
 
 
 private class PickerAdapter(
@@ -784,10 +783,15 @@ private class PickerAdapter(
                 frame.setPadding(Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f))
                 frame.background = rounded(item == selected)
                 val bitmap = previewCache[item] ?: try {
-                    WidgetUpdater.previewBitmap(
-                        context, item.kind, item.style,
-                        Store.folders().firstOrNull()?.id ?: "anytime"
-                    ).also { previewCache[item] = it }
+                    val folder = Store.folders().firstOrNull()?.id ?: "anytime"
+                    val family = item.family
+                    (if (family != null) {
+                        val (dw, dh) = AzkarWidgetSizes.design(family)
+                        val model = WidgetModel.load(context, AppWidgetManager.INVALID_APPWIDGET_ID, folder)
+                        NewWidgetRenderer(context).render(family, model, dw, dh)
+                    } else {
+                        WidgetUpdater.previewBitmap(context, item.kind, item.style, folder)
+                    }).also { previewCache[item] = it }
                 } catch (error: Exception) {
                     Log.e("WidgetPicker", "Unable to render ${item.kind}/${item.style.label} preview", error)
                     null

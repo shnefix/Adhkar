@@ -108,7 +108,7 @@ fun showNewWidgetPicker(context: Context) {
             gravity = Gravity.CENTER_HORIZONTAL
             background = bg(R.color.widget_editor_surface2, R.color.widget_editor_border, 20f)
             setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
-            setOnClickListener { dialog.dismiss(); pin(context, family) }
+            setOnClickListener { dialog.dismiss(); pinNewWidget(context, family) }
         }
         val preview: View = try {
             val bmp = if (model != null) renderer.render(family, model, dw, dh) else throw IllegalStateException("no model")
@@ -148,7 +148,7 @@ fun showNewWidgetPicker(context: Context) {
     dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 }
 
-private fun pin(context: Context, family: AzkarWidgetFamily) {
+internal fun pinNewWidget(context: Context, family: AzkarWidgetFamily) {
     val manager = AppWidgetManager.getInstance(context)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.isRequestPinAppWidgetSupported) {
         try {
