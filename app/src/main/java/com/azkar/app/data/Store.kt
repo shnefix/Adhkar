@@ -24,7 +24,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 11
+    private const val DEFAULTS_VERSION = 12
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -199,6 +199,7 @@ object Store {
         if (from in 1 until 9) renameDefaultFolders()
         if (!fresh && from < 10) fillDefaultSources(p)
         if (!fresh && from < 11) clearPlaceholderSources()
+        if (!fresh && from < 12) addShortAzkarAndPraised(p)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -245,6 +246,7 @@ object Store {
         "d_4" to ("فِي الْخِفَّةِ" to "أذكار خفيفة"),
         "d_5" to ("الْعِلْمُ" to "أدعية طلب العلم"),
         "d_8" to ("طلب الإجابة" to "مواطن إجابة الدعاء"),
+        "d_15" to ("الواجهة" to "أذكار قصيرة"),
         "d_16" to ("زَادُ المَعَادِ" to "مختارات")
     )
 
@@ -280,6 +282,25 @@ object Store {
         val placeholders = listOf("دعاء عام", "لم يُعثر")
         if (zCache.none { z -> placeholders.any { z.source.reference.startsWith(it) } }) return
         saveZikrs(zCache.map { z -> if (placeholders.any { z.source.reference.startsWith(it) }) z.copy(source = ZikrSource()) else z })
+    }
+
+    /**
+     * Version 12: the first Home folder becomes "short azkar" (renamed by [renameDefaultFolders] unless the user
+     * renamed it) with three more azkar, and the new "when you are praised" folder. Only the new azkar are merged,
+     * so ones the user removed from that folder stay removed.
+     */
+    private fun addShortAzkarAndPraised(p: ImportJson.Parsed.Ok) {
+        renameDefaultFolders()   // users on 9 to 11 ran the renames before the first folder's was added
+        val folders = p.folders.mapNotNull { f ->
+            when (f.id) {
+                // A user who deleted the folder doesn't get it back for three azkar.
+                DefaultFolders.HOME -> f.takeIf { folder(DefaultFolders.HOME) != null }
+                    ?.copy(items = f.items.filter { it.text in DefaultFolders.ADDED_TO_HOME_IN_V12 })
+                DefaultFolders.PRAISED -> f
+                else -> null
+            }
+        }
+        mergeDefaults(p.copy(folders = folders))
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {

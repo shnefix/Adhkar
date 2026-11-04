@@ -15,37 +15,56 @@ Most azkar apps need an account, show ads, or send data to a server. Adhkar does
 no internet permission at all, so it can't track you or send anything anywhere. Your azkar, folders and
 progress stay on your phone.
 
-It comes with the common daily azkar, and you can add your own: write any zikr or dua, choose how
-many times to repeat it, and organise it into your own folders.
+It comes with more than 850 azkar, most with their source from the Quran or the Sunnah, and you can add
+your own: write any zikr or dua, choose how many times to repeat it, and organise it into your own folders.
 
 ## Screenshots
 
 | Home | Library | My azkar |
 | :---: | :---: | :---: |
 | <img src="docs/images/home.png" width="250" alt="Home"> | <img src="docs/images/library.png" width="250" alt="Library"> | <img src="docs/images/my-azkar.png" width="250" alt="My azkar"> |
-| **Reader** | **Settings & reminders** | **Customize** |
-| <img src="docs/images/reader.png" width="250" alt="Reader"> | <img src="docs/images/reminders.png" width="250" alt="Settings and reminders"> | <img src="docs/images/customize.png" width="250" alt="Customize"> |
+| **Reader** | **Source of a zikr** | **Customize** |
+| <img src="docs/images/reader.png" width="250" alt="Reader"> | <img src="docs/images/source.png" width="250" alt="Source page"> | <img src="docs/images/customize.png" width="250" alt="Customize"> |
+| **Settings** | **Reminders** | |
+| <img src="docs/images/settings.png" width="250" alt="Settings"> | <img src="docs/images/reminders.png" width="250" alt="Reminders"> | |
 
 ## Features
 
-- **Add your own azkar**: write any zikr or dua, set its repeat count, and put it in your own folders;
-  edit, reorder or hide any folder, including the built-in ones
-- 41 built-in collections: morning, evening, before sleep, prayer, Quranic duas, duas of the prophets,
-  the 99 names, ruqyah, travel, food, hajj and more
-- The source of each zikr, one tap away: the ayah or the hadith text from the six books, with its
-  reference and grade; sources can be hidden for one zikr, a folder or the whole app
-- Focused Arabic reader with tap-to-advance, counters, notes, titles, adjustable text size and keep-screen-on
+### Azkar
+- **40 built-in collections, more than 850 azkar**: morning, evening, waking up, before sleep, after prayer,
+  short azkar, the prayer itself, tasabih, comprehensive duas, Quranic duas, duas of the prophets, the 99
+  names of Allah, ruqyah, adhan, wudu, home, food, travel, hajj and umrah, completing the Quran, duas for
+  the deceased, distress, istikhara, the sick, rain and wind, clothes, gatherings, anger, the market,
+  when you are praised, and more
+- **Add your own azkar**: write any zikr or dua, set its repeat count, give it a title, and put it in
+  your own folders; edit, reorder or hide any folder, including the built-in ones
+- Import and export your azkar as a JSON file
+
+### Sources
+- **Where each zikr comes from, one tap away**: the book button on the reader card turns it over to show
+  the ayah, or the hadith text from the six books, with its reference and grade (al-Bukhari and Muslim,
+  or al-Albani's grade for the Sunan)
+- Azkar with no source in the Quran or Sunnah have no source button
+- Hide sources for one zikr (in Edit folder), for a folder, or for the whole app (Settings)
+
+### Reading
+- Focused Arabic reader: tap to advance, counters, notes, titles above or below the zikr, a progress
+  slider you can drag, adjustable text size and keep-screen-on
 - Folders can remember where you stopped and start over at a moment you choose: before or after any
   prayer, or at midnight (morning azkar start over at Dhuhr and evening azkar at Maghrib by default)
+- Finishing a folder takes you back to where you opened it: Home, Library or My azkar
+
+### Reminders and tracking
 - Reminders for morning, evening and before sleep; they can follow prayer times for your approximate
   location, or a city or coordinates you set by hand (no location permission needed), with a choice of
   calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more) and the standard or Hanafi Asr time;
   your own reminders can come at a set time or before / after any prayer
-- Optional tracking of the days you finish your morning and evening azkar, with streaks
+- Optional tracking of the days you finish your azkar, with streaks
+
+### Widgets and look
 - Home-screen widgets in many sizes and styles, including tap-to-count; widgets and the reader share
   their progress
-- Import and export your azkar as a JSON file
-- Full Arabic interface on Arabic phones (RTL), OLED black theme, bundled Amiri and DM Sans fonts
+- Full Arabic interface on Arabic phones (RTL), OLED black or teal theme, bundled Amiri and DM Sans fonts
 
 ## Install
 
@@ -84,7 +103,7 @@ copy `keystore.properties.example` to `keystore.properties` and fill in your own
 ## Tests
 
 ```bash
-./gradlew testDebugUnitTest          # unit tests (prayer times, reminders, reader, import, tracking, widgets)
+./gradlew testDebugUnitTest          # unit tests (prayer times, reminders, reader, import, tracking, widgets, sources)
 ./gradlew lintDebug                  # Android lint
 ./gradlew connectedDebugAndroidTest  # instrumented tests on a device or emulator (database, import/export, widgets)
 ```
@@ -95,7 +114,8 @@ CI runs the unit tests and lint on every push, and the instrumented tests on an 
 ## Releasing
 
 1. Raise `versionCode` and set `versionName` in `app/build.gradle.kts`, then commit.
-2. Push a tag named after the version, for example `git tag v1.1 && git push origin v1.1`.
+2. Optionally write the release text in `docs/release-notes/v<version>.md`; without it, GitHub generates notes.
+3. Push a tag named after the version, for example `git tag v2.0 && git push origin v2.0`.
 
 The Release workflow builds the APK, checks it is signed with the release key, and publishes it as a
 GitHub release. It needs four repository secrets: `RELEASE_KEYSTORE_BASE64` (the `.jks` file,
