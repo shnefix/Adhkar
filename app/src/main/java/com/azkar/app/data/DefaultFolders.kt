@@ -10,6 +10,9 @@ object DefaultFolders {
     const val HOME = "d_15"          // الواجهة, added in defaults version 4
     const val ZAD = "d_16"           // زَادُ المَعَادِ, added in defaults version 6
 
+    /** d_17 .. d_41 (prayer, tasabih, jawami, Quranic duas, ... ruqyah), added in defaults version 8. */
+    val ADDED_IN_V8: Set<String> = (17..41).map { "d_$it" }.toSet()
+
     /** Default folders shown first on Home, in this order. */
     val HOME_ORDER = listOf(HOME, MORNING, EVENING, WAKE, SLEEP, ISTIGHFAR)
 }

@@ -24,7 +24,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 7
+    private const val DEFAULTS_VERSION = 8
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -192,6 +192,7 @@ object Store {
         if (fresh) mergeDefaults(p)
         else if (from < 4) mergeDefaults(p.copy(folders = p.folders.filter { it.id == DefaultFolders.HOME }))
         if (!fresh && from < 6) mergeDefaults(p.copy(folders = p.folders.filter { it.id == DefaultFolders.ZAD }))
+        if (!fresh && from < 8) mergeDefaults(p.copy(folders = p.folders.filter { it.id in DefaultFolders.ADDED_IN_V8 }))
         if (from < 4) applyHomeDefaults()
         if (from in 1 until 5) applySessionDefaults()
         if (from < 7) fixWakeNameAndSleepReminder()
