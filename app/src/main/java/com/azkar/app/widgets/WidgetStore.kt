@@ -199,6 +199,17 @@ object WidgetLogic {
         share(ctx, id, cfg.folder, items, idx, cnt)
     }
 
+    /** One tap = one whole zikr: the next zikr comes up (after the last, the folder starts again). */
+    fun step(ctx: Context, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        val items = Store.readerItems(cfg.folder)
+        if (items.isEmpty()) return
+        val (idx, _) = WidgetStore.progress(ctx, id)
+        val nextIdx = if (idx >= items.size) 0 else idx + 1
+        share(ctx, id, cfg.folder, items, nextIdx, 0)
+        Tracking.record(cfg.folder, nextIdx, items.size)   // no-op unless the folder is tracked
+    }
+
     fun next(ctx: Context, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
         val items = Store.readerItems(cfg.folder)

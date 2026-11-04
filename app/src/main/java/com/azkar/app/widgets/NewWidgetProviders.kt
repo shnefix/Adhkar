@@ -151,7 +151,10 @@ object NewWidgetUpdater {
                 if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
                 else "${model.folderName}: " + context.getString(R.string.widget_count_of, model.shown, model.target)
             )
-            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_COUNT))
+            // The progress strip shows no repeat count, so on the morning and evening folders a tap moves to the next zikr.
+            val stepFolder = config.folder == com.azkar.app.data.DefaultFolders.MORNING || config.folder == com.azkar.app.data.DefaultFolders.EVENING
+            val tapAction = if (family == AzkarWidgetFamily.J_STRIP_PROGRESS && stepFolder) ACTION_STEP else ACTION_COUNT
+            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, tapAction))
             if (family == AzkarWidgetFamily.H_LARGE) {
                 rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
             }

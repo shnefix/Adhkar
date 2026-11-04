@@ -18,6 +18,7 @@ const val ACTION_COUNT = "com.azkar.app.widget.COUNT"
 const val ACTION_RESET = "com.azkar.app.widget.RESET"
 const val ACTION_NEXT = "com.azkar.app.widget.NEXT"
 const val ACTION_UNDO = "com.azkar.app.widget.UNDO"
+const val ACTION_STEP = "com.azkar.app.widget.STEP"   // finish the current zikr and show the next one
 const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
 const val ACTION_BOUNDARY = "com.azkar.app.widget.BOUNDARY"   // tracking widgets: a session started or ended
 

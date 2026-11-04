@@ -27,6 +27,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     ACTION_RESET -> WidgetLogic.reset(context, id, kind)
                     ACTION_NEXT -> WidgetLogic.next(context, id, kind)
                     ACTION_UNDO -> WidgetLogic.undo(context, id, kind)
+                    ACTION_STEP -> WidgetLogic.step(context, id, kind)
                 }
             }
             if (family != null) NewWidgetUpdater.updateAll(context)
@@ -37,7 +38,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_FAMILY = "com.azkar.app.widget.FAMILY"
         const val EXTRA_KIND = "com.azkar.app.widget.KIND"
-        val ACTIONS = setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO)
+        val ACTIONS = setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO, ACTION_STEP)
         private val taps = Mutex()
     }
 }

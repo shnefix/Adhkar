@@ -348,9 +348,12 @@ private class PickerAdapter(
                         setTextColor(context.getColor(R.color.widget_editor_muted))
                     }
                 }
+                // Medium previews share one width (a 4x2 widget's), so the 4x1 strips aren't drawn larger than the rest.
+                val box = height.toFloat() - 12f
                 frame.addView(preview, FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    Ui.pxi(context, height.toFloat() - 12f)
+                    if (item.kind == WidgetKind.MEDIUM) Ui.pxi(context, box * 338f / 158f) else ViewGroup.LayoutParams.MATCH_PARENT,
+                    Ui.pxi(context, box),
+                    Gravity.CENTER
                 ))
                 frame.setOnClickListener {
                     val previous = selected

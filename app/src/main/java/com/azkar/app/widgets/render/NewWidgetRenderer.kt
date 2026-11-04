@@ -61,7 +61,8 @@ object AzkarWidgetSizes {
         AzkarWidgetFamily.C_STREAK_MEDIUM, AzkarWidgetFamily.T_TODAY_MEDIUM -> 338f to 158f
         AzkarWidgetFamily.H_LARGE,
         AzkarWidgetFamily.D_LARGE, AzkarWidgetFamily.C_STREAK_LARGE -> 338f to 354f
-        AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS,
+        // The strips are one row high and four cells wide (4×1), like their launcher info.
+        AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS -> 338f to 74f
         AzkarWidgetFamily.J_TALL_RING, AzkarWidgetFamily.J_TALL_TIMELINE -> 158f to 354f
     }
 }
@@ -558,14 +559,22 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     private fun todayMedium(c: Canvas, w: Float, h: Float, t: TrackingModel) {
         val l = 20f; val r = w - 20f; val top = 18f
-        eyebrow(c, str(R.string.widget_today), l, top + 6f, Paint.Align.LEFT, maxW = (r - l) / 2)
-        caption(c, t.dateLabel, r, top + 6f, Paint.Align.RIGHT, 13f, maxW = (r - l) / 2)
+        // Header: "Today" and, on the right, how long the current session has left (or until the next one starts).
+        val f = t.focus
+        val status = when {
+            f == null -> ""
+            t.focusRunning -> str(R.string.widget_time_left, duration(t.focusDelta))
+            else -> str(R.string.widget_starts_in, f.label, duration(t.focusDelta))
+        }
+        text(c, status, r, top + 6f, 13f, gold, dmBold, Paint.Align.RIGHT, 0f, (r - l) * 0.6f)
+        val sw = if (status.isEmpty()) 0f else min(measure(status, 13f, dmBold), (r - l) * 0.6f) + 12f
+        eyebrow(c, str(R.string.widget_today), l, top + 6f, Paint.Align.LEFT, maxW = r - l - sw)
 
         // The day from midnight to midnight: dim windows for each session, gold up to now.
         val span = (t.dayEnd - t.dayStart).toFloat().coerceAtLeast(1f)
         fun xAt(ms: Long) = l + (r - l) * ((ms - t.dayStart) / span).coerceIn(0f, 1f)
         val barH = 8f
-        val barCy = h * 0.42f
+        val barCy = top + 6f + (h - top - 6f) * 0.3f
         val bt = barCy - barH / 2
         c.drawRoundRect(RectF(l, bt, r, bt + barH), barH / 2, barH / 2, fill(track))
         t.sessions.forEach { s -> s.end?.let { e -> c.drawRoundRect(RectF(xAt(s.start), bt, xAt(e), bt + barH), barH / 2, barH / 2, fill(haloC)) } }
@@ -583,17 +592,9 @@ class NewWidgetRenderer(private val ctx: Context) {
             minX = x + lw + 12f
         }
 
-        // Footer: the zikr to read and how long its session has left (or until it starts).
-        val f = t.focus
-        val status = when {
-            f == null -> ""
-            t.focusRunning -> str(R.string.widget_time_left, duration(t.focusDelta))
-            else -> str(R.string.widget_starts_in, f.label, duration(t.focusDelta))
-        }
+        // Footer: the zikr to read, across the whole width.
         val footY = h - 18f - 14f
-        text(c, status, r, footY, 14f, gold, dmBold, Paint.Align.RIGHT, 0f, (r - l) / 2)
-        val sw = if (status.isEmpty()) 0f else measure(status, 14f, dmBold) + 14f
-        t.dhikr?.let { arabicLine(c, it, l, r - sw, footY, 22f, cream, Layout.Alignment.ALIGN_OPPOSITE) }
+        t.dhikr?.let { arabicLine(c, it, l, r, footY, 22f, cream, Layout.Alignment.ALIGN_CENTER) }
     }
 
     // ───────────────────────── shared pieces ─────────────────────────
