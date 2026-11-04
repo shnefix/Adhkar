@@ -467,7 +467,6 @@
     <string name="source_hide">Back to azkar</string>
     <string name="source_position">Zikr %1$d of %2$d</string>
     <string name="source_reference">Reference</string>
-    <string name="source_narrator">Narrated by</string>
     <string name="source_when">When to say it</string>
     <string name="show_sources">Show sources</string>
     <string name="show_sources_summary">The source button on the reader\'s cards. You can also hide it for one folder or one zikr.</string>

@@ -147,7 +147,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             setPadding(Ui.pxi(ctx, 14f), Ui.pxi(ctx, 6f), Ui.pxi(ctx, 14f), Ui.pxi(ctx, 6f))
         }
 
-        /** Fills the source page for zikr [i]: the zikr, then reference, narrator and when to say it, then chips. */
+        /** Fills the source page for zikr [i]: the zikr, then reference and when to say it, then chips. */
         fun fillSource(i: Int) {
             val it = items[i]
             val s = it.source
@@ -159,7 +159,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             fun add(v: View) = srcCards.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (srcCards.childCount > 0) topMargin = gap })
             if (s.reference.isNotBlank() || s.detail.isNotBlank())
                 add(infoCard(R.string.source_reference, s.reference.ifBlank { s.detail }, if (s.reference.isNotBlank()) s.detail else ""))
-            if (s.narrator.isNotBlank()) add(infoCard(R.string.source_narrator, s.narrator))
             if (s.whenToSay.isNotBlank()) add(infoCard(R.string.source_when, s.whenToSay))
             srcChips.removeAllViews()
             if (s.grade.isNotBlank()) srcChips.addView(chip(s.grade, true))

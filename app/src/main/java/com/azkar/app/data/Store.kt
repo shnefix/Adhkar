@@ -24,7 +24,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 10
+    private const val DEFAULTS_VERSION = 11
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -198,6 +198,7 @@ object Store {
         if (from < 7) fixWakeNameAndSleepReminder()
         if (from in 1 until 9) renameDefaultFolders()
         if (!fresh && from < 10) fillDefaultSources(p)
+        if (!fresh && from < 11) clearPlaceholderSources()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -269,6 +270,16 @@ object Store {
             if (replaceable && z.source != src) { changed = true; z.copy(source = src) } else z
         }
         if (changed) saveZikrs(next)
+    }
+
+    /**
+     * Version 11: azkar with no source in the Quran or Sunnah have no source at all. Earlier builds gave them a
+     * "no source found" text as their source, which still showed the source button; those are cleared.
+     */
+    private fun clearPlaceholderSources() {
+        val placeholders = listOf("دعاء عام", "لم يُعثر")
+        if (zCache.none { z -> placeholders.any { z.source.reference.startsWith(it) } }) return
+        saveZikrs(zCache.map { z -> if (placeholders.any { z.source.reference.startsWith(it) }) z.copy(source = ZikrSource()) else z })
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
