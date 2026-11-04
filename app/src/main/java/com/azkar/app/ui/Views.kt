@@ -85,9 +85,25 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         }
     }
 
+    /** Buttons inside the card that handle their own taps: tapping them must not move to the next zikr. */
+    var noTapViews: List<View> = emptyList()
+
     private fun inCard(x: Float, y: Float): Boolean {
         val c = card ?: return false
         return x >= c.left && x <= c.right && y >= c.top && y <= c.bottom
+    }
+
+    private fun onButton(x: Float, y: Float): Boolean {
+        if (noTapViews.isEmpty()) return false
+        val me = IntArray(2).also { getLocationInWindow(it) }
+        val at = IntArray(2)
+        return noTapViews.any { v ->
+            v.isShown && run {
+                v.getLocationInWindow(at)
+                val l = at[0] - me[0]; val t = at[1] - me[1]
+                x >= l && x <= l + v.width && y >= t && y <= t + v.height
+            }
+        }
     }
 
     private fun far(e: MotionEvent) =
@@ -98,7 +114,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
 
     private fun start(e: MotionEvent) {
         downX = e.x; downY = e.y; dragging = false
-        tapOk = inCard(e.x, e.y)
+        tapOk = inCard(e.x, e.y) && !onButton(e.x, e.y)
         vt?.recycle(); vt = android.view.VelocityTracker.obtain(); vt?.addMovement(e)
     }
 

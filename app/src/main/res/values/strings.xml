@@ -456,4 +456,7 @@
     <string name="preview_more">+%1$d more</string>
     <string name="customize_hint_home">Press and hold a folder to drag it. Tap the eye to hide it from Home.</string>
     <string name="customize_hint_library">Press and hold a folder to drag it. This order is used in the Library and My azkar.</string>
+    <string name="source_title">Source</string>
+    <string name="source_show">Show the source</string>
+    <string name="source_hide">Back to the zikr</string>
 </resources>

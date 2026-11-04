@@ -7,11 +7,11 @@ import org.json.JSONObject
 
 /**
  * Parses and validates an Azkar JSON file (hand-written or produced by Export).
- * Only "folders" is required. Optional: folder "id"/"icon", zikr "note"/"title"/"titlePosition" ("above" or "below"),
+ * Only "folders" is required. Optional: folder "id"/"icon", zikr "note"/"source"/"title"/"titlePosition" ("above" or "below"),
  * top-level "unfiled", "reminders", "settings".
  */
 object ImportJson {
-    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titleBelow: Boolean = false)
+    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titleBelow: Boolean = false, val source: String = "")
     data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
     data class SettingsIn(
@@ -59,7 +59,8 @@ object ImportJson {
             val note = if (o.isNull("note")) "" else o.optString("note", "")
             val title = if (o.isNull("title")) "" else o.optString("title", "").trim()
             val below = o.optString("titlePosition", "above").equals("below", ignoreCase = true)
-            out.add(Item(text, n, note, title, below))
+            val source = if (o.isNull("source")) "" else o.optString("source", "").trim()
+            out.add(Item(text, n, note, title, below, source))
         }
         return out
     }

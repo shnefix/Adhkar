@@ -19,4 +19,11 @@ object AzkarRoomMigrations {
             db.execSQL("ALTER TABLE zikrs ADD COLUMN titleBelow INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+    /** Optional zikr source (hadith reference), shown on the back of the reader card. */
+    val V3_TO_V4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE zikrs ADD COLUMN source TEXT NOT NULL DEFAULT ''")
+        }
+    }
 }

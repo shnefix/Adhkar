@@ -21,7 +21,8 @@ data class ZikrEntity(
     val folderId: String?,
     val position: Int,
     val title: String = "",
-    val titleBelow: Boolean = false
+    val titleBelow: Boolean = false,
+    val source: String = ""
 )
 
 @Entity(tableName = "schedules")

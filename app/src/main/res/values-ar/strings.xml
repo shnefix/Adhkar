@@ -486,4 +486,7 @@
     <string name="preview_more">و%1$d أخرى</string>
     <string name="customize_hint_home">اضغط مطولًا على مجلد لسحبه، واضغط العين لإخفائه من الرئيسية.</string>
     <string name="customize_hint_library">اضغط مطولًا على مجلد لسحبه. يُستخدم هذا الترتيب في المكتبة و«أذكاري».</string>
+    <string name="source_title">المصدر</string>
+    <string name="source_show">إظهار المصدر</string>
+    <string name="source_hide">العودة إلى الذكر</string>
 </resources>

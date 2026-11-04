@@ -95,6 +95,37 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val sub = view.findViewById<TextView>(R.id.sub)
         val hint = view.findViewById<TextView>(R.id.hint)
         val pos = view.findViewById<TextView>(R.id.pos)
+        val flipBox = view.findViewById<View>(R.id.flip_box).apply { cameraDistance = 8000 * d }
+        val sourceScroll = view.findViewById<ScrollView>(R.id.source_scroll)
+        val sourceTv = view.findViewById<TextView>(R.id.source)
+        val sourceBtn = view.findViewById<View>(R.id.btn_source).apply { isHapticFeedbackEnabled = false }
+        var showingSource = false
+        var shownIndex = -1
+
+        /** Front (the zikr) or back (its source) of the card, without animation. */
+        fun showSide(back: Boolean) {
+            showingSource = back
+            arScroll.visibility = if (back) View.INVISIBLE else View.VISIBLE
+            sourceScroll.visibility = if (back) View.VISIBLE else View.GONE
+            sourceBtn.contentDescription = getString(if (back) R.string.source_hide else R.string.source_show)
+            sourceBtn.isActivated = back
+        }
+
+        /** Turns the card over: a half turn to edge-on, swap sides, then the other half back to flat. */
+        fun flip() {
+            flipBox.animate().cancel()
+            val toBack = !showingSource
+            flipBox.animate().rotationY(90f).setDuration(160)
+                .setInterpolator(android.view.animation.AccelerateInterpolator())
+                .withEndAction {
+                    showSide(toBack)
+                    if (toBack) sourceScroll.scrollTo(0, 0)
+                    flipBox.rotationY = -90f
+                    flipBox.animate().rotationY(0f).setDuration(160)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                }.start()
+        }
+        sourceBtn.setOnClickListener { flip() }
 
         /** [moved]: the user counted or changed zikr (not just opened the reader), so widgets should follow. */
         fun render(moved: Boolean = true) {
@@ -109,6 +140,15 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             titleBelow.visibility = if (hasTitle && cur.titleBelow) View.VISIBLE else View.GONE
             note.text = cur.note
             note.visibility = if (cur.note.isNotBlank()) View.VISIBLE else View.GONE
+            // A new zikr always opens on its front; the source button only appears when there is a source.
+            if (i != shownIndex) {
+                shownIndex = i
+                flipBox.animate().cancel()
+                flipBox.rotationY = 0f
+                showSide(false)
+            }
+            sourceTv.text = cur.source
+            sourceBtn.visibility = if (cur.source.isNotBlank()) View.VISIBLE else View.GONE
             pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.removeAllViews()
             items.indices.forEach { k ->
@@ -141,6 +181,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val swipe = view as SwipeLayout
         swipe.apply {
             card = view.findViewById(R.id.card)
+            noTapViews = listOf(sourceBtn)
             tapEnabled = AppPrefs.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }

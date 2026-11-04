@@ -33,6 +33,17 @@ class ImportJsonTest {
     }
 
     @Test
+    fun sourceIsReadMergedAndExported() {
+        val p = ok("""{"folders":[{"name":"F","azkar":[{"text":"a","source":" رواه البخاري "},{"text":"b"}]}]}""")
+        assertEquals(listOf("رواه البخاري", ""), p.folders[0].items.map { it.source })
+        var n = 0
+        val (state, _) = ImportMerge.apply(ImportMerge.State(emptyList(), emptyList(), emptyList()), p) { "id${n++}" }
+        assertEquals(listOf("رواه البخاري", ""), state.zikrs.map { it.source })
+        val back = ok(ExportJson.build(state, arabicSize = 1, notificationsOn = false))
+        assertEquals(listOf("رواه البخاري", ""), back.folders[0].items.map { it.source })
+    }
+
+    @Test
     fun structuralErrorsNameTheProblem() {
         assertEquals(R.string.import_err_empty, error("  ").res)
         assertEquals(R.string.import_err_bare_list, error("[]").res)
