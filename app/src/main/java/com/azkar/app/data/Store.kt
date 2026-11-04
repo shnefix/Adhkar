@@ -525,10 +525,7 @@ object Store {
     fun setHomeOrder(order: List<String>) = home.setOrder(order)
     fun hidden(): Set<String> = home.hidden()
     fun setHidden(set: Set<String>) = home.setHidden(set)
-    fun placement(): Placement = home.placement()
-    fun setPlacement(p: Placement) = home.setPlacement(p)
-
-    /** Resets order/placement; default folders that are not meant for Home (no "home": true) are hidden again. */
+    /** Resets the order; default folders that are not meant for Home (no "home": true) are hidden again. */
     fun resetHome() {
         val hide = defaults()?.folders?.filter { it.home != true }?.mapNotNull { it.id }.orEmpty()
         home.reset(hide.filter { folder(it) != null }.toSet())

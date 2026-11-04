@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Customize: a Home tab (placement, order, visibility) and a Library tab (order), each with a live preview above a
+<!-- Customize: a Home tab (order, visibility) and a Library tab (order), each with a live preview above a
      grid of folder tiles you press and hold to drag. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orientation="vertical" android:background="@color/bg" android:paddingTop="56dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingBottom="16dp" android:layout_width="match_parent" android:layout_height="match_parent">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -10,7 +10,6 @@
 <TextView style="@style/TB" android:text="@string/done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:id="@+id/tabs" android:orientation="horizontal" android:layout_marginTop="16dp" android:padding="4dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="48dp"/>
-<LinearLayout android:id="@+id/placement" android:orientation="horizontal" android:layout_marginTop="10dp" android:padding="3dp" android:background="@drawable/bg_card18" android:layout_width="match_parent" android:layout_height="42dp"/>
 <TextView style="@style/Caps" android:text="@string/preview" android:layout_marginTop="14dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:id="@+id/preview" android:orientation="vertical" android:layout_marginTop="8dp" android:padding="8dp" android:background="@drawable/bg_prev18" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:id="@+id/hint" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

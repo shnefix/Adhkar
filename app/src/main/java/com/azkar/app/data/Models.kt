@@ -20,16 +20,6 @@ data class ReaderItem(
     val title: String = "", val titleBelow: Boolean = false, val note: String = ""
 )
 
-enum class Placement(val key: String, @param:androidx.annotation.StringRes val label: Int) {
-    TOP("top", com.azkar.app.R.string.placement_top),
-    MIXED("mixed", com.azkar.app.R.string.placement_mixed),
-    BOTTOM("bottom", com.azkar.app.R.string.placement_bottom);
-
-    companion object {
-        fun from(key: String?) = values().firstOrNull { it.key == key } ?: MIXED
-    }
-}
-
 /** A reminder the user configured. [open] is the folder id to read when tapped. */
 data class Schedule(
     val id: String, val title: String, val message: String,

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 
 /**
- * Home layout (folder order, hidden folders, placement) and the azkar hidden from reading. SharedPreferences only,
+ * Home layout (folder order, hidden folders) and the azkar hidden from reading. SharedPreferences only,
  * no Room content, so it can be tested on its own. [Store] owns one and keeps its old functions as thin wrappers.
  */
 class HomePrefs {
@@ -59,12 +59,9 @@ class HomePrefs {
         sp.edit().putString(K_HIDDEN, JSONArray(set.toList()).toString()).apply()
     }
 
-    fun placement(): Placement = Placement.from(sp.getString(K_PLACE, null))
-    fun setPlacement(p: Placement) = sp.edit().putString(K_PLACE, p.key).apply()
-
-    /** Forgets order and placement; only [hideByDefault] stay hidden. */
+    /** Forgets the order; only [hideByDefault] stay hidden. */
     fun reset(hideByDefault: Set<String>) {
-        sp.edit().remove(K_ORDER).remove(K_PLACE).apply()
+        sp.edit().remove(K_ORDER).remove(K_PLACE).apply()   // K_PLACE: the old Top / Mixed / Bottom choice
         savedOrderCache = null
         setHidden(hideByDefault)
     }
@@ -78,7 +75,7 @@ class HomePrefs {
     private companion object {
         const val K_ORDER = "home_order"
         const val K_HIDDEN = "home_hidden"
-        const val K_PLACE = "home_place"
+        const val K_PLACE = "home_place"   // no longer used; only cleared
         const val K_HIDDEN_ZIKRS = "hidden_zikrs"
     }
 }

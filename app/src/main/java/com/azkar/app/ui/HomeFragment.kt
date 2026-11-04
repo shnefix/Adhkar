@@ -13,7 +13,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
 import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.Folder
-import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -64,8 +63,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
             val foldersById = content.folders.associateBy { it.id }
             val hidden = Store.hidden()
             val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { foldersById[it] }
-            val collections = shown.filter { Store.isDefaultFolder(it.id) }
-            val mine = shown.filter { !Store.isDefaultFolder(it.id) }
 
             fun section(label: String?, cards: List<View>): View? {
                 if (cards.isEmpty()) return null
@@ -75,13 +72,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
                 return box
             }
 
-            val daily = section(getString(R.string.daily_collections), collections.map { card(it) })
-            val own = section(null, mine.map { card(it) })
-            val parts: List<View?> = when (Store.placement()) {
-                Placement.TOP -> listOf(own, daily)
-                Placement.BOTTOM -> listOf(daily, own)
-                Placement.MIXED -> listOf(section(getString(R.string.daily_collections), shown.map { card(it) }))
-            }
+            // One section in the order set in Customize (drag); built-in and own folders mix freely.
+            val parts: List<View?> = listOf(section(getString(R.string.daily_collections), shown.map { card(it) }))
             parts.filterNotNull().forEachIndexed { i, v ->
                 sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx))
             }

@@ -17,12 +17,10 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.Folder
-import com.azkar.app.data.Placement
 import com.azkar.app.data.Store
 
 /**
- * Customize, in two tabs. Home: where my folders sit among the daily collections, their order, and which show at
- * all. Library: the folder order of the Library and My azkar. Both show a live preview above a grid of tiles that
+ * Customize, in two tabs. Home: the order of the folders on Home and which show at all. Library: the folder order of the Library and My azkar. Both show a live preview above a grid of tiles that
  * you press and hold to drag; on Home the eye hides a folder.
  */
 class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
@@ -58,7 +56,6 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         ids.clear()
         ids += if (libraryTab) Store.folders().map { it.id } else Store.homeOrder()
         renderTabs(view)
-        renderPlacement(view)
         view.findViewById<TextView>(R.id.hint).setText(if (libraryTab) R.string.customize_hint_library else R.string.customize_hint_home)
         view.findViewById<View>(R.id.btn_reset).visibility = if (libraryTab) View.GONE else View.VISIBLE
         adapter.notifyDataSetChanged()
@@ -71,7 +68,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         view?.let { renderPreview(it) }
     }
 
-    // ---------- Tabs and placement (segmented pills) ----------
+    // ---------- Tabs (segmented pills) ----------
     private fun pills(row: LinearLayout, labels: List<String>, selected: Int, onPick: (Int) -> Unit) {
         val ctx = requireContext()
         row.removeAllViews()
@@ -96,36 +93,14 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         view.findViewById(R.id.tabs), listOf(getString(R.string.home), getString(R.string.library)), if (libraryTab) 1 else 0
     ) { libraryTab = it == 1; load(view) }
 
-    private fun renderPlacement(view: View) {
-        val row = view.findViewById<LinearLayout>(R.id.placement)
-        row.visibility = if (libraryTab) View.GONE else View.VISIBLE
-        if (libraryTab) return
-        val all = Placement.values().toList()
-        pills(row, all.map { getString(it.label) }, all.indexOf(Store.placement())) {
-            Store.setPlacement(all[it])
-            renderPlacement(view)
-            renderPreview(view)
-        }
-    }
-
     // ---------- Live preview ----------
-    /** A small copy of Home (shown folders, placement applied) or of the Library, two per row like the real screens. */
+    /** A small copy of Home (shown folders) or of the Library, two per row like the real screens. */
     private fun renderPreview(view: View) {
         val ctx = requireContext()
         val box = view.findViewById<LinearLayout>(R.id.preview)
         box.removeAllViews()
         val folders = ids.mapNotNull { Store.folder(it) }
-        val shown: List<Folder> = if (libraryTab) folders else {
-            val hidden = Store.hidden()
-            val visible = folders.filter { it.id !in hidden }
-            val daily = visible.filter { Store.isDefaultFolder(it.id) }
-            val mine = visible.filter { !Store.isDefaultFolder(it.id) }
-            when (Store.placement()) {
-                Placement.TOP -> mine + daily
-                Placement.BOTTOM -> daily + mine
-                Placement.MIXED -> visible
-            }
-        }
+        val shown: List<Folder> = if (libraryTab) folders else Store.hidden().let { hidden -> folders.filter { it.id !in hidden } }
         val max = 8
         shown.take(max).chunked(2).forEachIndexed { r, pair ->
             val line = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
@@ -141,7 +116,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
                     setTextColor(ctx.getColor(R.color.text))
                     val p = Ui.pxi(ctx, 8f)
                     setPadding(p, 0, p, 0)
-                    // My own folders are outlined in gold, the built-in collections plain: placement is easy to see.
+                    // My own folders are outlined in gold, the built-in collections plain.
                     background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(if (mine) R.color.gold else R.color.border), 8f, mine)
                 }
                 line.addView(chip, LinearLayout.LayoutParams(0, Ui.pxi(ctx, 28f), 1f).also { if (i > 0) it.marginStart = Ui.pxi(ctx, 6f) })

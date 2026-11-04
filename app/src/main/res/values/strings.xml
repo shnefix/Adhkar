@@ -219,10 +219,6 @@
     <string name="back_to_home">Back to Home</string>
     <string name="customize">Customize</string>
     <string name="done">Done</string>
-    <string name="folders_placement_question">Where should my folders appear?</string>
-    <string name="library_order">Library order</string>
-    <string name="library_order_summary">The order of folders in the Library and My azkar.</string>
-    <string name="order_and_visibility">Order and visibility</string>
     <string name="reset_home">Reset Home to default</string>
     <string name="edit_folder">Edit folder</string>
     <string name="folder_name">Folder name</string>
@@ -367,11 +363,6 @@
     <string name="all_hidden_toast">All azkar in this folder are hidden.</string>
     <string name="daily_collections">Daily collections</string>
     <string name="saved_label">Saved</string>
-    <string name="placement_top">Top</string>
-    <string name="placement_mixed">Mixed</string>
-    <string name="placement_bottom">Bottom</string>
-    <string name="preview_collections">Collections</string>
-    <string name="preview_mixed">Collections and my folders</string>
     <string name="export_complete_title">Export complete</string>
     <string name="export_complete_message">Saved %1$s, %2$s and %3$s.</string>
     <string name="export_failed_title">Export failed</string>

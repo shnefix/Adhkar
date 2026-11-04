@@ -223,10 +223,6 @@
     <string name="back_to_home">العودة إلى الرئيسية</string>
     <string name="customize">تخصيص</string>
     <string name="done">تم</string>
-    <string name="folders_placement_question">أين تظهر مجلداتي؟</string>
-    <string name="library_order">ترتيب المكتبة</string>
-    <string name="library_order_summary">ترتيب المجلدات في المكتبة و«أذكاري».</string>
-    <string name="order_and_visibility">الترتيب والظهور</string>
     <string name="reset_home">إعادة الرئيسية إلى الوضع الافتراضي</string>
     <string name="edit_folder">تعديل المجلد</string>
     <string name="folder_name">اسم المجلد</string>
@@ -395,11 +391,6 @@
     <string name="all_hidden_toast">جميع الأذكار في هذا المجلد مخفية.</string>
     <string name="daily_collections">الأذكار اليومية</string>
     <string name="saved_label">المحفوظة</string>
-    <string name="placement_top">أعلى</string>
-    <string name="placement_mixed">مختلط</string>
-    <string name="placement_bottom">أسفل</string>
-    <string name="preview_collections">الأذكار اليومية</string>
-    <string name="preview_mixed">الأذكار اليومية ومجلداتي</string>
     <string name="export_complete_title">اكتمل التصدير</string>
     <string name="export_complete_message">تم حفظ %1$s و%2$s و%3$s.</string>
     <string name="export_failed_title">فشل التصدير</string>

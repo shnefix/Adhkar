@@ -21,22 +21,18 @@ class HomePrefsTest {
     }
 
     @Test
-    fun hiddenAndPlacementSurviveANewInstance() {
+    fun hiddenSurvivesANewInstance() {
         home.setHidden(setOf("x"))
-        home.setPlacement(Placement.TOP)
         val again = HomePrefs().apply { attach(prefs) }
         assertEquals(setOf("x"), again.hidden())
-        assertEquals(Placement.TOP, again.placement())
     }
 
     @Test
-    fun resetForgetsOrderAndPlacementAndHidesOnlyTheDefaults() {
+    fun resetForgetsOrderAndHidesOnlyTheDefaults() {
         home.setOrder(listOf("b", "a"))
-        home.setPlacement(Placement.BOTTOM)
         home.setHidden(setOf("a"))
         home.reset(setOf("z"))
         assertEquals(listOf("a", "b"), home.order(listOf("a", "b")))
-        assertEquals(Placement.MIXED, home.placement())
         assertEquals(setOf("z"), home.hidden())
     }
 
