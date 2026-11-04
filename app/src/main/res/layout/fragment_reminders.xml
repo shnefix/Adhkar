@@ -5,7 +5,7 @@
 <FrameLayout android:id="@+id/btn_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_card22" android:contentDescription="@string/back" android:clickable="true" android:focusable="true">
 <ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
 </FrameLayout>
-<TextView style="@style/TB" android:text="@string/settings"  android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="@string/reminders"  android:textSize="18sp" android:textColor="@color/text" android:gravity="center" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <View android:layout_width="44dp" android:layout_height="44dp"/>
 </LinearLayout>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="20dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -30,26 +30,6 @@
 <TextView android:id="@+id/btn_test_notification" style="@style/TB" android:text="@string/test_notification" android:textColor="@color/gold" android:gravity="center" android:minHeight="48dp" android:layout_marginTop="12dp" android:background="@drawable/bg_card22" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="@string/prayer_times" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:id="@+id/loc_row" android:clickable="true" android:focusable="true" android:minHeight="64dp" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/location" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:id="@+id/loc_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="vertical" android:id="@+id/calc_row" android:clickable="true" android:focusable="true" android:minHeight="64dp" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/calc_method" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:id="@+id/calc_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="vertical" android:id="@+id/asr_row" android:clickable="true" android:focusable="true" android:minHeight="64dp" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/asr_time" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:id="@+id/asr_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-</LinearLayout>
-<TextView style="@style/T" android:text="@string/prayer_times_hint" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-</LinearLayout>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/Caps" android:text="@string/tracking" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:layout_marginTop="10dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
@@ -66,66 +46,6 @@
 <com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_nudge" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/nudge_setting"/>
 </LinearLayout>
 <TextView style="@style/T" android:text="@string/tracking_hint" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-</LinearLayout>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="@string/reading" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="vertical" android:id="@+id/reading" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/completion_screen" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="@string/completion_screen_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_complete" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/completion_screen"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/show_sources" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="@string/show_sources_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_sources" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/show_sources"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/tap_to_advance" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="@string/tap_to_advance_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_tap" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/tap_to_advance"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/reader_slider_setting" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="@string/reader_slider_setting_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_slider" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/reader_slider_setting"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/keep_screen_on" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="@string/keep_screen_on_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_awake" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/keep_screen_on"/>
-</LinearLayout>
-<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
-<LinearLayout android:orientation="vertical" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/arabic_text_size" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<SeekBar android:id="@+id/size_slider" android:layout_weight="1" android:layout_width="0dp" android:layout_height="44dp" android:paddingStart="0dp" android:paddingEnd="12dp"/>
-<TextView style="@style/TB" android:id="@+id/size_value" android:text="" android:textSize="15sp" android:textColor="@color/gold" android:gravity="end" android:minWidth="52dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-<TextView style="@style/Ar" android:id="@+id/size_preview" android:text="@string/size_preview_sample" android:textColor="@color/arabic" android:textDirection="rtl" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-</LinearLayout>
-</LinearLayout>
-</LinearLayout>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/Caps" android:text="@string/appearance" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:paddingTop="16dp" android:paddingBottom="18dp" android:paddingHorizontal="18dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/theme" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<LinearLayout android:orientation="horizontal" android:id="@+id/themes" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-</LinearLayout>
 </LinearLayout>
 </LinearLayout>
 </ScrollView>

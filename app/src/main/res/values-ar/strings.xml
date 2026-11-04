@@ -487,7 +487,7 @@
     <string name="reminder_at_clock">في وقت محدد</string>
     <string name="reminder_around_prayer">حول وقت صلاة</string>
     <string name="reminder_rule_title">أي صلاة؟</string>
-    <string name="reminder_needs_location">%1$s · حدّد الموقع في مواقيت الصلاة</string>
+    <string name="reminder_needs_location">%1$s · حدّد الموقع من الإعدادات، مواقيت الصلاة</string>
     <string name="preview">معاينة</string>
     <string name="preview_more">و%1$d أخرى</string>
     <string name="customize_hint_home">اضغط مطولًا على مجلد لسحبه، واضغط العين لإخفائه من الرئيسية.</string>

@@ -457,7 +457,7 @@
     <string name="reminder_at_clock">At a set time</string>
     <string name="reminder_around_prayer">Around a prayer</string>
     <string name="reminder_rule_title">Which prayer?</string>
-    <string name="reminder_needs_location">%1$s · set a location in Prayer times</string>
+    <string name="reminder_needs_location">%1$s · set a location in Settings, Prayer times</string>
     <string name="preview">Preview</string>
     <string name="preview_more">+%1$d more</string>
     <string name="customize_hint_home">Press and hold a folder to drag it. Tap the eye to hide it from Home.</string>

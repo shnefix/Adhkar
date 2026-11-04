@@ -26,6 +26,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
         bindNav(view, Tab.HOME)
         view.findViewById<View>(R.id.btn_widgets).setOnClickListener { nav().push(WidgetEditorFragment()) }
         view.findViewById<View>(R.id.btn_notifications).setOnClickListener { nav().push(RemindersFragment()) }
+        view.findViewById<View>(R.id.btn_settings).setOnClickListener { nav().push(SettingsFragment()) }
         view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }
         val sections = view.findViewById<LinearLayout>(R.id.sections)
 
