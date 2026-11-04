@@ -30,8 +30,11 @@ many times to repeat it, and organise it into your own folders.
 
 - **Add your own azkar**: write any zikr or dua, set its repeat count, and put it in your own folders;
   edit, reorder or hide any folder, including the built-in ones
-- Morning, evening, before-sleep and other azkar collections built in
-- Focused Arabic reader with tap-to-advance, counters, notes, adjustable text size and keep-screen-on
+- 41 built-in collections: morning, evening, before sleep, prayer, Quranic duas, duas of the prophets,
+  the 99 names, ruqyah, travel, food, hajj and more
+- The source of each zikr, one tap away: the ayah or the hadith text from the six books, with its
+  reference and grade; sources can be hidden for one zikr, a folder or the whole app
+- Focused Arabic reader with tap-to-advance, counters, notes, titles, adjustable text size and keep-screen-on
 - Folders can remember where you stopped and start over at a moment you choose: before or after any
   prayer, or at midnight (morning azkar start over at Dhuhr and evening azkar at Maghrib by default)
 - Reminders for morning, evening and before sleep; they can follow prayer times for your approximate

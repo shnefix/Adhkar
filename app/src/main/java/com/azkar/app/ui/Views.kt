@@ -67,6 +67,11 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     private var busy = false
     private var vt: android.view.VelocityTracker? = null
 
+    // Reused on every layout (each counted tap lays the card out again), so nothing is allocated there.
+    private val edgeL = android.graphics.Rect()
+    private val edgeR = android.graphics.Rect()
+    private val edgeRects = listOf(edgeL, edgeR)
+
     /** Stops the system back gesture from stealing swipes that start at the screen edge. */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
@@ -79,9 +84,9 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
             val top = (cy - half).coerceAtLeast(0)
             val bottom = (cy + half).coerceAtMost(h)
             val edge = (40 * dp).toInt()
-            setSystemGestureExclusionRects(
-                listOf(android.graphics.Rect(0, top, edge, bottom), android.graphics.Rect(w - edge, top, w, bottom))
-            )
+            edgeL.set(0, top, edge, bottom)
+            edgeR.set(w - edge, top, w, bottom)
+            setSystemGestureExclusionRects(edgeRects)
         }
     }
 

@@ -57,7 +57,11 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/Adhkar-*.apk --title "Adhkar ${GITHUB_REF_NAME#v}" --generate-notes
+        # docs/release-notes/<tag>.md is used as the release text when it exists.
+        run: |
+          notes="docs/release-notes/$GITHUB_REF_NAME.md"
+          if [ -f "$notes" ]; then set -- --notes-file "$notes"; else set -- --generate-notes; fi
+          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/Adhkar-*.apk --title "Adhkar ${GITHUB_REF_NAME#v}" "$@"
 
       - name: Remove signing files
         if: always()

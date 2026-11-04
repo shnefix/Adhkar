@@ -157,11 +157,17 @@ class ReaderScrubber @JvmOverloads constructor(ctx: Context, attrs: AttributeSet
         }
     }
 
+    private val exclusion = Rect()
+    private val exclusionList = listOf(exclusion)
+
     override fun onLayout(changed: Boolean, l: Int, t: Int, rr: Int, b: Int) {
         super.onLayout(changed, l, t, rr, b)
         if (!dragging) thumb = centre(current)
         // Dragging from the very edge must move the slider, not open the system back gesture.
-        if (Build.VERSION.SDK_INT >= 29) systemGestureExclusionRects = if (slider) listOf(Rect(0, 0, width, height)) else emptyList()
+        if (Build.VERSION.SDK_INT >= 29) {
+            exclusion.set(0, 0, width, height)
+            systemGestureExclusionRects = if (slider) exclusionList else emptyList()
+        }
     }
 
     // Screen readers: announced as a slider, with "scroll forward / backward" moving one zikr.
