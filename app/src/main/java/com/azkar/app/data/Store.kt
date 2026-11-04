@@ -242,7 +242,8 @@ object Store {
         "d_6" to ("دُعَاءُ النَّبِيِّ" to "من أدعية النبي ﷺ"),
         "d_4" to ("فِي الْخِفَّةِ" to "أذكار خفيفة"),
         "d_5" to ("الْعِلْمُ" to "أدعية طلب العلم"),
-        "d_8" to ("طلب الإجابة" to "مواطن إجابة الدعاء")
+        "d_8" to ("طلب الإجابة" to "مواطن إجابة الدعاء"),
+        "d_16" to ("زَادُ المَعَادِ" to "مختارات")
     )
 
     /** Renames those folders on upgrade; a folder the user renamed or deleted is left alone. */
