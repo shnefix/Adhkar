@@ -20,6 +20,16 @@ class DefaultFoldersAssetTest {
     }
 
     @Test
+    fun azkarFoundInTheQuranOrHadithBooksCarryTheirText() {
+        val all = parsed.folders.flatMap { it.items }
+        assertTrue(all.count { it.source.detail.isNotBlank() } >= 500)
+        // A hadith source names its book and number; a Quran source its surah and ayahs.
+        all.filter { it.source.detail.isNotBlank() }.forEach {
+            assertTrue(it.source.reference, Regex("\\d").containsMatchIn(it.source.reference))
+        }
+    }
+
+    @Test
     fun addedAzkarHaveSourcesAndNoDuplicatesInAFolder() {
         val added = parsed.folders.filter { it.id in DefaultFolders.ADDED_IN_V8 }
         assertEquals(643, added.sumOf { it.items.size })

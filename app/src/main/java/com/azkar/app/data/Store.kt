@@ -24,7 +24,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 9
+    private const val DEFAULTS_VERSION = 10
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -197,6 +197,7 @@ object Store {
         if (from in 1 until 5) applySessionDefaults()
         if (from < 7) fixWakeNameAndSleepReminder()
         if (from in 1 until 9) renameDefaultFolders()
+        if (!fresh && from < 10) fillDefaultSources(p)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -251,6 +252,23 @@ object Store {
         RENAMED_IN_V9.forEach { (id, names) ->
             folder(id)?.takeIf { it.name == names.first }?.let { renameFolder(it.id, names.second) }
         }
+    }
+
+    /**
+     * Version 10: every default zikr has its source (the ayah or hadith text, narrator and grade). Fills it in for
+     * default azkar whose text is unchanged and that have no source yet; azkar from the folders added in version 8
+     * also get it over their old reference-only source. A source the user wrote is never replaced.
+     */
+    private fun fillDefaultSources(p: ImportJson.Parsed.Ok) {
+        val bySource = p.folders.filter { it.id != null }.associate { f -> f.id to f.items.associate { it.text to it.source } }
+        var changed = false
+        val next = zCache.map { z ->
+            val src = bySource[z.folderId]?.get(z.arabic) ?: return@map z
+            val replaceable = z.source.isEmpty ||
+                (z.folderId in DefaultFolders.ADDED_IN_V8 && z.source.detail.isBlank() && z.source.narrator.isBlank() && z.source.grade.isBlank())
+            if (replaceable && z.source != src) { changed = true; z.copy(source = src) } else z
+        }
+        if (changed) saveZikrs(next)
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
