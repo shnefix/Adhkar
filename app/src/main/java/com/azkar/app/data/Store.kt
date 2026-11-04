@@ -330,16 +330,16 @@ object Store {
     fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
     @Synchronized
-    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titleBelow: Boolean = false): Zikr {
+    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titlePos: TitlePos = TitlePos.ABOVE): Zikr {
         zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
             val merged = it.copy(
                 note = note.ifBlank { it.note }, repeat = repeat,
-                title = title.ifBlank { it.title }, titleBelow = if (title.isBlank()) it.titleBelow else titleBelow
+                title = title.ifBlank { it.title }, titlePos = if (title.isBlank()) it.titlePos else titlePos
             )
             updateZikr(merged)
             return merged
         }
-        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titleBelow)
+        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titlePos)
         saveZikrs(zCache + z)
         return z
     }
@@ -567,10 +567,10 @@ object Store {
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
         if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow, it.note, it.source)) } ?: emptyList()
+            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source)) } ?: emptyList()
         }
         val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titleBelow, it.note, it.source) }
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"

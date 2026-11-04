@@ -29,7 +29,20 @@ class ImportJsonTest {
         val item = p.folders[0].items[0]
         assertEquals("n", item.note)
         assertEquals("t", item.title)
-        assertTrue(item.titleBelow)
+        assertEquals(TitlePos.BELOW, item.titlePos)
+    }
+
+    @Test
+    fun allTitlePositionsRoundTrip() {
+        val p = ok("""{"folders":[{"name":"F","azkar":[
+            {"text":"a","title":"t"},{"text":"b","title":"t","titlePosition":"BOTH"},
+            {"text":"c","title":"t","titlePosition":"hidden"},{"text":"d","title":"t","titlePosition":"sideways"}]}]}""")
+        assertEquals(listOf(TitlePos.ABOVE, TitlePos.BOTH, TitlePos.HIDDEN, TitlePos.ABOVE), p.folders[0].items.map { it.titlePos })
+        val (state, _) = ImportMerge.apply(ImportMerge.State(emptyList(), emptyList(), emptyList()), p) { java.util.UUID.randomUUID().toString() }
+        val back = ok(ExportJson.build(state, arabicSize = 1, notificationsOn = false))
+        assertEquals(listOf(TitlePos.ABOVE, TitlePos.BOTH, TitlePos.HIDDEN, TitlePos.ABOVE), back.folders[0].items.map { it.titlePos })
+        // Database codes: the old "below" flag values 0 / 1 keep their meaning.
+        assertEquals(listOf(TitlePos.ABOVE, TitlePos.BELOW, TitlePos.BOTH, TitlePos.HIDDEN), (0..3).map { TitlePos.of(it) })
     }
 
     @Test

@@ -58,7 +58,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val sizeSp = AppPrefs.arabicSp()
         val gold = ctx.getColor(R.color.gold)
         val teal = ctx.getColor(R.color.teal)
-        val track = ctx.getColor(R.color.track)
 
         // Full screen: small margins plus whatever the cutout / bars need.
         val d = resources.displayMetrics.density
@@ -89,7 +88,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val titleBelow = view.findViewById<TextView>(R.id.title_below)
         val note = view.findViewById<TextView>(R.id.note)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
-        val segs = view.findViewById<LinearLayout>(R.id.segs)
+        val segs = view.findViewById<ReaderScrubber>(R.id.segs)
         val ring = view.findViewById<RingView>(R.id.ring).apply { isHapticFeedbackEnabled = false }
         val countTv = view.findViewById<TextView>(R.id.count)
         val sub = view.findViewById<TextView>(R.id.sub)
@@ -136,8 +135,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             val hasTitle = cur.title.isNotBlank()
             titleAbove.text = cur.title
             titleBelow.text = cur.title
-            titleAbove.visibility = if (hasTitle && !cur.titleBelow) View.VISIBLE else View.GONE
-            titleBelow.visibility = if (hasTitle && cur.titleBelow) View.VISIBLE else View.GONE
+            titleAbove.visibility = if (hasTitle && cur.titlePos.showsAbove) View.VISIBLE else View.GONE
+            titleBelow.visibility = if (hasTitle && cur.titlePos.showsBelow) View.VISIBLE else View.GONE
             note.text = cur.note
             note.visibility = if (cur.note.isNotBlank()) View.VISIBLE else View.GONE
             // A new zikr always opens on its front; the source button only appears when there is a source.
@@ -150,14 +149,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             sourceTv.text = cur.source
             sourceBtn.visibility = if (cur.source.isNotBlank()) View.VISIBLE else View.GONE
             pos.text = getString(R.string.reader_position, i + 1, items.size)
-            segs.removeAllViews()
-            items.indices.forEach { k ->
-                val c = if (k < i) teal else if (k == i) gold else track
-                val seg = View(ctx).apply { background = Ui.shape(ctx, c, null, 2f) }
-                val p = LinearLayout.LayoutParams(0, Ui.pxi(ctx, 4f), 1f)
-                if (k > 0) p.marginStart = Ui.pxi(ctx, 6f)
-                segs.addView(seg, p)
-            }
+            segs.setPosition(i, items.size, animate = moved)
             countTv.text = rn.count.toString()
             sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
@@ -176,6 +168,18 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
         ring.setOnClickListener {
             if (rn.tapRing()) render()
+        }
+
+        // Progress-bar slider: the position label follows the finger, and letting go opens that zikr.
+        val cardView = view.findViewById<View>(R.id.card)
+        segs.onScrub = { k -> pos.text = getString(R.string.reader_position, k + 1, items.size) }
+        segs.onPick = { k ->
+            if (rn.jumpTo(k)) {
+                arScroll.scrollTo(0, 0)
+                render()
+                cardView.alpha = 0.35f
+                cardView.animate().alpha(1f).setDuration(180).start()
+            } else pos.text = getString(R.string.reader_position, rn.index + 1, items.size)
         }
 
         val swipe = view as SwipeLayout

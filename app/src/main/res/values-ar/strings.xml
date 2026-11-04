@@ -123,6 +123,8 @@
     <string name="zikr_title_hint">مثال: يقال بعد الفجر</string>
     <string name="zikr_title_above">فوق الذكر</string>
     <string name="zikr_title_below">تحت الذكر</string>
+    <string name="zikr_title_both">فوق وتحت</string>
+    <string name="zikr_title_hidden">مخفي</string>
     <string name="azkar_widget_c_streak_small_label">مواظبة الأذكار صغيرة</string>
     <string name="azkar_widget_c_streak_small_desc">مواظبتك على الأذكار، صغيرة</string>
     <string name="azkar_widget_c_streak_medium_label">مواظبة الأذكار متوسطة</string>
@@ -261,6 +263,7 @@
     <string name="export_json">تصدير إلى JSON</string>
     <string name="home">الرئيسية</string>
     <string name="reader_position">%1$d من %2$d</string>
+    <string name="reader_slider">موضع الذكر في المجلد. اسحب للانتقال إلى ذكر آخر.</string>
     <string name="reader_of">من %1$d</string>
     <string name="reader_finished">أتممت هذه المجموعة</string>
     <string name="reader_tap_ring">اضغط على الدائرة للعدّ</string>

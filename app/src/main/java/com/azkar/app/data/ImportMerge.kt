@@ -20,7 +20,7 @@ object ImportMerge {
         fun addItems(folderId: String?, items: List<ImportJson.Item>) {
             items.forEach { item ->
                 if (zl.any { it.folderId == folderId && it.arabic == item.text }) skipped++
-                else { zl.add(Zikr(newId(), item.text, item.note, item.count, folderId, item.title, item.titleBelow, item.source)); added++ }
+                else { zl.add(Zikr(newId(), item.text, item.note, item.count, folderId, item.title, item.titlePos, item.source)); added++ }
             }
         }
 

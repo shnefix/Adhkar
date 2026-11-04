@@ -26,6 +26,14 @@ class ReaderNav(private val targets: List<Int>, start: Int = 0, count: Int = 0) 
         else -> Outcome.BOUNCE
     }
 
+    /** Progress-bar slider: go straight to zikr [i], its count starting over. Returns true if the zikr changed. */
+    fun jumpTo(i: Int): Boolean {
+        val to = i.coerceIn(0, last.coerceAtLeast(0))
+        if (to == index) return false
+        index = to; count = 0
+        return true
+    }
+
     /** Swipe right. Never finishes. */
     fun prev(): Outcome =
         if (canPage(-1)) { index--; count = 0; Outcome.MOVED } else Outcome.BOUNCE

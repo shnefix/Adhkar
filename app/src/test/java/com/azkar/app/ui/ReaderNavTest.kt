@@ -58,4 +58,18 @@ class ReaderNavTest {
         assertEquals(1, ReaderNav(listOf(1, 1), start = 9).index)
         assertEquals(0, ReaderNav(listOf(1, 1), start = -4).index)
     }
+
+    @Test
+    fun sliderJumpResetsTheCountAndClamps() {
+        val nav = ReaderNav(listOf(3, 3, 3))
+        nav.tapRing()
+        assertEquals(true, nav.jumpTo(2))
+        assertEquals(2, nav.index)
+        assertEquals(0, nav.count)
+        assertEquals(false, nav.jumpTo(2))     // same zikr: nothing changes
+        assertEquals(true, nav.jumpTo(-5))
+        assertEquals(0, nav.index)
+        assertEquals(true, nav.jumpTo(99))
+        assertEquals(2, nav.index)
+    }
 }

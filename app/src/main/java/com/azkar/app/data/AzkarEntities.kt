@@ -1,5 +1,6 @@
 package com.azkar.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -21,7 +22,8 @@ data class ZikrEntity(
     val folderId: String?,
     val position: Int,
     val title: String = "",
-    val titleBelow: Boolean = false,
+    /** [TitlePos.code]; the column keeps its first name, from when it was only "below or not". */
+    @ColumnInfo(name = "titleBelow") val titlePos: Int = 0,
     val source: String = ""
 )
 

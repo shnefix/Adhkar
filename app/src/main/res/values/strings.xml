@@ -144,6 +144,8 @@
     <string name="zikr_title_hint">e.g. Recite after Fajr</string>
     <string name="zikr_title_above">Above the zikr</string>
     <string name="zikr_title_below">Below the zikr</string>
+    <string name="zikr_title_both">Above and below</string>
+    <string name="zikr_title_hidden">Hidden</string>
     <string name="azkar_widget_c_streak_small_label">Azkar streak small</string>
     <string name="azkar_widget_c_streak_small_desc">Your azkar streak, small</string>
     <string name="azkar_widget_c_streak_medium_label">Azkar streak medium</string>
@@ -257,6 +259,7 @@
     <string name="export_json">Export to JSON</string>
     <string name="home">Home</string>
     <string name="reader_position">%1$d of %2$d</string>
+    <string name="reader_slider">Zikr in this folder. Drag to jump to another.</string>
     <string name="reader_of">of %1$d</string>
     <string name="reader_finished">You have finished this collection</string>
     <string name="reader_tap_ring">Tap the circle to count</string>

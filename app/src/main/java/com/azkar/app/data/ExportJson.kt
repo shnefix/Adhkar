@@ -8,7 +8,7 @@ object ExportJson {
     private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
         if (z.note.isNotBlank()) it.put("note", z.note)
         if (z.source.isNotBlank()) it.put("source", z.source)
-        if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", if (z.titleBelow) "below" else "above")
+        if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", z.titlePos.key)
     }
 
     /**

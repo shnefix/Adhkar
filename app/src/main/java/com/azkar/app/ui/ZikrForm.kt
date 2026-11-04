@@ -8,6 +8,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import com.azkar.app.R
 import com.azkar.app.data.Store
+import com.azkar.app.data.TitlePos
 
 /**
  * Shared behaviour of the Add zikr and Edit zikr screens:
@@ -48,16 +49,17 @@ class ZikrForm(
     private val titleSwitch: ToggleSwitch = view.findViewById(R.id.sw_title)
     private val titleBox: View = view.findViewById(R.id.title_box)
     private val titleInput: EditText = view.findViewById(R.id.zikr_title)
-    private var below = false
+    private var pos = TitlePos.ABOVE
 
     /** The title to save: blank while the switch is off. */
     val title: String get() = if (titleSwitch.on) titleInput.text.toString().trim() else ""
-    val titleBelow: Boolean get() = title.isNotEmpty() && below
+    /** Where the title shows: above, below, both, or kept but hidden. */
+    val titlePos: TitlePos get() = if (title.isNotEmpty()) pos else TitlePos.ABOVE
 
     /** Fills the title controls; the switch starts on only when there is a title. */
-    fun setTitle(text: String, isBelow: Boolean) {
+    fun setTitle(text: String, at: TitlePos) {
         titleInput.setText(text)
-        below = isBelow
+        pos = at
         titleSwitch.on = text.isNotBlank()
         renderTitle()
     }
@@ -65,10 +67,21 @@ class ZikrForm(
     private fun renderTitle() {
         titleBox.visibility = if (titleSwitch.on) View.VISIBLE else View.GONE
         val ctx = view.context
-        val row = view.findViewById<android.widget.LinearLayout>(R.id.title_pos)
-        row.removeAllViews()
-        listOf(false to R.string.zikr_title_above, true to R.string.zikr_title_below).forEachIndexed { i, (isBelow, label) ->
-            val on = below == isBelow
+        val box = view.findViewById<android.widget.LinearLayout>(R.id.title_pos)
+        box.orientation = android.widget.LinearLayout.VERTICAL
+        box.removeAllViews()
+        // Two rows of two: above / below, then both / hidden.
+        var row = android.widget.LinearLayout(ctx)
+        listOf(
+            TitlePos.ABOVE to R.string.zikr_title_above, TitlePos.BELOW to R.string.zikr_title_below,
+            TitlePos.BOTH to R.string.zikr_title_both, TitlePos.HIDDEN to R.string.zikr_title_hidden
+        ).forEachIndexed { k, (option, label) ->
+            if (k % 2 == 0) {
+                row = android.widget.LinearLayout(ctx)
+                box.addView(row, android.widget.LinearLayout.LayoutParams(-1, -2).apply { if (k > 0) topMargin = Ui.pxi(ctx, 8f) })
+            }
+            val i = k % 2
+            val on = pos == option
             val b = android.widget.TextView(ctx, null, 0, R.style.TB).apply {
                 setText(label)
                 textSize = 15f
@@ -77,7 +90,7 @@ class ZikrForm(
                 background = Ui.shape(ctx, if (on) ctx.getColor(R.color.gold) else null, ctx.getColor(if (on) R.color.gold else R.color.border2), 14f)
                 isClickable = true
                 isFocusable = true
-                setOnClickListener { below = isBelow; renderTitle() }
+                setOnClickListener { pos = option; renderTitle() }
             }
             val p = android.widget.LinearLayout.LayoutParams(0, Ui.pxi(ctx, 44f), 1f)
             if (i > 0) p.marginStart = Ui.pxi(ctx, 8f)
