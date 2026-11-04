@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Accessibility actions on Customize tiles (screen readers can't drag). -->
+    <item name="action_move_earlier" type="id"/>
+    <item name="action_move_later" type="id"/>
+</resources>

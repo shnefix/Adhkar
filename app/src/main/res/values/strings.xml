@@ -367,9 +367,9 @@
     <string name="all_hidden_toast">All azkar in this folder are hidden.</string>
     <string name="daily_collections">Daily collections</string>
     <string name="saved_label">Saved</string>
-    <string name="placement_top">Top of Home</string>
-    <string name="placement_mixed">Mixed with collections</string>
-    <string name="placement_bottom">Bottom of Home</string>
+    <string name="placement_top">Top</string>
+    <string name="placement_mixed">Mixed</string>
+    <string name="placement_bottom">Bottom</string>
     <string name="preview_collections">Collections</string>
     <string name="preview_mixed">Collections and my folders</string>
     <string name="export_complete_title">Export complete</string>
@@ -461,4 +461,8 @@
     <string name="reminder_around_prayer">Around a prayer</string>
     <string name="reminder_rule_title">Which prayer?</string>
     <string name="reminder_needs_location">%1$s · set a location in Prayer times</string>
+    <string name="preview">Preview</string>
+    <string name="preview_more">+%1$d more</string>
+    <string name="customize_hint_home">Press and hold a folder to drag it. Tap the eye to hide it from Home.</string>
+    <string name="customize_hint_library">Press and hold a folder to drag it. This order is used in the Library and My azkar.</string>
 </resources>

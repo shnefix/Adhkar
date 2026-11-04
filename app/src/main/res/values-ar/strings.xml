@@ -395,9 +395,9 @@
     <string name="all_hidden_toast">جميع الأذكار في هذا المجلد مخفية.</string>
     <string name="daily_collections">الأذكار اليومية</string>
     <string name="saved_label">المحفوظة</string>
-    <string name="placement_top">أعلى الرئيسية</string>
-    <string name="placement_mixed">مع الأذكار اليومية</string>
-    <string name="placement_bottom">أسفل الرئيسية</string>
+    <string name="placement_top">أعلى</string>
+    <string name="placement_mixed">مختلط</string>
+    <string name="placement_bottom">أسفل</string>
     <string name="preview_collections">الأذكار اليومية</string>
     <string name="preview_mixed">الأذكار اليومية ومجلداتي</string>
     <string name="export_complete_title">اكتمل التصدير</string>
@@ -491,4 +491,8 @@
     <string name="reminder_around_prayer">حول وقت صلاة</string>
     <string name="reminder_rule_title">أي صلاة؟</string>
     <string name="reminder_needs_location">%1$s · حدّد الموقع في مواقيت الصلاة</string>
+    <string name="preview">معاينة</string>
+    <string name="preview_more">و%1$d أخرى</string>
+    <string name="customize_hint_home">اضغط مطولًا على مجلد لسحبه، واضغط العين لإخفائه من الرئيسية.</string>
+    <string name="customize_hint_library">اضغط مطولًا على مجلد لسحبه. يُستخدم هذا الترتيب في المكتبة و«أذكاري».</string>
 </resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One folder in the Customize grid: press and hold to drag; the eye (Home tab only) shows or hides it on Home. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="96dp" android:layout_margin="4dp" android:background="@drawable/bg_card18">
+<LinearLayout android:orientation="vertical" android:gravity="center" android:paddingHorizontal="6dp" android:layout_width="match_parent" android:layout_height="match_parent">
+<ImageView android:id="@+id/ic" android:importantForAccessibility="no" android:src="@drawable/ic_folder_1p75" android:layout_width="22dp" android:layout_height="22dp" app:tint="@color/gold"/>
+<TextView android:id="@+id/emoji" android:visibility="gone" android:textSize="20sp" android:includeFontPadding="false" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:id="@+id/name" android:textSize="13sp" android:textColor="@color/text" android:gravity="center" android:maxLines="2" android:ellipsize="end" android:textDirection="firstStrong" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+<FrameLayout android:id="@+id/toggle" android:contentDescription="@string/show_on_home" android:clickable="true" android:focusable="true" android:layout_gravity="top|end" android:layout_width="36dp" android:layout_height="36dp">
+<ImageView android:id="@+id/eye" android:importantForAccessibility="no" android:src="@drawable/ic_eye_1p75" android:layout_gravity="center" android:layout_width="18dp" android:layout_height="18dp" app:tint="@color/gold"/>
+</FrameLayout>
+</FrameLayout>

@@ -402,6 +402,15 @@ object Store {
 
     fun folderIndex(id: String) = fCache.indexOfFirst { it.id == id }
 
+    /** The Library / My azkar order, as dragged in Customize; folders missing from [ids] keep their place at the end. */
+    @Synchronized
+    fun setFolderOrder(ids: List<String>) {
+        val byId = fCache.associateBy { it.id }
+        val ordered = ids.mapNotNull { byId[it] }
+        val rest = fCache.filter { it.id !in ids }
+        if (ordered + rest != fCache) saveFolders(ordered + rest)
+    }
+
     /** Deletes the folder; its azkar stay saved as "Anytime" and reminders pointing at it just open the app. */
     @Synchronized
     fun deleteFolder(id: String) {
