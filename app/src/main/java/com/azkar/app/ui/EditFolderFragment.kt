@@ -63,8 +63,21 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
 
         val swRem = view.findViewById<ToggleSwitch>(R.id.sw_remember)
         val remSub = view.findViewById<TextView>(R.id.remember_sub)
+        // While it remembers, the folder can start over at a set moment: before / after a prayer, or at midnight.
+        val resetRow = view.findViewById<View>(R.id.reset_row)
+        val resetSub = view.findViewById<TextView>(R.id.reset_sub)
         fun renderRem() {
             remSub.text = getString(if (swRem.on) R.string.remember_on else R.string.remember_off)
+            resetRow.visibility = if (swRem.on) View.VISIBLE else View.GONE
+            val rule = viewModel.resetRule()
+            resetSub.text = if (rule == null) timeRuleLabel(requireContext(), null)
+            else getString(R.string.start_over_summary, timeRuleLabel(requireContext(), rule))
+        }
+        resetRow.setOnClickListener {
+            pickTimeRule(R.string.start_over_title, viewModel.resetRule(), allowNever = true, allowMidnight = true) {
+                viewModel.setResetRule(it)
+                renderRem()
+            }
         }
         swRem.on = viewModel.remembersPosition()
         renderRem()

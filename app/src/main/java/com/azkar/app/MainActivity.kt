@@ -96,10 +96,19 @@ class MainActivity : AppCompatActivity() {
             else insets.safeBottom().let { v.setPadding(it.left, 0, it.right, it.bottom) }
             insets
         }
+        // The status bar is transparent: a scrim of its height keeps scrolled text from running under the clock.
+        // In the reader the bars are hidden, so its height drops to 0.
+        val scrim = findViewById<View>(R.id.status_scrim)
+        ViewCompat.setOnApplyWindowInsetsListener(scrim) { v, insets ->
+            val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            if (v.layoutParams.height != top) v.layoutParams = v.layoutParams.apply { height = top }
+            insets
+        }
         // Insets are only dispatched on change, so re-apply them whenever a different screen is shown.
         supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
             override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
                 ViewCompat.requestApplyInsets(container)
+                ViewCompat.requestApplyInsets(scrim)
             }
         }, false)
     }

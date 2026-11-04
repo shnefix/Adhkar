@@ -1,2 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/container" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg">
+<FrameLayout android:id="@+id/container" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg"/>
+<!-- Behind the status bar, so scrolled content fades out instead of running under the clock. Sized to the bar in MainActivity. -->
+<View android:id="@+id/status_scrim" android:layout_width="match_parent" android:layout_height="0dp" android:layout_gravity="top" android:background="@drawable/status_scrim" android:importantForAccessibility="no"/>
+</FrameLayout>

@@ -443,6 +443,13 @@ object Store {
         p.settings?.nudgeMinutes?.let { AppPrefs.setNudgeLeadMinutes(it) }
         p.settings?.calcMethod?.let { AppPrefs.setCalcMethod(it) }
         p.settings?.asrHanafi?.let { AppPrefs.setAsrHanafi(it) }
+        // Rules follow their reminder / folder: same id if it kept it, else the id the merge gave it.
+        p.settings?.reminderRules?.forEach { (id, raw) ->
+            com.azkar.app.reminders.TimeRule.decode(raw)?.let { r -> schedule(id)?.let { AppPrefs.setReminderRule(it.id, r) } }
+        }
+        p.settings?.resetRules?.forEach { (id, raw) ->
+            (sum.folderIds[id] ?: id).takeIf { folder(it) != null }?.let { AppPrefs.setResetRuleRaw(it, raw) }
+        }
         // Tracked folders follow their folder: same id if it kept it, else the id the merge gave it.
         p.tracking?.let { t ->
             Tracking.restore(t.folders, t.history) { fileId -> (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null } }
@@ -487,7 +494,8 @@ object Store {
             sessionDelays = listOf("m", "e", "s").associateWith { AppPrefs.sessionDelayMinutes(it) },
             nudgeOn = AppPrefs.nudgeOn(), nudgeMinutes = AppPrefs.nudgeLeadMinutes(),
             tracking = Tracking.toJson(),
-            calcMethod = AppPrefs.calcMethod(), asrHanafi = AppPrefs.asrHanafi()
+            calcMethod = AppPrefs.calcMethod(), asrHanafi = AppPrefs.asrHanafi(),
+            reminderRules = AppPrefs.reminderRules(), resetRules = AppPrefs.resetRules()
         )
     }
 

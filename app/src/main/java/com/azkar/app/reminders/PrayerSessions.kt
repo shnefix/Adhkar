@@ -140,21 +140,28 @@ object PrayerSessions {
     }
 
     /** Next time of a reminder that follows a prayer (morning, evening, before sleep); null for other reminders or without a location. */
-    fun nextPrayerReminder(scheduleId: String, now: Long, delayMs: Long = AppPrefs.sessionDelayMinutes(scheduleId) * 60_000L): Long? =
-        if (scheduleId == SLEEP_SCHEDULE) nextAfterIsha(now, delayMs = delayMs)
+    fun nextPrayerReminder(scheduleId: String, now: Long, delayMs: Long = AppPrefs.sessionDelayMinutes(scheduleId) * 60_000L): Long? {
+        // A reminder the user set to follow a prayer (e.g. 10 min after Dhuhr); its clock time is the fallback.
+        AppPrefs.reminderRule(scheduleId)?.let { rule ->
+            val loc = AppPrefs.location() ?: return null
+            return PrayerClock.next(rule, now, loc)
+        }
+        return if (scheduleId == SLEEP_SCHEDULE) nextAfterIsha(now, delayMs = delayMs)
         else forSchedule(scheduleId)?.let { nextReminder(it, now, delayMs = delayMs) }
+    }
 
     /**
-     * True when a reading position saved at [savedAt] belongs to a session that has since ended,
-     * so the reader starts again from the first zikr.
+     * True when the folder's start-over moment ([AppPrefs.resetRule]: by default Dhuhr for the morning azkar and
+     * Maghrib for the evening ones) came after the position was saved at [savedAt], so the reader starts again
+     * from the first zikr.
      */
     fun positionExpired(
         folderId: String, savedAt: Long, now: Long = System.currentTimeMillis(),
         loc: Pair<Double, Double>? = AppPrefs.location(), zone: TimeZone = TimeZone.getDefault()
     ): Boolean {
-        val s = forFolder(folderId) ?: return false
+        val rule = AppPrefs.resetRule(folderId) ?: return false
         if (savedAt <= 0L) return false                       // saved by an older version: keep it
-        val end = endAfter(s, savedAt, loc, zone) ?: return false
-        return now >= end
+        // Without a location the rule uses typical prayer times, so the folder still starts over once a day.
+        return PrayerClock.passedBetween(rule, savedAt, now, loc, zone)
     }
 }

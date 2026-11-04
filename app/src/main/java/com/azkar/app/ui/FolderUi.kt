@@ -3,6 +3,7 @@ package com.azkar.app.ui
 import android.content.DialogInterface
 import android.text.InputType
 import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -44,6 +45,7 @@ fun Fragment.promptNewFolder(onCreated: (Folder) -> Unit) {
     val ctx = requireContext()
     var icon: String? = null
     val input = EditText(ctx).apply {
+        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
         hint = ctx.getString(R.string.folder_name_hint)
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         setSingleLine(true)

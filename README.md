@@ -32,9 +32,12 @@ many times to repeat it, and organise it into your own folders.
   edit, reorder or hide any folder, including the built-in ones
 - Morning, evening, before-sleep and other azkar collections built in
 - Focused Arabic reader with tap-to-advance, counters, notes, adjustable text size and keep-screen-on
+- Folders can remember where you stopped and start over at a moment you choose: before or after any
+  prayer, or at midnight (morning azkar start over at Dhuhr and evening azkar at Maghrib by default)
 - Reminders for morning, evening and before sleep; they can follow prayer times for your approximate
   location, or a city or coordinates you set by hand (no location permission needed), with a choice of
-  calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more) and the standard or Hanafi Asr time
+  calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more) and the standard or Hanafi Asr time;
+  your own reminders can come at a set time or before / after any prayer
 - Optional tracking of the days you finish your morning and evening azkar, with streaks
 - Home-screen widgets in many sizes and styles, including tap-to-count; widgets and the reader share
   their progress

@@ -342,6 +342,7 @@ internal fun customIntervalBox(
     box.addView(header)
 
     val input = EditText(ctx).apply {
+        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
         if (manual) setText("") else setText(value.toString())
         hint = "—"
         setHintTextColor(EditorColors.Muted)

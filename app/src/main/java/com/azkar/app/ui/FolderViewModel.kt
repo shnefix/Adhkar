@@ -63,6 +63,8 @@ class FolderViewModel @Inject constructor(
     fun setIcon(icon: String?) = Store.setFolderIcon(id, icon)
     fun remembersPosition() = Store.rememberPosition(id)
     fun setRemember(on: Boolean) = Store.setFolderRemember(id, on)
+    fun resetRule() = com.azkar.app.data.AppPrefs.resetRule(id)
+    fun setResetRule(rule: com.azkar.app.reminders.TimeRule?) = com.azkar.app.data.AppPrefs.setResetRule(id, rule)
     fun unfile(zikrId: String) = Store.unfile(zikrId)
     fun delete() = Store.deleteFolder(id)
 

@@ -56,7 +56,7 @@
     <string name="widget_pin_requested">اختر مكان الأداة على شاشتك الرئيسية.</string>
     <string name="widget_pin_failed">تعذر إضافة الأداة. حاول مرة أخرى.</string>
     <string name="widget_applied">تم تطبيق تغييرات الأداة.</string>
-    <string name="widgets">الأدوات</string>
+    <string name="widgets">الويدجت</string>
     <string name="choose_widget">اختيار أداة</string>
     <string name="widget_sizes">صغيرة · متوسطة · كبيرة</string>
     <string name="live_preview">معاينة مباشرة</string>
@@ -471,4 +471,24 @@
     <string name="zikr_exists_title">محفوظ مسبقًا</string>
     <string name="zikr_exists_message">هذا الذكر موجود بالفعل في «%1$s» (×%2$d). هل تريد تحديثه بتعديلاتك؟</string>
     <string name="update">تحديث</string>
+    <string name="moment_fajr">الفجر</string>
+    <string name="moment_sunrise">الشروق</string>
+    <string name="moment_dhuhr">الظهر</string>
+    <string name="moment_asr">العصر</string>
+    <string name="moment_maghrib">المغرب</string>
+    <string name="moment_isha">العشاء</string>
+    <string name="rule_never">أبدًا · فقط عند الإتمام</string>
+    <string name="rule_midnight">عند منتصف الليل</string>
+    <string name="rule_at">عند %1$s</string>
+    <string name="rule_before">قبل %2$s بـ%1$d دقيقة</string>
+    <string name="rule_after">بعد %2$s بـ%1$d دقيقة</string>
+    <string name="rule_offset_title">قبل %1$s أم بعده؟</string>
+    <string name="start_over">البدء من أول ذكر</string>
+    <string name="start_over_title">متى يبدأ من جديد؟</string>
+    <string name="start_over_summary">%1$s · عند فتحه بعد ذلك</string>
+    <string name="reminder_when">متى</string>
+    <string name="reminder_at_clock">في وقت محدد</string>
+    <string name="reminder_around_prayer">حول وقت صلاة</string>
+    <string name="reminder_rule_title">أي صلاة؟</string>
+    <string name="reminder_needs_location">%1$s · حدّد الموقع في مواقيت الصلاة</string>
 </resources>

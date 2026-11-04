@@ -76,7 +76,7 @@
     <string name="widget_pin_requested">Choose a location for the widget on your home screen.</string>
     <string name="widget_pin_failed">The widget could not be added. Please try again.</string>
     <string name="widget_applied">Widget changes applied.</string>
-    <string name="widgets">widgets</string>
+    <string name="widgets">Widgets</string>
     <string name="widget_preview_unavailable">Preview unavailable</string>
     <string name="choose_widget">Choose a widget</string>
     <string name="widget_sizes">Small · Medium · Large</string>
@@ -441,4 +441,24 @@
     <string name="update">Update</string>
     <string name="zikr_text_hint" translatable="false">اكتب الذكر هنا</string>
     <string name="size_preview_sample" translatable="false">سُبْحَانَ اللَّهِ وَبِحَمْدِهِ</string>
+    <string name="moment_fajr">Fajr</string>
+    <string name="moment_sunrise">Sunrise</string>
+    <string name="moment_dhuhr">Dhuhr</string>
+    <string name="moment_asr">Asr</string>
+    <string name="moment_maghrib">Maghrib</string>
+    <string name="moment_isha">Isha</string>
+    <string name="rule_never">Never · only when you finish</string>
+    <string name="rule_midnight">At midnight</string>
+    <string name="rule_at">At %1$s</string>
+    <string name="rule_before">%1$d min before %2$s</string>
+    <string name="rule_after">%1$d min after %2$s</string>
+    <string name="rule_offset_title">Before or after %1$s?</string>
+    <string name="start_over">Start over from the beginning</string>
+    <string name="start_over_title">When should it start over?</string>
+    <string name="start_over_summary">%1$s · the next time you open it</string>
+    <string name="reminder_when">When</string>
+    <string name="reminder_at_clock">At a set time</string>
+    <string name="reminder_around_prayer">Around a prayer</string>
+    <string name="reminder_rule_title">Which prayer?</string>
+    <string name="reminder_needs_location">%1$s · set a location in Prayer times</string>
 </resources>

@@ -86,7 +86,7 @@
                     android:layout_height="20dp"
                     app:tint="@color/gold" />
 
-                <EditText
+                <EditText android:importantForAutofill="no"
                     style="@style/T"
                     android:id="@+id/fname"
                     android:layout_width="0dp"
@@ -213,6 +213,42 @@
                 android:layout_width="56dp"
                 android:layout_height="44dp"
                 android:contentDescription="@string/remember_position" />
+        </LinearLayout>
+
+        <!-- When a remembering folder starts over (shown only while it remembers) -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:id="@+id/reset_row"
+            android:clickable="true"
+            android:focusable="true"
+            android:minHeight="64dp"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:background="@drawable/bg_card22"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                style="@style/TB"
+                android:text="@string/start_over"
+                android:textSize="16sp"
+                android:textColor="@color/text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                style="@style/T"
+                android:id="@+id/reset_sub"
+                android:text=""
+                android:textSize="14sp"
+                android:textColor="@color/muted"
+                android:layout_marginTop="2dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <!-- Track this folder (off by default) -->

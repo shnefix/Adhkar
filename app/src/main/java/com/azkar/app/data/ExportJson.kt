@@ -17,7 +17,8 @@ object ExportJson {
     fun build(
         s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT,
         sessionDelays: Map<String, Int> = emptyMap(), nudgeOn: Boolean = true, nudgeMinutes: Int? = null,
-        tracking: JSONObject? = null, calcMethod: String? = null, asrHanafi: Boolean = false
+        tracking: JSONObject? = null, calcMethod: String? = null, asrHanafi: Boolean = false,
+        reminderRules: Map<String, String> = emptyMap(), resetRules: Map<String, String> = emptyMap()
     ): String {
         val folders = JSONArray()
         s.folders.forEach { f ->
@@ -44,6 +45,8 @@ object ExportJson {
         if (sessionDelays.isNotEmpty()) settings.put("prayerDelays", JSONObject().apply { sessionDelays.forEach { (k, v) -> put(k, v) } })
         nudgeMinutes?.let { settings.put("nudgeEnabled", nudgeOn).put("nudgeMinutes", it) }
         calcMethod?.let { settings.put("calcMethod", it).put("asrHanafi", asrHanafi) }
+        if (reminderRules.isNotEmpty()) settings.put("reminderRules", JSONObject(reminderRules))
+        if (resetRules.isNotEmpty()) settings.put("resetRules", JSONObject(resetRules))
         root.put("settings", settings)
         tracking?.let { root.put("tracking", it) }
         return root.toString(2)

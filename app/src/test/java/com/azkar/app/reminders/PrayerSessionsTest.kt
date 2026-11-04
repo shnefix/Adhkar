@@ -103,7 +103,9 @@ class PrayerSessionsTest {
     fun withoutLocationEverythingFallsBack() {
         assertNull(PrayerSessions.nextReminder(Session.MORNING, at(1), null, zone))
         assertNull(PrayerSessions.inSession(Session.MORNING, at(7), null, zone))
-        assertFalse(PrayerSessions.positionExpired("d_14", at(7), at(20, day = 4), null, zone))
+        // Without a location the morning azkar still start over, at a typical Dhuhr time (12:00).
+        assertFalse(PrayerSessions.positionExpired("d_14", at(7), at(11), null, zone))
+        assertTrue(PrayerSessions.positionExpired("d_14", at(7), at(12, 1), null, zone))
     }
 
     @Test

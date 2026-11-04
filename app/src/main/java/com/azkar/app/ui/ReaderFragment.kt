@@ -96,7 +96,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val hint = view.findViewById<TextView>(R.id.hint)
         val pos = view.findViewById<TextView>(R.id.pos)
 
-        fun render() {
+        /** [moved]: the user counted or changed zikr (not just opened the reader), so widgets should follow. */
+        fun render(moved: Boolean = true) {
             val i = rn.index
             val cur = items[i]
             val done = rn.isDone
@@ -127,8 +128,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             // Azkar behind the current one are read; the current one counts once its repeats are done.
             val finished = i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0
             Tracking.record(key, finished, items.size)
-            // Widgets on this folder follow along (redrawn when the app goes to the background).
-            WidgetStore.syncFolderProgress(ctx, key, finished, if (finished == i) rn.count else 0)
+            // Widgets on this folder follow along (redrawn when the app goes to the background). Only after the
+            // user acts: merely opening a folder at its first zikr must not wipe a widget's count for today.
+            if (moved) WidgetStore.syncFolderProgress(ctx, key, finished, if (finished == i) rn.count else 0)
         }
 
         ring.setOnClickListener {
@@ -164,7 +166,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             ViewCompat.addAccessibilityAction(this, getString(R.string.next_zikr)) { _, _ -> swipe.next(); true }
             ViewCompat.addAccessibilityAction(this, getString(R.string.previous_zikr)) { _, _ -> swipe.previous(); true }
         }
-        render()
+        render(moved = false)
     }
 
     private fun immersive(on: Boolean) {

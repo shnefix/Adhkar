@@ -17,7 +17,9 @@ object ImportJson {
     data class SettingsIn(
         val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null,
         val prayerDelays: Map<String, Int> = emptyMap(), val nudgeOn: Boolean? = null, val nudgeMinutes: Int? = null,
-        val calcMethod: String? = null, val asrHanafi: Boolean? = null
+        val calcMethod: String? = null, val asrHanafi: Boolean? = null,
+        /** Reminder id -> prayer rule, and folder id -> start-over rule (ids as in the file). */
+        val reminderRules: Map<String, String> = emptyMap(), val resetRules: Map<String, String> = emptyMap()
     )
     /** Tracked folder ids and their daily history, as written by Export (ids are the file's own). */
     data class TrackingIn(val folders: List<String>, val history: Map<String, Map<String, Tracking.Progress>>)
@@ -61,6 +63,9 @@ object ImportJson {
         }
         return out
     }
+
+    private fun stringMap(o: JSONObject?): Map<String, String> =
+        o?.keys()?.asSequence()?.mapNotNull { k -> (o.opt(k) as? String)?.let { k to it } }?.toMap().orEmpty()
 
     @Suppress("UNCHECKED_CAST")
     fun parse(raw: String): Parsed {
@@ -128,7 +133,9 @@ object ImportJson {
                 if (so.opt("nudgeEnabled") is Boolean) so.getBoolean("nudgeEnabled") else null,
                 (so.opt("nudgeMinutes") as? Number)?.toInt()?.takeIf { it in 1..AppPrefs.SESSION_DELAY_MAX },
                 (so.opt("calcMethod") as? String)?.takeIf { it.isNotBlank() },
-                if (so.opt("asrHanafi") is Boolean) so.getBoolean("asrHanafi") else null
+                if (so.opt("asrHanafi") is Boolean) so.getBoolean("asrHanafi") else null,
+                stringMap(so.optJSONObject("reminderRules")),
+                stringMap(so.optJSONObject("resetRules"))
             )
         }
         // Tracking is optional and never fails an import: unreadable entries are skipped.

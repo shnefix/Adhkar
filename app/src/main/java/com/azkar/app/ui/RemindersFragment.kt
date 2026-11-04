@@ -82,6 +82,14 @@ fun prayerTimeLabel(
     ctx: Context, s: Schedule,
     delayMinutes: Int = AppPrefs.sessionDelayMinutes(s.id)
 ): String? {
+    // Any reminder the user set around a prayer: "10 min after Dhuhr · 12:48", or a hint until a location is set.
+    AppPrefs.reminderRule(s.id)?.let { rule ->
+        val label = timeRuleLabel(ctx, rule)
+        val at = PrayerSessions.nextPrayerReminder(s.id, System.currentTimeMillis())
+            ?: return ctx.getString(R.string.reminder_needs_location, label)
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = at }
+        return label + " · " + timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+    }
     val anchor = PrayerAnchor.of(s.id) ?: return null
     val at = PrayerSessions.nextPrayerReminder(s.id, System.currentTimeMillis(), delayMinutes * 60_000L) ?: return null
     val c = java.util.Calendar.getInstance().apply { timeInMillis = at }
@@ -393,6 +401,10 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         super.onResume()
         if (view != null) {
             ReminderScheduler.rescheduleAll(requireContext())   // picks up a newly granted exact-alarm permission
+            // Notifications may have been switched on or off in system settings meanwhile.
+            syncing = true
+            view?.findViewById<ToggleSwitch>(R.id.sw_all)?.on = AppPrefs.notificationsOn() && hasNotificationPermission()
+            syncing = false
             renderList()
         }
     }
@@ -417,6 +429,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
     private fun enterCoordinates(onSet: () -> Unit) {
         val ctx = requireContext()
         fun field(hint: Int, value: Double?) = EditText(ctx).apply {
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
             setHint(hint)
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                 android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
@@ -524,11 +537,41 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         // time, the user picks how many minutes after Fajr / Asr / Isha they come (saved with the reminder).
         val anchor = existing?.let { PrayerAnchor.of(it.id) }
         var delay = existing?.let { AppPrefs.sessionDelayMinutes(it.id) } ?: AppPrefs.SESSION_DELAY_DEFAULT
-        fun prayerLabel() = existing?.let { prayerTimeLabel(ctx, it, delay) }
-        fun showTime() { timeTv.text = prayerLabel() ?: timeLabel(ctx, h, m) }
+        fun prayerLabel() = existing?.takeIf { anchor != null }?.let { prayerTimeLabel(ctx, it, delay) }
+        // Other reminders come at a clock time, or around a prayer (e.g. 10 min after Dhuhr) once a location is set.
+        var rule = if (anchor == null) existing?.let { AppPrefs.reminderRule(it.id) } else null
+        fun showTime() {
+            val r = rule
+            timeTv.text = when {
+                r != null -> {
+                    val label = timeRuleLabel(ctx, r)
+                    val loc = AppPrefs.location()
+                    if (loc == null) getString(R.string.reminder_needs_location, label)
+                    else {
+                        val c = java.util.Calendar.getInstance().apply {
+                            timeInMillis = com.azkar.app.reminders.PrayerClock.next(r, System.currentTimeMillis(), loc)
+                        }
+                        label + " · " + timeLabel(ctx, c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+                    }
+                }
+                else -> prayerLabel() ?: timeLabel(ctx, h, m)
+            }
+        }
         showTime()
+        fun pickClock() = TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; rule = null; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
         timeTv.setOnClickListener {
-            if (anchor != null && prayerLabel() != null) {
+            if (anchor == null) {
+                AlertDialog.Builder(ctx)
+                    .setTitle(R.string.reminder_when)
+                    .setItems(arrayOf(getString(R.string.reminder_at_clock), getString(R.string.reminder_around_prayer))) { _, which ->
+                        if (which == 0) pickClock()
+                        else pickTimeRule(R.string.reminder_rule_title, rule, allowNever = false, allowMidnight = false) {
+                            rule = it
+                            showTime()
+                        }
+                    }
+                    .show()
+            } else if (prayerLabel() != null) {
                 val choices = (anchor.delays + delay).distinct().sorted()
                 AlertDialog.Builder(ctx)
                     .setTitle(anchor.titleRes)
@@ -538,7 +581,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                         d.dismiss()
                     }
                     .show()
-            } else TimePickerDialog(ctx, { _, hh, mm -> h = hh; m = mm; showTime() }, h, m, DateFormat.is24HourFormat(ctx)).show()
+            } else pickClock()
         }
 
         var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
@@ -561,6 +604,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             .setNegativeButton(R.string.cancel, null)
         if (existing != null) b.setNeutralButton(R.string.delete) { _, _ ->
             ReminderScheduler.cancel(ctx, existing.id)   // cancel the alarm before forgetting it
+            AppPrefs.setReminderRule(existing.id, null)
             Store.deleteSchedule(existing.id)
             renderList()
         }
@@ -575,7 +619,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
                 if (anchor != null) {
                     AppPrefs.setSessionDelayMinutes(s.id, delay)
                     WidgetUpdater.updateAll(ctx)   // countdown / today widgets show the new start time
-                }
+                } else AppPrefs.setReminderRule(s.id, rule)   // before scheduling: it decides the alarm time
                 Store.upsertSchedule(s)
                 ReminderScheduler.cancel(ctx, s.id)   // drop the old alarm, then set the new time
                 ReminderScheduler.apply(ctx, s)

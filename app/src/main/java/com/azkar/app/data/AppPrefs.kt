@@ -31,6 +31,9 @@ object AppPrefs {
     private const val K_NUDGE = "nudge_on"
     private const val K_NUDGE_LEAD = "nudge_lead"
     private const val K_CALC = "calc_method"
+    private const val K_RESET = "reset_"          // reset_<folderId> = TimeRule text, or "NEVER"
+    private const val K_REM_RULE = "rem_rule_"    // rem_rule_<scheduleId> = TimeRule text: the reminder follows a prayer
+    private const val NEVER = "NEVER"
     private const val K_ASR_HANAFI = "asr_hanafi"
     /** Prayer-time method used before it became a setting; stays the default so existing reminders don't move. */
     const val CALC_METHOD_DEFAULT = "EGYPTIAN"
@@ -137,6 +140,46 @@ object AppPrefs {
     /** Asr by the Hanafi shadow length (twice the object) instead of the majority's (once). */
     fun asrHanafi(): Boolean = ::sp.isInitialized && sp.getBoolean(K_ASR_HANAFI, false)
     fun setAsrHanafi(v: Boolean) = sp.edit().putBoolean(K_ASR_HANAFI, v).apply()
+
+    /**
+     * When a folder that remembers its position starts over from the first zikr; null = never (only when finished).
+     * Morning azkar start over at Dhuhr and evening azkar at Maghrib unless the user chose otherwise.
+     */
+    fun resetRule(folderId: String): com.azkar.app.reminders.TimeRule? {
+        val raw = if (::sp.isInitialized) sp.getString(K_RESET + folderId, null) else null
+        if (raw == NEVER) return null
+        return com.azkar.app.reminders.TimeRule.decode(raw) ?: when (folderId) {
+            DefaultFolders.MORNING -> com.azkar.app.reminders.TimeRule(com.azkar.app.reminders.Moment.DHUHR)
+            DefaultFolders.EVENING -> com.azkar.app.reminders.TimeRule(com.azkar.app.reminders.Moment.MAGHRIB)
+            else -> null
+        }
+    }
+
+    fun setResetRule(folderId: String, rule: com.azkar.app.reminders.TimeRule?) =
+        sp.edit().putString(K_RESET + folderId, rule?.encode() ?: NEVER).apply()
+
+    /** A reminder that comes before / after a prayer instead of at a clock time; null = at its clock time. */
+    fun reminderRule(scheduleId: String): com.azkar.app.reminders.TimeRule? =
+        if (::sp.isInitialized) com.azkar.app.reminders.TimeRule.decode(sp.getString(K_REM_RULE + scheduleId, null)) else null
+
+    fun setReminderRule(scheduleId: String, rule: com.azkar.app.reminders.TimeRule?) {
+        if (rule == null) sp.edit().remove(K_REM_RULE + scheduleId).apply()
+        else sp.edit().putString(K_REM_RULE + scheduleId, rule.encode()).apply()
+    }
+
+    /** All prayer-based reminder rules, for the backup file. */
+    fun reminderRules(): Map<String, String> = sp.all.mapNotNull { (k, v) ->
+        if (k.startsWith(K_REM_RULE) && v is String) k.removePrefix(K_REM_RULE) to v else null
+    }.toMap()
+
+    /** All folder start-over choices the user made, for the backup file. */
+    fun resetRules(): Map<String, String> = sp.all.mapNotNull { (k, v) ->
+        if (k.startsWith(K_RESET) && v is String) k.removePrefix(K_RESET) to v else null
+    }.toMap()
+
+    fun setResetRuleRaw(folderId: String, raw: String) {
+        if (raw == NEVER || com.azkar.app.reminders.TimeRule.decode(raw) != null) sp.edit().putString(K_RESET + folderId, raw).apply()
+    }
 
     /** True once the app has asked for location permission (it asks only once). */
     fun locationAsked() = sp.getBoolean(K_LOC_ASKED, false)
