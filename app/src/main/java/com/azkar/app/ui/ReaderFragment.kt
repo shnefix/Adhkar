@@ -26,6 +26,12 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     private lateinit var rn: ReaderNav
     private var lastBack = 0L
 
+    /**
+     * Swipes, the slider and the source flip finish on animation callbacks, which can fire after the reader
+     * has closed (e.g. back pressed while the card is still sliding). Each of them checks this first.
+     */
+    private val alive get() = isAdded && view != null && !isRemoving
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         if (::rn.isInitialized) { outState.putInt("i", rn.index); outState.putInt("count", rn.count) }
@@ -181,6 +187,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             flipArea.animate().rotationY(if (toBack) 90f else -90f).setDuration(170)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
+                    if (!alive) return@withEndAction
                     showSide(toBack)
                     flipArea.rotationY = if (toBack) -90f else 90f
                     flipArea.animate().rotationY(0f).setDuration(170)
@@ -193,6 +200,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
         /** [moved]: the user counted or changed zikr (not just opened the reader), so widgets should follow. */
         fun render(moved: Boolean = true) {
+            if (!alive) return
             val i = rn.index
             val cur = items[i]
             val done = rn.isDone
@@ -238,8 +246,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
         // Progress-bar slider: the position label follows the finger, and letting go opens that zikr.
         val cardView = view.findViewById<View>(R.id.card)
-        segs.onScrub = { k -> pos.text = getString(R.string.reader_position, k + 1, items.size) }
-        segs.onPick = { k ->
+        segs.onScrub = { k -> if (alive) pos.text = getString(R.string.reader_position, k + 1, items.size) }
+        segs.onPick = pick@{ k ->
+            if (!alive) return@pick
             if (rn.jumpTo(k)) {
                 arScroll.scrollTo(0, 0)
                 render()
@@ -253,7 +262,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             tapEnabled = AppPrefs.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
-            onFinish = {
+            onFinish = finish@{
+                if (!alive) return@finish
                 Tracking.record(key, items.size, items.size)
                 AppPrefs.clearPosition(key)
                 WidgetStore.syncFolderProgress(ctx, key, items.size, 0)
@@ -262,7 +272,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 main.finishReading()
                 if (AppPrefs.completionScreen()) main.push(CompleteFragment.of(folderTitle, key))
             }
-            onPage = { dir ->
+            onPage = page@{ dir ->
+                if (!alive) return@page
                 if (dir > 0) rn.next() else rn.prev()
                 arScroll.scrollTo(0, 0)
                 render()
@@ -289,7 +300,16 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     }
 
     override fun onResume() { super.onResume(); immersive(true) }
-    override fun onDestroyView() { immersive(false); super.onDestroyView() }
+    override fun onDestroyView() {
+        // Stop anything still moving so its end callback never reaches a closed reader.
+        view?.let { v ->
+            (v as? SwipeLayout)?.apply { onPage = null; onFinish = null; card?.animate()?.cancel() }
+            v.findViewById<View>(R.id.flip_area)?.animate()?.cancel()
+            v.findViewById<ReaderScrubber>(R.id.segs)?.apply { onPick = null; onScrub = null }
+        }
+        immersive(false)
+        super.onDestroyView()
+    }
 
     companion object {
         fun of(key: String, start: Int = -1) = ReaderFragment().apply { arguments = Bundle().apply { putString("key", key); putInt("start", start) } }
