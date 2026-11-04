@@ -477,6 +477,6 @@
     <string name="show_source">Show source</string>
     <string name="zikr_source_on">The source button shows on this zikr\'s card</string>
     <string name="zikr_source_off">This zikr\'s source is hidden</string>
-    <string name="source_hide_this">Hide this zikr\'s source</string>
-    <string name="source_hidden_toast">Source hidden. Show it again from editing the zikr.</string>
+    <string name="show_or_hide_source">Show or hide source</string>
+    <string name="source_hidden_label">Source hidden</string>
 </resources>

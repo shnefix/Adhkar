@@ -114,8 +114,21 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         /** Fills one row for [z] at position [idx] of [last] + 1 (a new row or a reused one). */
         fun bindRow(v: View, z: com.azkar.app.data.Zikr, idx: Int, last: Int, hid: Boolean) {
             v.findViewById<TextView>(R.id.ar).text = z.arabic
+            // The book shows or hides this zikr's source in the reader; only azkar that have a source get it.
+            val srcHidden = !z.source.isEmpty && AppPrefs.zikrSourceHidden(z.id)
             v.findViewById<TextView>(R.id.line).text =
-                "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · " + getString(R.string.hidden_label) else "")
+                "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · " + getString(R.string.hidden_label) else "") +
+                    (if (srcHidden) " · " + getString(R.string.source_hidden_label) else "")
+            v.findViewById<View>(R.id.src).apply {
+                visibility = if (z.source.isEmpty) View.INVISIBLE else View.VISIBLE
+                alpha = if (srcHidden) 0.4f else 1f
+                setOnClickListener {
+                    AppPrefs.setZikrSourceHidden(z.id, !srcHidden)
+                    bindRow(v, z, idx, last, hid)
+                }
+            }
+            v.findViewById<ImageView>(R.id.src_ic).imageTintList =
+                ColorStateList.valueOf(ctx.getColor(if (srcHidden) R.color.muted else R.color.gold))
             v.findViewById<ImageView>(R.id.hide_ic).apply {
                 setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
                 imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))

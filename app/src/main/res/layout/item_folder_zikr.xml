@@ -12,6 +12,9 @@
 <TextView style="@style/Ar" android:text="" android:textSize="21sp" android:textColor="@color/arabic" android:lineHeight="31.5sp" android:textDirection="rtl" android:id="@+id/ar" android:singleLine="true" android:ellipsize="end" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:id="@+id/line" android:singleLine="true" android:ellipsize="end" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<FrameLayout android:id="@+id/src" android:visibility="invisible" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/show_or_hide_source" android:clickable="true" android:focusable="true">
+<ImageView android:importantForAccessibility="no" android:id="@+id/src_ic" android:src="@drawable/ic_open_book" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold" android:layout_gravity="center"/>
+</FrameLayout>
 <FrameLayout android:id="@+id/hide" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/hide_or_show" android:clickable="true" android:focusable="true">
 <ImageView android:importantForAccessibility="no" android:id="@+id/hide_ic" android:src="@drawable/ic_eye_1p75" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/gold" android:layout_gravity="center"/>
 </FrameLayout>

@@ -507,6 +507,6 @@
     <string name="show_source">إظهار المصدر</string>
     <string name="zikr_source_on">يظهر زر المصدر على بطاقة هذا الذكر</string>
     <string name="zikr_source_off">مصدر هذا الذكر مخفي</string>
-    <string name="source_hide_this">إخفاء مصدر هذا الذكر</string>
-    <string name="source_hidden_toast">أُخفي المصدر. يمكنك إظهاره من تعديل الذكر.</string>
+    <string name="show_or_hide_source">إظهار المصدر أو إخفاؤه</string>
+    <string name="source_hidden_label">المصدر مخفي</string>
 </resources>
