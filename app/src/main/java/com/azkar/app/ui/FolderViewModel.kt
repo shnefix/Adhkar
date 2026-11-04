@@ -42,14 +42,21 @@ class FolderViewModel @Inject constructor(
 ) : ViewModel() {
     val id: String = savedState.get<String>("id") ?: FolderState.ANYTIME
 
+    private fun stateOf(content: com.azkar.app.data.AzkarContent, hidden: Set<String>) = FolderState(
+        id = id,
+        folder = content.folders.firstOrNull { it.id == id },
+        zikrs = content.zikrs.filter { if (id == FolderState.ANYTIME) it.folderId == null else it.folderId == id },
+        hidden = hidden
+    )
+
+    // Starts from the in-memory content so the azkar show on the first frame; an identical Room emission is
+    // then dropped by the StateFlow, so the list isn't built twice.
     val state: StateFlow<FolderState?> = combine(repository.content, Store.hiddenZikrsFlow) { content, hidden ->
-        FolderState(
-            id = id,
-            folder = content.folders.firstOrNull { it.id == id },
-            zikrs = content.zikrs.filter { if (id == FolderState.ANYTIME) it.folderId == null else it.folderId == id },
-            hidden = hidden
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        stateOf(content, hidden)
+    }.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000),
+        Store.contentSnapshot()?.let { stateOf(it, Store.hiddenZikrs()) }
+    )
 
     // Selection survives rotation.
     var selecting = false

@@ -314,6 +314,13 @@ object Store {
         }
     }
 
+    /**
+     * The in-memory content once loaded, else null. Screens start from it so they draw at once instead of
+     * waiting for their first database read (which then only confirms the same data).
+     */
+    fun contentSnapshot(): AzkarContent? =
+        if (initResult?.isCompleted == true) AzkarContent(fCache, zCache, sCache) else null
+
     // ---------- Azkar ----------
     fun zikrs(): List<Zikr> = zCache
     fun zikr(id: String): Zikr? = zCache.firstOrNull { it.id == id }

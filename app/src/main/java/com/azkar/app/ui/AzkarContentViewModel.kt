@@ -15,5 +15,5 @@ class AzkarContentViewModel @Inject constructor(
     repository: AzkarRepository
 ) : ViewModel() {
     val content: StateFlow<AzkarContent?> = repository.content
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.azkar.app.data.Store.contentSnapshot())
 }
