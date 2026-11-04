@@ -7,7 +7,13 @@ import org.json.JSONObject
 object ExportJson {
     private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
         if (z.note.isNotBlank()) it.put("note", z.note)
-        if (z.source.isNotBlank()) it.put("source", z.source)
+        with(z.source) {
+            if (reference.isNotBlank()) it.put("source", reference)
+            if (detail.isNotBlank()) it.put("sourceDetail", detail)
+            if (narrator.isNotBlank()) it.put("narrator", narrator)
+            if (whenToSay.isNotBlank()) it.put("when", whenToSay)
+            if (grade.isNotBlank()) it.put("grade", grade)
+        }
         if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", z.titlePos.key)
     }
 

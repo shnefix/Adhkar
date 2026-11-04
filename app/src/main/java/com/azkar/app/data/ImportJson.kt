@@ -7,11 +7,11 @@ import org.json.JSONObject
 
 /**
  * Parses and validates an Azkar JSON file (hand-written or produced by Export).
- * Only "folders" is required. Optional: folder "id"/"icon", zikr "note"/"source"/"title"/"titlePosition" ("above", "below", "both" or "hidden"),
+ * Only "folders" is required. Optional: folder "id"/"icon", zikr "note"/"source"/"sourceDetail"/"narrator"/"when"/"grade"/"title"/"titlePosition" ("above", "below", "both" or "hidden"),
  * top-level "unfiled", "reminders", "settings".
  */
 object ImportJson {
-    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val source: String = "")
+    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val source: ZikrSource = ZikrSource())
     data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
     data class SettingsIn(
@@ -59,7 +59,8 @@ object ImportJson {
             val note = if (o.isNull("note")) "" else o.optString("note", "")
             val title = if (o.isNull("title")) "" else o.optString("title", "").trim()
             val pos = TitlePos.ofKey(o.optString("titlePosition", "above"))
-            val source = if (o.isNull("source")) "" else o.optString("source", "").trim()
+            fun str(k: String) = if (o.isNull(k)) "" else o.optString(k, "").trim()
+            val source = ZikrSource(str("source"), str("sourceDetail"), str("narrator"), str("when"), str("grade"))
             out.add(Item(text, n, note, title, pos, source))
         }
         return out

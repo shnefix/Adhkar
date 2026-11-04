@@ -10,7 +10,7 @@ object AzkarDatabaseProvider {
     fun get(context: Context): AzkarDatabase =
         instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AzkarDatabase::class.java, "azkar.db")
-                .addMigrations(AzkarRoomMigrations.V1_TO_V2, AzkarRoomMigrations.V2_TO_V3, AzkarRoomMigrations.V3_TO_V4)
+                .addMigrations(AzkarRoomMigrations.V1_TO_V2, AzkarRoomMigrations.V2_TO_V3, AzkarRoomMigrations.V3_TO_V4, AzkarRoomMigrations.V4_TO_V5)
                 .build()
                 .also { instance = it }
         }

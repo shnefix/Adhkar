@@ -26,4 +26,13 @@ object AzkarRoomMigrations {
             db.execSQL("ALTER TABLE zikrs ADD COLUMN source TEXT NOT NULL DEFAULT ''")
         }
     }
+
+    /** The rest of the source page: hadith number / chapter, narrator, when it is said, and its grade. */
+    val V4_TO_V5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            listOf("sourceDetail", "narrator", "sayWhen", "grade").forEach {
+                db.execSQL("ALTER TABLE zikrs ADD COLUMN $it TEXT NOT NULL DEFAULT ''")
+            }
+        }
+    }
 }

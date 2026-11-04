@@ -68,16 +68,20 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         }
         ViewCompat.requestApplyInsets(view)
 
+        // Back on the source page turns back to the zikr (set once the views below exist).
+        var closeSource: () -> Boolean = { false }
+
         // A stray system back (edge swipe) must not close the reader: it needs a second press.
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                if (closeSource()) return
                 val now = SystemClock.uptimeMillis()
                 if (now - lastBack < 2000) nav().pop()
                 else { lastBack = now; Toast.makeText(ctx, R.string.reader_back_again, Toast.LENGTH_SHORT).show() }
             }
         })
 
-        view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
+        view.findViewById<View>(R.id.btn_back).setOnClickListener { if (!closeSource()) nav().pop() }
         view.findViewById<TextView>(R.id.title).text = folderTitle
         val ar = view.findViewById<TextView>(R.id.ar).apply {
             textSize = sizeSp.toFloat()
@@ -94,37 +98,98 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val sub = view.findViewById<TextView>(R.id.sub)
         val hint = view.findViewById<TextView>(R.id.hint)
         val pos = view.findViewById<TextView>(R.id.pos)
-        val flipBox = view.findViewById<View>(R.id.flip_box).apply { cameraDistance = 8000 * d }
+        val titleTv = view.findViewById<TextView>(R.id.title)
+        val swipe = view as SwipeLayout
+        val flipArea = view.findViewById<View>(R.id.flip_area).apply { cameraDistance = 8000 * d }
+        val front = view.findViewById<View>(R.id.front)
+        val sourcePage = view.findViewById<View>(R.id.source_page)
         val sourceScroll = view.findViewById<ScrollView>(R.id.source_scroll)
-        val sourceTv = view.findViewById<TextView>(R.id.source)
+        val srcAr = view.findViewById<TextView>(R.id.src_ar)
+        val srcNote = view.findViewById<TextView>(R.id.src_note)
+        val srcCards = view.findViewById<LinearLayout>(R.id.src_cards)
+        val srcChips = view.findViewById<FlowLayout>(R.id.src_chips).apply { fromRight = true }
+        // The source page is always in Arabic, whatever the phone's language.
+        val arRes = ctx.createConfigurationContext(android.content.res.Configuration(resources.configuration).apply {
+            setLocale(java.util.Locale.forLanguageTag("ar"))
+        }).resources
+        view.findViewById<TextView>(R.id.src_back).text = arRes.getString(R.string.source_hide)
         val sourceBtn = view.findViewById<View>(R.id.btn_source).apply { isHapticFeedbackEnabled = false }
         var showingSource = false
         var shownIndex = -1
 
-        /** Front (the zikr) or back (its source) of the card, without animation. */
-        fun showSide(back: Boolean) {
-            showingSource = back
-            arScroll.visibility = if (back) View.INVISIBLE else View.VISIBLE
-            sourceScroll.visibility = if (back) View.VISIBLE else View.GONE
-            sourceBtn.contentDescription = getString(if (back) R.string.source_hide else R.string.source_show)
-            sourceBtn.isActivated = back
+        /** One card on the source page: a gold label, the value, and an optional muted second line. */
+        fun infoCard(label: Int, value: String, extra: String = "") = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 20f)
+            setPadding(Ui.pxi(ctx, 18f), Ui.pxi(ctx, 16f), Ui.pxi(ctx, 18f), Ui.pxi(ctx, 16f))
+            fun line(text: String, sp: Float, color: Int, bold: Boolean, top: Float) = TextView(ctx, null, 0, if (bold) R.style.TB else R.style.T).apply {
+                this.text = text; textSize = sp; setTextColor(ctx.getColor(color))
+                textDirection = View.TEXT_DIRECTION_RTL
+                textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+                setLineSpacing(0f, 1.3f)
+                if (top > 0f) setPadding(0, Ui.pxi(ctx, top), 0, 0)
+            }
+            addView(line(arRes.getString(label), 13f, R.color.gold, true, 0f))
+            addView(line(value, 16f, R.color.arabic, false, 6f))
+            if (extra.isNotBlank()) addView(line(extra, 14f, R.color.muted, false, 4f))
         }
 
-        /** Turns the card over: a half turn to edge-on, swap sides, then the other half back to flat. */
+        fun chip(text: String, gold: Boolean) = TextView(ctx, null, 0, R.style.T).apply {
+            this.text = text; textSize = 13f
+            setTextColor(ctx.getColor(if (gold) R.color.gold else R.color.muted))
+            background = Ui.shape(ctx, null, ctx.getColor(if (gold) R.color.gold else R.color.border2), 999f)
+            setPadding(Ui.pxi(ctx, 14f), Ui.pxi(ctx, 6f), Ui.pxi(ctx, 14f), Ui.pxi(ctx, 6f))
+        }
+
+        /** Fills the source page for zikr [i]: the zikr, then reference, narrator and when to say it, then chips. */
+        fun fillSource(i: Int) {
+            val it = items[i]
+            val s = it.source
+            srcAr.text = it.arabic
+            srcNote.text = it.note
+            srcNote.visibility = if (it.note.isNotBlank()) View.VISIBLE else View.GONE
+            srcCards.removeAllViews()
+            val gap = Ui.pxi(ctx, 12f)
+            fun add(v: View) = srcCards.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (srcCards.childCount > 0) topMargin = gap })
+            if (s.reference.isNotBlank() || s.detail.isNotBlank())
+                add(infoCard(R.string.source_reference, s.reference.ifBlank { s.detail }, if (s.reference.isNotBlank()) s.detail else ""))
+            if (s.narrator.isNotBlank()) add(infoCard(R.string.source_narrator, s.narrator))
+            if (s.whenToSay.isNotBlank()) add(infoCard(R.string.source_when, s.whenToSay))
+            srcChips.removeAllViews()
+            if (s.grade.isNotBlank()) srcChips.addView(chip(s.grade, true))
+            if (s.reference.isNotBlank()) srcChips.addView(chip(s.reference, false))
+            srcChips.visibility = if (srcChips.childCount > 0) View.VISIBLE else View.GONE
+            (srcChips.layoutParams as LinearLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (srcCards.childCount > 0) 16f else 0f)
+        }
+
+        /** Reader (front) or source page (back), without animation; the header follows. */
+        fun showSide(back: Boolean) {
+            showingSource = back
+            front.visibility = if (back) View.INVISIBLE else View.VISIBLE
+            sourcePage.visibility = if (back) View.VISIBLE else View.GONE
+            swipe.paused = back
+            titleTv.text = if (back) arRes.getString(R.string.source_title) else folderTitle
+            pos.text = if (back) arRes.getString(R.string.source_position, rn.index + 1, items.size)
+                else getString(R.string.reader_position, rn.index + 1, items.size)
+        }
+
+        /** Turns the page over: a half turn to edge-on, swap sides, then the other half back to flat. */
         fun flip() {
-            flipBox.animate().cancel()
+            flipArea.animate().cancel()
             val toBack = !showingSource
-            flipBox.animate().rotationY(90f).setDuration(160)
+            if (toBack) { fillSource(rn.index); sourceScroll.scrollTo(0, 0) }
+            flipArea.animate().rotationY(if (toBack) 90f else -90f).setDuration(170)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
                     showSide(toBack)
-                    if (toBack) sourceScroll.scrollTo(0, 0)
-                    flipBox.rotationY = -90f
-                    flipBox.animate().rotationY(0f).setDuration(160)
+                    flipArea.rotationY = if (toBack) -90f else 90f
+                    flipArea.animate().rotationY(0f).setDuration(170)
                         .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
                 }.start()
         }
         sourceBtn.setOnClickListener { flip() }
+        view.findViewById<View>(R.id.src_back).setOnClickListener { if (showingSource) flip() }
+        closeSource = { if (showingSource) { flip(); true } else false }
 
         /** [moved]: the user counted or changed zikr (not just opened the reader), so widgets should follow. */
         fun render(moved: Boolean = true) {
@@ -142,18 +207,19 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             // A new zikr always opens on its front; the source button only appears when there is a source.
             if (i != shownIndex) {
                 shownIndex = i
-                flipBox.animate().cancel()
-                flipBox.rotationY = 0f
+                flipArea.animate().cancel()
+                flipArea.rotationY = 0f
                 showSide(false)
             }
-            sourceTv.text = cur.source
-            sourceBtn.visibility = if (cur.source.isNotBlank()) View.VISIBLE else View.GONE
+            sourceBtn.visibility = if (cur.source.isEmpty) View.GONE else View.VISIBLE
             pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.setPosition(i, items.size, animate = moved)
             countTv.text = rn.count.toString()
             sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
+            // Level with the ring's centre; with no ring, it sits on its own at the right.
+            (sourceBtn.layoutParams as android.widget.FrameLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (cur.target <= 1) 0f else 42f)
             hint.text = if (rn.isLast && cur.target > 1)
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
             // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
@@ -182,10 +248,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             } else pos.text = getString(R.string.reader_position, rn.index + 1, items.size)
         }
 
-        val swipe = view as SwipeLayout
         swipe.apply {
             card = view.findViewById(R.id.card)
-            noTapViews = listOf(sourceBtn)
             tapEnabled = AppPrefs.tapAdvance()
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }

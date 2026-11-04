@@ -24,8 +24,14 @@ data class ZikrEntity(
     val title: String = "",
     /** [TitlePos.code]; the column keeps its first name, from when it was only "below or not". */
     @ColumnInfo(name = "titleBelow") val titlePos: Int = 0,
-    val source: String = ""
-)
+    val source: String = "",
+    val sourceDetail: String = "",
+    val narrator: String = "",
+    val sayWhen: String = "",
+    val grade: String = ""
+) {
+    fun sourceInfo() = ZikrSource(source, sourceDetail, narrator, sayWhen, grade)
+}
 
 @Entity(tableName = "schedules")
 data class ScheduleEntity(

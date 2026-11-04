@@ -493,5 +493,9 @@
     <string name="customize_hint_library">اضغط مطولًا على مجلد لسحبه. يُستخدم هذا الترتيب في المكتبة و«أذكاري».</string>
     <string name="source_title">المصدر</string>
     <string name="source_show">إظهار المصدر</string>
-    <string name="source_hide">العودة إلى الذكر</string>
+    <string name="source_hide">العودة إلى الأذكار</string>
+    <string name="source_position">الذكر %1$d من %2$d</string>
+    <string name="source_reference">المرجع</string>
+    <string name="source_narrator">الراوي</string>
+    <string name="source_when">متى يُقال</string>
 </resources>

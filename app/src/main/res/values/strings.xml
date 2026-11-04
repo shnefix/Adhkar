@@ -463,5 +463,9 @@
     <string name="customize_hint_library">Press and hold a folder to drag it. This order is used in the Library and My azkar.</string>
     <string name="source_title">Source</string>
     <string name="source_show">Show the source</string>
-    <string name="source_hide">Back to the zikr</string>
+    <string name="source_hide">Back to azkar</string>
+    <string name="source_position">Zikr %1$d of %2$d</string>
+    <string name="source_reference">Reference</string>
+    <string name="source_narrator">Narrated by</string>
+    <string name="source_when">When to say it</string>
 </resources>

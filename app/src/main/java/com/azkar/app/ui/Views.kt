@@ -125,7 +125,11 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
 
     private fun cleanup() { vt?.recycle(); vt = null }
 
+    /** While true (the source page is open) the layout neither swipes nor taps to the next zikr. */
+    var paused = false
+
     override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+        if (paused) return false
         if (busy) return true
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> start(e)
@@ -141,6 +145,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
+        if (paused) return false
         if (busy) return true
         if (vt == null) vt = android.view.VelocityTracker.obtain()
         when (e.actionMasked) {
@@ -285,6 +290,8 @@ class ToggleSwitch @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? 
 /** Wrapping row layout with 8dp gaps (flex-wrap). */
 class FlowLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : ViewGroup(ctx, attrs) {
     private val gap = (8 * resources.displayMetrics.density).toInt()
+    /** Lay rows out from the right edge (the Arabic source page); other screens keep left-to-right. */
+    var fromRight = false
 
     override fun onMeasure(wSpec: Int, hSpec: Int) {
         val maxW = MeasureSpec.getSize(wSpec) - paddingLeft - paddingRight
@@ -307,7 +314,8 @@ class FlowLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = 
             val c = getChildAt(i)
             if (c.visibility == GONE) continue
             if (x > 0 && x + c.measuredWidth > maxW) { x = 0; y += lineH + gap; lineH = 0 }
-            c.layout(paddingLeft + x, paddingTop + y, paddingLeft + x + c.measuredWidth, paddingTop + y + c.measuredHeight)
+            val left = if (fromRight) r - l - paddingRight - x - c.measuredWidth else paddingLeft + x
+            c.layout(left, paddingTop + y, left + c.measuredWidth, paddingTop + y + c.measuredHeight)
             x += c.measuredWidth + gap
             lineH = maxOf(lineH, c.measuredHeight)
         }

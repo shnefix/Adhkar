@@ -47,13 +47,16 @@ class ImportJsonTest {
 
     @Test
     fun sourceIsReadMergedAndExported() {
-        val p = ok("""{"folders":[{"name":"F","azkar":[{"text":"a","source":" رواه البخاري "},{"text":"b"}]}]}""")
-        assertEquals(listOf("رواه البخاري", ""), p.folders[0].items.map { it.source })
+        val p = ok("""{"folders":[{"name":"F","azkar":[{"text":"a","source":" صحيح مسلم ","sourceDetail":"حديث 591",
+            "narrator":"ثوبان","when":"بعد الصلاة","grade":"صحيح"},{"text":"b"}]}]}""")
+        val full = ZikrSource("صحيح مسلم", "حديث 591", "ثوبان", "بعد الصلاة", "صحيح")
+        assertEquals(listOf(full, ZikrSource()), p.folders[0].items.map { it.source })
+        assertTrue(p.folders[0].items[1].source.isEmpty)
         var n = 0
         val (state, _) = ImportMerge.apply(ImportMerge.State(emptyList(), emptyList(), emptyList()), p) { "id${n++}" }
-        assertEquals(listOf("رواه البخاري", ""), state.zikrs.map { it.source })
+        assertEquals(listOf(full, ZikrSource()), state.zikrs.map { it.source })
         val back = ok(ExportJson.build(state, arabicSize = 1, notificationsOn = false))
-        assertEquals(listOf("رواه البخاري", ""), back.folders[0].items.map { it.source })
+        assertEquals(listOf(full, ZikrSource()), back.folders[0].items.map { it.source })
     }
 
     @Test
