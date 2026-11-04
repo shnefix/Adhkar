@@ -90,4 +90,12 @@ class ImportJsonTest {
             java.util.Locale.setDefault(saved)
         }
     }
+
+    @Test
+    fun mergeReportsTheIdsOfAddedRemindersOnly() {
+        val p = ok("""{"folders":[{"name":"F","azkar":[{"text":"a"}]}],"reminders":[{"id":"r1","title":"A","time":"06:30"},{"id":"old","title":"B","time":"07:00"}]}""")
+        val existing = ImportMerge.State(emptyList(), emptyList(), listOf(Schedule("old", "B", "", 7, 0, true, null)))
+        val (_, sum) = ImportMerge.apply(existing, p) { "new" }
+        assertEquals(mapOf("r1" to "r1"), sum.reminderIds)
+    }
 }

@@ -155,6 +155,9 @@ object AppPrefs {
         }
     }
 
+    /** Forgets a deleted folder's choice. */
+    fun clearResetRule(folderId: String) = sp.edit().remove(K_RESET + folderId).apply()
+
     fun setResetRule(folderId: String, rule: com.azkar.app.reminders.TimeRule?) =
         sp.edit().putString(K_RESET + folderId, rule?.encode() ?: NEVER).apply()
 

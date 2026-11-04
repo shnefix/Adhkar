@@ -124,7 +124,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             hint.text = if (rn.isLast && cur.target > 1)
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
-            if (remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
+            // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
+            if (moved && remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
             // Azkar behind the current one are read; the current one counts once its repeats are done.
             val finished = i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0
             Tracking.record(key, finished, items.size)

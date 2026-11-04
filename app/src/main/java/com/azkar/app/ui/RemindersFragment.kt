@@ -604,8 +604,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
             .setNegativeButton(R.string.cancel, null)
         if (existing != null) b.setNeutralButton(R.string.delete) { _, _ ->
             ReminderScheduler.cancel(ctx, existing.id)   // cancel the alarm before forgetting it
-            AppPrefs.setReminderRule(existing.id, null)
-            Store.deleteSchedule(existing.id)
+            Store.deleteSchedule(existing.id)   // also forgets its prayer rule
             renderList()
         }
         val dlg = b.create()

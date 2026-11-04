@@ -405,6 +405,7 @@ object Store {
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
         AppPrefs.clearPosition(id)
+        AppPrefs.clearResetRule(id)
         Tracking.setTracked(id, false)
     }
 
@@ -444,8 +445,10 @@ object Store {
         p.settings?.calcMethod?.let { AppPrefs.setCalcMethod(it) }
         p.settings?.asrHanafi?.let { AppPrefs.setAsrHanafi(it) }
         // Rules follow their reminder / folder: same id if it kept it, else the id the merge gave it.
+        // Only reminders this import added get a rule: one that already existed keeps its own setting.
         p.settings?.reminderRules?.forEach { (id, raw) ->
-            com.azkar.app.reminders.TimeRule.decode(raw)?.let { r -> schedule(id)?.let { AppPrefs.setReminderRule(it.id, r) } }
+            val target = sum.reminderIds[id] ?: return@forEach
+            com.azkar.app.reminders.TimeRule.decode(raw)?.let { r -> AppPrefs.setReminderRule(target, r) }
         }
         p.settings?.resetRules?.forEach { (id, raw) ->
             (sum.folderIds[id] ?: id).takeIf { folder(it) != null }?.let { AppPrefs.setResetRuleRaw(it, raw) }
@@ -543,7 +546,10 @@ object Store {
     }
 
     @Synchronized
-    fun deleteSchedule(id: String) = saveSchedules(sCache.filter { it.id != id })
+    fun deleteSchedule(id: String) {
+        saveSchedules(sCache.filter { it.id != id })
+        AppPrefs.setReminderRule(id, null)
+    }
 
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
