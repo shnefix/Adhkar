@@ -136,6 +136,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleIntent(i: Intent?) {
         val key = i?.getStringExtra("open") ?: return
         i.removeExtra("open")
+        currentTab = Tab.HOME
         showRoot(HomeFragment())
         if (Store.readerItems(key).isNotEmpty()) push(ReaderFragment.of(key))   // deleted or empty folder: just stay on Home
     }
@@ -148,13 +149,7 @@ class MainActivity : AppCompatActivity() {
     fun openTab(tab: Tab) {
         if (tab == currentTab && supportFragmentManager.backStackEntryCount == 0) return
         currentTab = tab
-        showRoot(
-            when (tab) {
-                Tab.HOME -> HomeFragment()
-                Tab.LIBRARY -> LibraryFragment()
-                Tab.MY -> MyAzkarFragment()
-            }
-        )
+        showRoot(rootOf(tab))
     }
 
     fun push(f: Fragment) {
@@ -165,10 +160,18 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.popBackStack()
     }
 
-    /** The last zikr of a collection was finished: back to Home. */
+    /** The last zikr of a collection was finished: back to the tab it was opened from (Home, Library or My Azkar). */
     fun finishReading() {
-        currentTab = Tab.HOME
-        showRoot(HomeFragment())
+        showRoot(rootOf(currentTab))
+    }
+
+    /** The tab the reader was opened from, so the completion screen can name where its button goes. */
+    val readingTab: Tab get() = currentTab
+
+    private fun rootOf(tab: Tab): Fragment = when (tab) {
+        Tab.HOME -> HomeFragment()
+        Tab.LIBRARY -> LibraryFragment()
+        Tab.MY -> MyAzkarFragment()
     }
     /** Resets the back stack and shows Home. */
     fun goHome() {

@@ -221,6 +221,7 @@
     <string name="collection_complete">Collection complete</string>
     <string name="collection_complete_message">You have finished this collection.</string>
     <string name="back_to_home">Back to Home</string>
+    <string name="back_to_my_azkar">Back to My Azkar</string>
     <string name="customize">Customize</string>
     <string name="done">Done</string>
     <string name="reset_home">Reset Home to default</string>

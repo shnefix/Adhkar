@@ -225,6 +225,7 @@
     <string name="collection_complete">اكتملت المجموعة</string>
     <string name="collection_complete_message">لقد أتممت هذه المجموعة.</string>
     <string name="back_to_home">العودة إلى الرئيسية</string>
+    <string name="back_to_my_azkar">العودة إلى أذكاري</string>
     <string name="customize">تخصيص</string>
     <string name="done">تم</string>
     <string name="reset_home">إعادة الرئيسية إلى الوضع الافتراضي</string>

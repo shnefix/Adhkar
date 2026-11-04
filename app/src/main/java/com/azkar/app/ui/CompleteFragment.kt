@@ -19,7 +19,14 @@ class CompleteFragment : Fragment(R.layout.fragment_complete) {
                 visibility = View.VISIBLE
             } else visibility = View.GONE
         }
-        view.findViewById<View>(R.id.btn_home).setOnClickListener { nav().pop() }
+        view.findViewById<TextView>(R.id.btn_home).apply {
+            setText(when (nav().readingTab) {
+                Tab.HOME -> R.string.back_to_home
+                Tab.LIBRARY -> R.string.back_to_library
+                Tab.MY -> R.string.back_to_my_azkar
+            })
+            setOnClickListener { nav().pop() }
+        }
     }
 
     companion object {
