@@ -25,6 +25,16 @@ class ReaderScrubber @JvmOverloads constructor(ctx: Context, attrs: AttributeSet
     var onScrub: ((Int) -> Unit)? = null
     var onPick: ((Int) -> Unit)? = null
 
+    /** Off: the plain segment bar, with no handle and no dragging (Settings → Progress bar slider). */
+    var slider = true
+        set(v) {
+            field = v
+            isClickable = v
+            isFocusable = v
+            importantForAccessibility = if (v) IMPORTANT_FOR_ACCESSIBILITY_YES else IMPORTANT_FOR_ACCESSIBILITY_NO
+            requestLayout(); invalidate()
+        }
+
     private var total = 1
     private var current = 0
     /** Thumb position as a fraction of the width, from the start edge (right in Arabic). */
@@ -78,7 +88,7 @@ class ReaderScrubber @JvmOverloads constructor(ctx: Context, attrs: AttributeSet
     private fun indexAt(f: Float) = (f * total).toInt().coerceIn(0, total - 1)
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
-        if (total <= 1) return false
+        if (!slider || total <= 1) return false
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 // The swipe layout around the reader must not take this drag for a page swipe.
@@ -137,7 +147,7 @@ class ReaderScrubber @JvmOverloads constructor(ctx: Context, attrs: AttributeSet
             r.set(minOf(x(0f), done), cy - h / 2, maxOf(x(0f), done), cy + h / 2)
             canvas.drawRoundRect(r, h / 2, h / 2, paint)
         }
-        if (total > 1) {
+        if (slider && total > 1) {
             val tr = (if (dragging) 10f else 7f) * d
             paint.color = gold
             val tx = x(thumb)
@@ -151,7 +161,7 @@ class ReaderScrubber @JvmOverloads constructor(ctx: Context, attrs: AttributeSet
         super.onLayout(changed, l, t, rr, b)
         if (!dragging) thumb = centre(current)
         // Dragging from the very edge must move the slider, not open the system back gesture.
-        if (Build.VERSION.SDK_INT >= 29) systemGestureExclusionRects = listOf(Rect(0, 0, width, height))
+        if (Build.VERSION.SDK_INT >= 29) systemGestureExclusionRects = if (slider) listOf(Rect(0, 0, width, height)) else emptyList()
     }
 
     // Screen readers: announced as a slider, with "scroll forward / backward" moving one zikr.

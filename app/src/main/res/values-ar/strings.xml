@@ -191,6 +191,8 @@
     <string name="tap_to_advance">اضغط للتقدّم</string>
     <string name="tap_to_advance_summary">الضغط على البطاقة ينقلك إلى الذكر التالي</string>
     <string name="keep_screen_on">إبقاء الشاشة مضاءة</string>
+    <string name="reader_slider_setting">شريط التقدم القابل للسحب</string>
+    <string name="reader_slider_setting_summary">دائرة على الشريط تسحبها للانتقال إلى ذكر آخر</string>
     <string name="keep_screen_on_summary">أثناء القراءة</string>
     <string name="arabic_text_size">حجم النص العربي</string>
     <string name="theme">السمة</string>

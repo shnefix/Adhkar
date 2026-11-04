@@ -337,6 +337,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         // Reading switches
         view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = AppPrefs.completionScreen(); onToggle = { AppPrefs.setCompletionScreen(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
+        view.findViewById<ToggleSwitch>(R.id.sw_slider).apply { on = AppPrefs.readerSlider(); onToggle = { AppPrefs.setReaderSlider(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
 
         // Arabic text size slider (the preview updates while you drag; the reader uses it on its next open)

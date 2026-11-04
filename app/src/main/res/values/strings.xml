@@ -35,6 +35,8 @@
     <string name="tap_to_advance">Tap to advance</string>
     <string name="tap_to_advance_summary">Tapping the card moves to the next dhikr</string>
     <string name="keep_screen_on">Keep screen on</string>
+    <string name="reader_slider_setting">Progress bar slider</string>
+    <string name="reader_slider_setting_summary">A circle on the bar to drag to another zikr</string>
     <string name="keep_screen_on_summary">While you are reading</string>
     <string name="arabic_text_size">Arabic text size</string>
     <string name="theme">Theme</string>

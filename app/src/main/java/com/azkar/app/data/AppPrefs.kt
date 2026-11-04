@@ -13,6 +13,7 @@ object AppPrefs {
     private const val K_SP = "arabic_sp"
     private const val K_TAP = "tap_advance"
     private const val K_AWAKE = "keep_awake"
+    private const val K_SLIDER = "reader_slider"
     private const val K_COMPLETE = "completion_screen"
     private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
     private const val K_POSC = "posc_"    // posc_<folderId> = its count
@@ -54,6 +55,9 @@ object AppPrefs {
     fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
     fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
+    /** The reader's progress bar has a handle to drag to another zikr (off: the plain segment bar). */
+    fun readerSlider() = sp.getBoolean(K_SLIDER, true)
+    fun setReaderSlider(v: Boolean) = sp.edit().putBoolean(K_SLIDER, v).apply()
     /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
     fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
     fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()

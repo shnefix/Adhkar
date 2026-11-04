@@ -88,7 +88,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val titleBelow = view.findViewById<TextView>(R.id.title_below)
         val note = view.findViewById<TextView>(R.id.note)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
-        val segs = view.findViewById<ReaderScrubber>(R.id.segs)
+        val segs = view.findViewById<ReaderScrubber>(R.id.segs).apply { slider = AppPrefs.readerSlider() }
         val ring = view.findViewById<RingView>(R.id.ring).apply { isHapticFeedbackEnabled = false }
         val countTv = view.findViewById<TextView>(R.id.count)
         val sub = view.findViewById<TextView>(R.id.sub)
