@@ -24,7 +24,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 8
+    private const val DEFAULTS_VERSION = 9
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -196,6 +196,7 @@ object Store {
         if (from < 4) applyHomeDefaults()
         if (from in 1 until 5) applySessionDefaults()
         if (from < 7) fixWakeNameAndSleepReminder()
+        if (from in 1 until 9) renameDefaultFolders()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -230,6 +231,24 @@ object Store {
         folder(DefaultFolders.WAKE)?.takeIf { it.name in WAKE_OLD_NAMES }?.let { renameFolder(it.id, WAKE_FOLDER_NAME) }
         sCache.filter { it.open == OLD_SLEEP_OPEN }.forEach {
             upsertSchedule(it.copy(open = DefaultFolders.SLEEP.takeIf { id -> folder(id) != null }))
+        }
+    }
+
+    /** Version 9: clearer names for some default folders (id to old name to new name). */
+    private val RENAMED_IN_V9 = mapOf(
+        "d_1" to ("ٱسْتِغْفَار" to "الاستغفار"),
+        "d_7" to ("بعد الصلاة" to "أذكار بعد الصلاة"),
+        "d_17" to ("أذكار الصلاة" to "أذكار داخل الصلاة"),
+        "d_6" to ("دُعَاءُ النَّبِيِّ" to "من أدعية النبي ﷺ"),
+        "d_4" to ("فِي الْخِفَّةِ" to "أذكار خفيفة"),
+        "d_5" to ("الْعِلْمُ" to "أدعية طلب العلم"),
+        "d_8" to ("طلب الإجابة" to "مواطن إجابة الدعاء")
+    )
+
+    /** Renames those folders on upgrade; a folder the user renamed or deleted is left alone. */
+    private fun renameDefaultFolders() {
+        RENAMED_IN_V9.forEach { (id, names) ->
+            folder(id)?.takeIf { it.name == names.first }?.let { renameFolder(it.id, names.second) }
         }
     }
 
