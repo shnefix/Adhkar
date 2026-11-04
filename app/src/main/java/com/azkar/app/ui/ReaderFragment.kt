@@ -196,6 +196,17 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         }
         sourceBtn.setOnClickListener { flip() }
         view.findViewById<View>(R.id.src_back).setOnClickListener { if (showingSource) flip() }
+        // Hides this zikr's source button; the zikr's editor shows it again.
+        view.findViewById<TextView>(R.id.src_hide_this).apply {
+            text = arRes.getString(R.string.source_hide_this)
+            setOnClickListener {
+                if (!showingSource) return@setOnClickListener
+                AppPrefs.setZikrSourceHidden(items[rn.index].id, true)
+                android.widget.Toast.makeText(ctx, R.string.source_hidden_toast, android.widget.Toast.LENGTH_LONG).show()
+                flip()
+                sourceBtn.visibility = View.GONE
+            }
+        }
         closeSource = { if (showingSource) { flip(); true } else false }
 
         /** [moved]: the user counted or changed zikr (not just opened the reader), so widgets should follow. */
@@ -219,7 +230,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 flipArea.rotationY = 0f
                 showSide(false)
             }
-            sourceBtn.visibility = if (cur.source.isEmpty) View.GONE else View.VISIBLE
+            sourceBtn.visibility = if (cur.source.isEmpty || !AppPrefs.showsSource(cur.id, Store.zikr(cur.id)?.folderId)) View.GONE else View.VISIBLE
             pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.setPosition(i, items.size, animate = moved)
             countTv.text = rn.count.toString()

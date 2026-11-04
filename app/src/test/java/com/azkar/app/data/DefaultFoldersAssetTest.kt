@@ -34,7 +34,10 @@ class DefaultFoldersAssetTest {
         val added = parsed.folders.filter { it.id in DefaultFolders.ADDED_IN_V8 }
         assertEquals(643, added.sumOf { it.items.size })
         added.forEach { f ->
-            f.items.forEach { assertTrue("${f.name}: ${it.text.take(30)}", it.source.reference.isNotBlank()) }
+            // A zikr with no source has none at all, not a "no source found" placeholder.
+            f.items.forEach {
+                assertTrue("${f.name}: ${it.text.take(30)}", listOf("دعاء عام", "لم يُعثر").none { p -> it.source.reference.startsWith(p) })
+            }
             // Store merges skip a text already in the folder, so a duplicate would silently disappear.
             assertEquals(f.name, f.items.size, f.items.map { it.text }.toSet().size)
         }

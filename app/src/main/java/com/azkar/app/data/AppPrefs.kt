@@ -15,6 +15,9 @@ object AppPrefs {
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
     private const val K_COMPLETE = "completion_screen"
+    private const val K_SOURCES = "sources_on"
+    private const val K_SRC_OFF_FOLDERS = "sources_off_folders"   // folder ids whose sources are hidden
+    private const val K_SRC_OFF_ZIKRS = "sources_off_zikrs"       // zikr ids whose source is hidden
     private const val K_POS = "pos_"      // pos_<folderId> = last zikr id
     private const val K_POSC = "posc_"    // posc_<folderId> = its count
     private const val K_POST = "post_"    // post_<folderId> = when it was saved (ms)
@@ -61,6 +64,22 @@ object AppPrefs {
     /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
     fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
     fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()
+
+    // ---------- Sources: hidden for the whole app, a folder, or one zikr ----------
+    /** The reader's source button, for the whole app (on by default). */
+    fun sourcesOn() = sp.getBoolean(K_SOURCES, true)
+    fun setSourcesOn(v: Boolean) = sp.edit().putBoolean(K_SOURCES, v).apply()
+    fun folderSourcesHidden(folderId: String) = folderId in sp.getStringSet(K_SRC_OFF_FOLDERS, emptySet())!!
+    fun setFolderSourcesHidden(folderId: String, hidden: Boolean) = setMember(K_SRC_OFF_FOLDERS, folderId, hidden)
+    fun zikrSourceHidden(zikrId: String) = zikrId in sp.getStringSet(K_SRC_OFF_ZIKRS, emptySet())!!
+    fun setZikrSourceHidden(zikrId: String, hidden: Boolean) = setMember(K_SRC_OFF_ZIKRS, zikrId, hidden)
+    /** Whether the reader offers the source of zikr [zikrId] in folder [folderId] (null: not in a folder). */
+    fun showsSource(zikrId: String, folderId: String?) =
+        sourcesOn() && (folderId == null || !folderSourcesHidden(folderId)) && !zikrSourceHidden(zikrId)
+    private fun setMember(key: String, id: String, add: Boolean) {
+        val now = sp.getStringSet(key, emptySet())!!.toMutableSet()
+        if (if (add) now.add(id) else now.remove(id)) sp.edit().putStringSet(key, now).apply()
+    }
 
     /** 0 = teal theme, 1 = OLED black (default). */
     fun theme() = sp.getInt(K_THEME, 1)

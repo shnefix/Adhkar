@@ -55,7 +55,8 @@
 <TextView style="@style/T" android:id="@+id/src_note" android:visibility="gone" android:textSize="14sp" android:textColor="@color/muted" android:lineHeight="21sp" android:gravity="center" android:textDirection="firstStrong" android:layout_marginTop="14dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:id="@+id/src_cards" android:orientation="vertical" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-<com.azkar.app.ui.FlowLayout android:id="@+id/src_chips" android:layout_marginTop="4dp" android:layout_marginBottom="16dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<com.azkar.app.ui.FlowLayout android:id="@+id/src_chips" android:layout_marginTop="4dp" android:layout_marginBottom="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/src_hide_this" android:textSize="14sp" android:textColor="@color/muted" android:gravity="center" android:minHeight="48dp" android:layout_marginBottom="12dp" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
 </ScrollView>
 <TextView style="@style/TB" android:id="@+id/src_back" android:text="@string/source_hide" android:textSize="16sp" android:textColor="@color/bg" android:gravity="center" android:background="@drawable/bg_gold26" android:layout_marginTop="8dp" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="52dp"/>

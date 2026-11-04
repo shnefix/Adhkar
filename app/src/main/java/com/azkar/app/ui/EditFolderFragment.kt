@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
+import com.azkar.app.data.AppPrefs
 import com.azkar.app.data.Store
 import com.azkar.app.data.Tracking
 import dagger.hilt.android.AndroidEntryPoint
@@ -82,6 +83,20 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         swRem.on = viewModel.remembersPosition()
         renderRem()
         swRem.onToggle = { on -> viewModel.setRemember(on); renderRem() }
+
+        // Sources: the reader's source button for this folder's azkar (on by default; Settings can turn all off).
+        val swSrc = view.findViewById<ToggleSwitch>(R.id.sw_sources)
+        val srcSub = view.findViewById<TextView>(R.id.sources_sub)
+        fun renderSrc() {
+            srcSub.text = getString(when {
+                !AppPrefs.sourcesOn() -> R.string.sources_off_app
+                swSrc.on -> R.string.folder_sources_on
+                else -> R.string.folder_sources_off
+            })
+        }
+        swSrc.on = !AppPrefs.folderSourcesHidden(viewModel.id)
+        renderSrc()
+        swSrc.onToggle = { on -> AppPrefs.setFolderSourcesHidden(viewModel.id, !on); renderSrc() }
 
         // Track this folder: counts the days it is finished (off by default).
         val swTrack = view.findViewById<ToggleSwitch>(R.id.sw_track)

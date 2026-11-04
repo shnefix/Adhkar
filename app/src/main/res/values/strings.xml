@@ -469,4 +469,15 @@
     <string name="source_reference">Reference</string>
     <string name="source_narrator">Narrated by</string>
     <string name="source_when">When to say it</string>
+    <string name="show_sources">Show sources</string>
+    <string name="show_sources_summary">The source button on the reader\'s cards. You can also hide it for one folder or one zikr.</string>
+    <string name="folder_sources_on">Each zikr\'s source can be opened while reading</string>
+    <string name="folder_sources_off">Sources are hidden in this folder</string>
+    <string name="sources_off_app">Sources are turned off for the whole app in Settings</string>
+    <string name="sources_off_folder">Sources are hidden for this zikr\'s folder</string>
+    <string name="show_source">Show source</string>
+    <string name="zikr_source_on">The source button shows on this zikr\'s card</string>
+    <string name="zikr_source_off">This zikr\'s source is hidden</string>
+    <string name="source_hide_this">Hide this zikr\'s source</string>
+    <string name="source_hidden_toast">Source hidden. Show it again from editing the zikr.</string>
 </resources>

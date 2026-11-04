@@ -6,6 +6,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.azkar.app.R
+import com.azkar.app.data.AppPrefs
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,6 +28,24 @@ class EditZikrFragment : Fragment(R.layout.fragment_edit_zikr) {
         swHide.on = viewModel.isHidden(z.id)
         renderHide()
         swHide.onToggle = { on -> viewModel.setHidden(z.id, on); renderHide() }
+
+        // Only a zikr that has a source gets the switch; Settings and the folder can still hide all sources.
+        if (!z.source.isEmpty) {
+            view.findViewById<View>(R.id.source_row).visibility = View.VISIBLE
+            val swSrc = view.findViewById<ToggleSwitch>(R.id.sw_source)
+            val srcSub = view.findViewById<TextView>(R.id.source_sub)
+            fun renderSrc() {
+                srcSub.text = getString(when {
+                    !AppPrefs.sourcesOn() -> R.string.sources_off_app
+                    z.folderId != null && AppPrefs.folderSourcesHidden(z.folderId) -> R.string.sources_off_folder
+                    swSrc.on -> R.string.zikr_source_on
+                    else -> R.string.zikr_source_off
+                })
+            }
+            swSrc.on = !AppPrefs.zikrSourceHidden(z.id)
+            renderSrc()
+            swSrc.onToggle = { on -> AppPrefs.setZikrSourceHidden(z.id, !on); renderSrc() }
+        }
 
         view.findViewById<View>(R.id.btn_close).setOnClickListener { nav().pop() }
         view.findViewById<View>(R.id.btn_save).setOnClickListener {

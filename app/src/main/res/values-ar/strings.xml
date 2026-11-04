@@ -499,4 +499,15 @@
     <string name="source_reference">المرجع</string>
     <string name="source_narrator">الراوي</string>
     <string name="source_when">متى يُقال</string>
+    <string name="show_sources">إظهار المصادر</string>
+    <string name="show_sources_summary">زر المصدر في بطاقات القراءة. يمكنك أيضًا إخفاؤه لمجلد واحد أو لذكر واحد.</string>
+    <string name="folder_sources_on">يمكن فتح مصدر كل ذكر أثناء القراءة</string>
+    <string name="folder_sources_off">المصادر مخفية في هذا المجلد</string>
+    <string name="sources_off_app">المصادر مُطفأة للتطبيق كله من الإعدادات</string>
+    <string name="sources_off_folder">المصادر مخفية في مجلد هذا الذكر</string>
+    <string name="show_source">إظهار المصدر</string>
+    <string name="zikr_source_on">يظهر زر المصدر على بطاقة هذا الذكر</string>
+    <string name="zikr_source_off">مصدر هذا الذكر مخفي</string>
+    <string name="source_hide_this">إخفاء مصدر هذا الذكر</string>
+    <string name="source_hidden_toast">أُخفي المصدر. يمكنك إظهاره من تعديل الذكر.</string>
 </resources>
