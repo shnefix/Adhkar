@@ -96,34 +96,62 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         val empty = view.findViewById<View>(R.id.empty)
         val label = view.findViewById<TextView>(R.id.order_label)
 
+        /** Fills one row for [z] at position [idx] of [last] + 1 (a new row or a reused one). */
+        fun bindRow(v: View, z: com.azkar.app.data.Zikr, idx: Int, last: Int, hid: Boolean) {
+            v.findViewById<TextView>(R.id.ar).text = z.arabic
+            v.findViewById<TextView>(R.id.line).text =
+                "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · " + getString(R.string.hidden_label) else "")
+            v.findViewById<ImageView>(R.id.hide_ic).apply {
+                setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
+                imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
+            }
+            v.alpha = if (hid) 0.55f else 1f
+            v.findViewById<View>(R.id.hide).setOnClickListener { viewModel.setHidden(listOf(z.id), !hid) }
+            val up = v.findViewById<View>(R.id.up)
+            val down = v.findViewById<View>(R.id.down)
+            up.alpha = if (idx == 0) 0.35f else 1f
+            down.alpha = if (idx == last) 0.35f else 1f
+            up.setOnClickListener { viewModel.move(z.id, -1) }
+            down.setOnClickListener { viewModel.move(z.id, 1) }
+            v.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
+            v.findViewById<View>(R.id.remove).setOnClickListener { viewModel.unfile(z.id) }
+        }
+
+        // Rows are kept per zikr and reused, so a hide / move / edit only updates them instead of re-inflating the
+        // whole list. The first build goes in small batches: the screen shows at once and the rest follows.
+        val rowViews = HashMap<String, View>()
+        var renderGen = 0
+
         fun renderRows(state: FolderState) {
+            val gen = ++renderGen
             val list = state.zikrs
             label.text = getString(R.string.order_count, azkarCount(requireContext(), list.size))
             empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            rows.removeAllViews()
+            rowViews.keys.retainAll(list.mapTo(HashSet()) { it.id })
             val last = list.size - 1
-            list.forEachIndexed { idx, z ->
-                val hid = z.id in state.hidden
-                val v = layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
-                v.findViewById<TextView>(R.id.ar).text = z.arabic
-                v.findViewById<TextView>(R.id.line).text =
-                    "×${z.repeat}" + (if (z.note.isBlank()) "" else " · ${z.note}") + (if (hid) " · " + getString(R.string.hidden_label) else "")
-                v.findViewById<ImageView>(R.id.hide_ic).apply {
-                    setImageResource(if (hid) R.drawable.ic_eyeoff_1p75 else R.drawable.ic_eye_1p75)
-                    imageTintList = ColorStateList.valueOf(ctx.getColor(if (hid) R.color.muted else R.color.gold))
+
+            fun place(from: Int) {
+                if (gen != renderGen || view == null) return   // a newer state is being drawn, or the screen closed
+                var idx = from
+                var inflated = 0
+                while (idx < list.size && inflated < ROW_BATCH) {
+                    val z = list[idx]
+                    val v = rowViews[z.id] ?: layoutInflater.inflate(R.layout.item_folder_zikr, rows, false)
+                        .also { rowViews[z.id] = it; inflated++ }
+                    bindRow(v, z, idx, last, z.id in state.hidden)
+                    val lp = Ui.lp(top = if (idx > 0) 8 else 0, ctx = ctx)
+                    if (rows.getChildAt(idx) !== v) {
+                        (v.parent as? android.view.ViewGroup)?.removeView(v)
+                        rows.addView(v, idx, lp)
+                    } else {
+                        v.layoutParams = lp
+                    }
+                    idx++
                 }
-                v.alpha = if (hid) 0.55f else 1f
-                v.findViewById<View>(R.id.hide).setOnClickListener { viewModel.setHidden(listOf(z.id), !hid) }
-                val up = v.findViewById<View>(R.id.up)
-                val down = v.findViewById<View>(R.id.down)
-                up.alpha = if (idx == 0) 0.35f else 1f
-                down.alpha = if (idx == last) 0.35f else 1f
-                up.setOnClickListener { viewModel.move(z.id, -1) }
-                down.setOnClickListener { viewModel.move(z.id, 1) }
-                v.findViewById<View>(R.id.edit).setOnClickListener { nav().push(EditZikrFragment.of(z.id)) }
-                v.findViewById<View>(R.id.remove).setOnClickListener { viewModel.unfile(z.id) }
-                rows.addView(v, Ui.lp(top = if (idx > 0) 8 else 0, ctx = ctx))
+                if (idx < list.size) rows.post { place(idx) }
+                else while (rows.childCount > list.size) rows.removeViewAt(rows.childCount - 1)   // removed azkar
             }
+            place(0)
         }
 
         view.findViewById<View>(R.id.btn_add).setOnClickListener { nav().push(AddZikrFragment.of(viewModel.id)) }
@@ -151,6 +179,9 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
     }
 
     companion object {
+        /** Rows inflated per frame while the list is first built. */
+        private const val ROW_BATCH = 6
+
         fun of(id: String) = EditFolderFragment().apply { arguments = Bundle().apply { putString("id", id) } }
     }
 }
