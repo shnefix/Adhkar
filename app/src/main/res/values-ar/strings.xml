@@ -516,4 +516,10 @@
     <string name="source_hidden_label">المصدر مخفي</string>
     <string name="previous_widget">الويدجت السابقة</string>
     <string name="next_widget">الويدجت التالية</string>
+    <string name="zikr_title_above_hint">السطر فوق الذكر</string>
+    <string name="zikr_title_below_hint">السطر تحت الذكر</string>
+    <string name="export_all">كل شيء (نسخة احتياطية)</string>
+    <string name="export_one">مجلد واحد</string>
+    <string name="export_pick_folder">أي مجلد؟</string>
+    <string name="export_folder_complete">تم حفظ «%1$s» مع %2$s.</string>
 </resources>

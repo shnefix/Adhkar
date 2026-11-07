@@ -486,4 +486,10 @@
     <string name="source_hidden_label">Source hidden</string>
     <string name="previous_widget">Previous widget</string>
     <string name="next_widget">Next widget</string>
+    <string name="zikr_title_above_hint">Line above the zikr</string>
+    <string name="zikr_title_below_hint">Line below the zikr</string>
+    <string name="export_all">Everything (backup)</string>
+    <string name="export_one">One folder</string>
+    <string name="export_pick_folder">Which folder?</string>
+    <string name="export_folder_complete">Saved «%1$s» with %2$s.</string>
 </resources>

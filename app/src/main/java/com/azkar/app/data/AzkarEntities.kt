@@ -28,7 +28,9 @@ data class ZikrEntity(
     val sourceDetail: String = "",
     val narrator: String = "",
     val sayWhen: String = "",
-    val grade: String = ""
+    val grade: String = "",
+    /** The second title line, under the zikr ([TitlePos.BOTH]); blank = same as [title]. */
+    val titleBottom: String = ""
 ) {
     fun sourceInfo() = ZikrSource(source, sourceDetail, narrator, sayWhen, grade)
 }

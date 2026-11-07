@@ -206,7 +206,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             ar.text = cur.arabic
             val hasTitle = cur.title.isNotBlank()
             titleAbove.text = cur.title
-            titleBelow.text = cur.title
+            titleBelow.text = cur.belowText
             titleAbove.visibility = if (hasTitle && cur.titlePos.showsAbove) View.VISIBLE else View.GONE
             titleBelow.visibility = if (hasTitle && cur.titlePos.showsBelow) View.VISIBLE else View.GONE
             note.text = cur.note

@@ -49,16 +49,21 @@ class ZikrForm(
     private val titleSwitch: ToggleSwitch = view.findViewById(R.id.sw_title)
     private val titleBox: View = view.findViewById(R.id.title_box)
     private val titleInput: EditText = view.findViewById(R.id.zikr_title)
+    /** Shown only for "Above and below": the line under the zikr. */
+    private val titleBelowInput: EditText = view.findViewById(R.id.zikr_title_below)
     private var pos = TitlePos.ABOVE
 
     /** The title to save: blank while the switch is off. */
     val title: String get() = if (titleSwitch.on) titleInput.text.toString().trim() else ""
     /** Where the title shows: above, below, both, or kept but hidden. */
     val titlePos: TitlePos get() = if (title.isNotEmpty()) pos else TitlePos.ABOVE
+    /** The line under the zikr, kept only for "Above and below". */
+    val titleBelow: String get() = if (titleSwitch.on && pos == TitlePos.BOTH) titleBelowInput.text.toString().trim() else ""
 
     /** Fills the title controls; the switch starts on only when there is a title. */
-    fun setTitle(text: String, at: TitlePos) {
+    fun setTitle(text: String, at: TitlePos, below: String = "") {
         titleInput.setText(text)
+        titleBelowInput.setText(below)
         pos = at
         titleSwitch.on = text.isNotBlank()
         renderTitle()
@@ -66,6 +71,9 @@ class ZikrForm(
 
     private fun renderTitle() {
         titleBox.visibility = if (titleSwitch.on) View.VISIBLE else View.GONE
+        val both = pos == TitlePos.BOTH
+        titleBelowInput.visibility = if (both) View.VISIBLE else View.GONE
+        titleInput.setHint(if (both) R.string.zikr_title_above_hint else R.string.zikr_title_hint)
         val ctx = view.context
         val box = view.findViewById<android.widget.LinearLayout>(R.id.title_pos)
         box.orientation = android.widget.LinearLayout.VERTICAL

@@ -26,7 +26,7 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
             val text = form.arabic.text.toString().trim()
             if (text.isEmpty()) { form.arabic.requestFocus(); return@setOnClickListener }
             val save = {
-                viewModel.add(text, form.n, form.sel, newName.text.toString(), form.title, form.titlePos)
+                viewModel.add(text, form.n, form.sel, newName.text.toString(), form.title, form.titlePos, form.titleBelow)
                 nav().pop()
             }
             // Same text in the same folder updates that zikr instead of adding a copy: say so first.

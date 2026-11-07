@@ -28,12 +28,12 @@ class ZikrEditorViewModel @Inject constructor() : ViewModel() {
         return Store.zikrs().firstOrNull { it.arabic == arabic && it.folderId == folderId }
     }
 
-    fun add(arabic: String, repeat: Int, folderSel: String?, newFolderName: String, title: String = "", titlePos: com.azkar.app.data.TitlePos = com.azkar.app.data.TitlePos.ABOVE) {
+    fun add(arabic: String, repeat: Int, folderSel: String?, newFolderName: String, title: String = "", titlePos: com.azkar.app.data.TitlePos = com.azkar.app.data.TitlePos.ABOVE, titleBelow: String = "") {
         val folderId: String? = if (folderSel == "new") {
             val name = newFolderName.trim()
             if (name.isEmpty()) null
             else (Store.folders().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Store.addFolder(name)).id
         } else folderSel
-        Store.addZikr(arabic, "", repeat, folderId, title, titlePos)
+        Store.addZikr(arabic, "", repeat, folderId, title, titlePos, titleBelow)
     }
 }

@@ -45,7 +45,7 @@ class AzkarRepository @Inject constructor(
     ) { folders, zikrs, schedules ->
         AzkarContent(
             folders = folders.map { Folder(it.id, it.name, it.icon, it.remember) },
-            zikrs = zikrs.map { Zikr(it.id, it.arabic, it.note, it.repeat, it.folderId, it.title, TitlePos.of(it.titlePos), it.sourceInfo()) },
+            zikrs = zikrs.map { Zikr(it.id, it.arabic, it.note, it.repeat, it.folderId, it.title, TitlePos.of(it.titlePos), it.sourceInfo(), it.titleBottom) },
             schedules = schedules.map {
                 Schedule(it.id, it.title, it.message, it.hour, it.minute, it.enabled, it.open)
             }
@@ -55,7 +55,7 @@ class AzkarRepository @Inject constructor(
     suspend fun loadContent(): AzkarContent = withContext(Dispatchers.IO) {
         AzkarContent(
             folders = dao.getFoldersOnce().map { Folder(it.id, it.name, it.icon, it.remember) },
-            zikrs = dao.getZikrsOnce().map { Zikr(it.id, it.arabic, it.note, it.repeat, it.folderId, it.title, TitlePos.of(it.titlePos), it.sourceInfo()) },
+            zikrs = dao.getZikrsOnce().map { Zikr(it.id, it.arabic, it.note, it.repeat, it.folderId, it.title, TitlePos.of(it.titlePos), it.sourceInfo(), it.titleBottom) },
             schedules = dao.getSchedulesOnce().map {
                 Schedule(it.id, it.title, it.message, it.hour, it.minute, it.enabled, it.open)
             }
@@ -137,7 +137,7 @@ class AzkarRepository @Inject constructor(
 
     private fun AzkarContent.toZikrs() = zikrs.mapIndexed { index, item ->
         ZikrEntity(item.id, item.arabic, item.note, item.repeat, item.folderId, index, item.title, item.titlePos.code,
-            item.source.reference, item.source.detail, item.source.narrator, item.source.whenToSay, item.source.grade)
+            item.source.reference, item.source.detail, item.source.narrator, item.source.whenToSay, item.source.grade, item.titleBelow)
     }
 
     private fun AzkarContent.toSchedules() = schedules.mapIndexed { index, item ->

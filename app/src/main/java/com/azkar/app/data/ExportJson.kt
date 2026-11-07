@@ -15,7 +15,22 @@ object ExportJson {
             if (grade.isNotBlank()) it.put("grade", grade)
         }
         if (z.title.isNotBlank()) it.put("title", z.title).put("titlePosition", z.titlePos.key)
+        if (z.title.isNotBlank() && z.titlePos == TitlePos.BOTH && z.titleBelow.isNotBlank()) it.put("titleBelow", z.titleBelow)
     }
+
+    private fun folderJson(f: Folder, zikrs: List<Zikr>): JSONObject {
+        val az = JSONArray()
+        zikrs.forEach { az.put(item(it)) }
+        val o = JSONObject().put("id", f.id).put("name", f.name)
+        f.icon?.let { o.put("icon", it) }
+        if (f.remember) o.put("remember", true)
+        return o.put("azkar", az)
+    }
+
+    /** A file with just [f] and its azkar: no reminders or settings. */
+    fun folder(f: Folder, zikrs: List<Zikr>): String =
+        JSONObject().put("app", "azkar").put("version", 1)
+            .put("folders", JSONArray().put(folderJson(f, zikrs))).toString(2)
 
     /**
      * [sessionDelays]: minutes after the prayer per reminder id ("m", "e", "s"); [nudgeMinutes] null leaves the
@@ -28,14 +43,7 @@ object ExportJson {
         reminderRules: Map<String, String> = emptyMap(), resetRules: Map<String, String> = emptyMap()
     ): String {
         val folders = JSONArray()
-        s.folders.forEach { f ->
-            val az = JSONArray()
-            s.zikrs.filter { it.folderId == f.id }.forEach { az.put(item(it)) }
-            val o = JSONObject().put("id", f.id).put("name", f.name)
-            f.icon?.let { o.put("icon", it) }
-            if (f.remember) o.put("remember", true)
-            folders.put(o.put("azkar", az))
-        }
+        s.folders.forEach { f -> folders.put(folderJson(f, s.zikrs.filter { it.folderId == f.id })) }
         val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
         val unfiled = JSONArray()
         s.zikrs.filter { it.folderId == null }.forEach { unfiled.put(item(it)) }
@@ -43,7 +51,8 @@ object ExportJson {
         val rems = JSONArray()
         s.schedules.forEach {
             val o = JSONObject().put("id", it.id).put("title", it.title).put("message", it.message)
-                .put("time", String.format(java.util.Locale.US, "%02d:%02d", it.hour, it.minute))   // ASCII digits on any phone.put("enabled", it.enabled)
+                .put("time", String.format(java.util.Locale.US, "%02d:%02d", it.hour, it.minute))   // ASCII digits on any phone
+                .put("enabled", it.enabled)
             it.open?.let { f -> o.put("folder", f) }
             rems.put(o)
         }

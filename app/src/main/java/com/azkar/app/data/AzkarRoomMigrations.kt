@@ -35,4 +35,11 @@ object AzkarRoomMigrations {
             }
         }
     }
+
+    /** A separate line under the zikr when the title shows above and below. */
+    val V5_TO_V6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE zikrs ADD COLUMN titleBottom TEXT NOT NULL DEFAULT ''")
+        }
+    }
 }

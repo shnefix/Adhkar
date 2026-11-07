@@ -401,16 +401,17 @@ object Store {
     fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
     @Synchronized
-    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titlePos: TitlePos = TitlePos.ABOVE): Zikr {
+    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titlePos: TitlePos = TitlePos.ABOVE, titleBelow: String = ""): Zikr {
         zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
             val merged = it.copy(
                 note = note.ifBlank { it.note }, repeat = repeat,
-                title = title.ifBlank { it.title }, titlePos = if (title.isBlank()) it.titlePos else titlePos
+                title = title.ifBlank { it.title }, titlePos = if (title.isBlank()) it.titlePos else titlePos,
+                titleBelow = if (title.isBlank()) it.titleBelow else titleBelow
             )
             updateZikr(merged)
             return merged
         }
-        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titlePos)
+        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titlePos, titleBelow = titleBelow)
         saveZikrs(zCache + z)
         return z
     }
@@ -589,6 +590,12 @@ object Store {
         )
     }
 
+    /** One folder and its azkar only, in the same format, so it can be shared or imported elsewhere. */
+    suspend fun exportFolderJsonAsync(folderId: String): String = withContext(Dispatchers.Default) {
+        val folder = fCache.first { it.id == folderId }
+        ExportJson.folder(folder, zCache.filter { it.folderId == folderId })
+    }
+
     // ---------- Home customisation ----------
     val defaultOrder: List<String> get() = fCache.map { it.id }
 
@@ -638,10 +645,10 @@ object Store {
     // ---------- Reader content ----------
     fun readerItems(key: String): List<ReaderItem> {
         if (key.startsWith("zikr:")) {
-            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source)) } ?: emptyList()
+            return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source, it.titleBelow)) } ?: emptyList()
         }
         val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
-        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source) }
+        return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source, it.titleBelow) }
     }
 
     fun readerKey(z: Zikr): String = z.folderId ?: "anytime"

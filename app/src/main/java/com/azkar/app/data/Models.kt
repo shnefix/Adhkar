@@ -30,6 +30,7 @@ data class ZikrSource(
 
 /**
  * A zikr the user added. [title] is optional (blank = none), shown where [titlePos] says (or kept but hidden).
+ * [titleBelow] is the line under the zikr when [titlePos] is BOTH; blank = the same text as [title].
  * [source] is where the text comes from; empty = unknown.
  */
 data class Zikr(
@@ -40,7 +41,8 @@ data class Zikr(
     val folderId: String?,
     val title: String = "",
     val titlePos: TitlePos = TitlePos.ABOVE,
-    val source: ZikrSource = ZikrSource()
+    val source: ZikrSource = ZikrSource(),
+    val titleBelow: String = ""
 )
 
 /** A folder the user created or one loaded from the default asset. */
@@ -52,8 +54,12 @@ data class Folder(val id: String, val name: String, val icon: String? = null, va
  */
 data class ReaderItem(
     val arabic: String, val target: Int, val id: String = "",
-    val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val note: String = "", val source: ZikrSource = ZikrSource()
-)
+    val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val note: String = "", val source: ZikrSource = ZikrSource(),
+    val titleBelow: String = ""
+) {
+    /** The line shown under the zikr: its own text when it has one, else the title. */
+    val belowText get() = titleBelow.ifBlank { title }
+}
 
 /** A reminder the user configured. [open] is the folder id to read when tapped. */
 data class Schedule(

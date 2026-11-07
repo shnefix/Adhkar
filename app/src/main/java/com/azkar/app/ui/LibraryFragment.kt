@@ -65,13 +65,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
             launchImportPicker()
         }
 
-        view.findViewById<View>(R.id.btn_export).setOnClickListener {
-            exportPicker.launch(
-                "azkar-backup-" +
-                    SimpleDateFormat("yyyyMMdd", Locale.US).format(Date()) +
-                    ".json"
-            )
-        }
+        view.findViewById<View>(R.id.btn_export).setOnClickListener { chooseExport() }
 
         view.findViewById<EditText>(R.id.search).addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -178,11 +172,44 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
             resources.getQuantityString(R.plurals.folder_count, n, n)
     }
 
+    /** null = everything (folders, reminders, settings); otherwise just that folder. */
+    private var exportFolderId: String? = null
+
+    /** The user picks: a full backup, or one folder to share. */
+    private fun chooseExport() {
+        val ctx = requireContext()
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.export_label)
+            .setItems(arrayOf(getString(R.string.export_all), getString(R.string.export_one))) { _, which ->
+                val day = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+                if (which == 0) {
+                    exportFolderId = null
+                    exportPicker.launch("azkar-backup-$day.json")
+                } else {
+                    val folders = latestContent?.folders.orEmpty()
+                    if (folders.isEmpty()) return@setItems
+                    AlertDialog.Builder(ctx)
+                        .setTitle(R.string.export_pick_folder)
+                        .setItems(folders.map { it.name }.toTypedArray()) { _, i ->
+                            val f = folders[i]
+                            exportFolderId = f.id
+                            val safe = f.name.replace(Regex("[\\\\/:*?\"<>|]"), "").trim().ifEmpty { "folder" }
+                            exportPicker.launch("azkar-$safe-$day.json")
+                        }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun writeExport(uri: Uri) {
         val ctx = requireContext()
+        val folderId = exportFolderId
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val text = Store.exportJsonAsync()
+                val text = if (folderId != null) Store.exportFolderJsonAsync(folderId) else Store.exportJsonAsync()
                 check(withContext(Dispatchers.Default) { ImportJson.parse(text) is ImportJson.Parsed.Ok }) {
                     getString(R.string.export_validation_failed)
                 }
@@ -190,6 +217,15 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
                     ctx.contentResolver.openOutputStream(uri, "wt")?.use {
                         it.write(text.toByteArray(Charsets.UTF_8))
                     } ?: throw java.io.IOException(getString(R.string.export_open_failed))
+                }
+                if (folderId != null) {
+                    val n = latestContent?.zikrs?.count { it.folderId == folderId } ?: 0
+                    AlertDialog.Builder(ctx)
+                        .setTitle(R.string.export_complete_title)
+                        .setMessage(getString(R.string.export_folder_complete, latestContent?.folders?.firstOrNull { it.id == folderId }?.name ?: "", count(R.plurals.azkar_count, n)))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                    return@launch
                 }
                 AlertDialog.Builder(ctx)
                     .setTitle(R.string.export_complete_title)
