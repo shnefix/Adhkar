@@ -79,7 +79,7 @@ class FolderFragment : Fragment(R.layout.fragment_folder_view) {
             btnHide.alpha = if (selected.isEmpty()) 0.4f else 1f
             btnShow.alpha = if (selected.isEmpty()) 0.4f else 1f
             backCb.isEnabled = selecting
-            adapter.submitList(list.map { ZRow(it.id, it.arabic, it.repeat, it.note, it.id in hidden, selecting, it.id in selected) })
+            adapter.submitList(list.map { ZRow(it.id, it.arabic, it.repeat, it.note, it.id in hidden, selecting, it.id in selected, if (it.titlePos == com.azkar.app.data.TitlePos.HIDDEN) "" else it.title) })
         }
 
         fun endSelection() { viewModel.selecting = false; selected.clear(); refresh() }

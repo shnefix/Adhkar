@@ -61,7 +61,9 @@ class LibraryAdapter : ListAdapter<LibRow, LibraryAdapter.VH>(object : DiffUtil.
 // ---------- Folder view: azkar rows ----------
 data class ZRow(
     val id: String, val arabic: String, val repeat: Int, val note: String,
-    val hidden: Boolean = false, val selecting: Boolean = false, val selected: Boolean = false
+    val hidden: Boolean = false, val selecting: Boolean = false, val selected: Boolean = false,
+    /** The zikr's title, blank when it has none or it is set to Hidden. */
+    val title: String = ""
 )
 
 class ZikrAdapter(
@@ -77,6 +79,7 @@ class ZikrAdapter(
         val rep: TextView = v.findViewById(R.id.rep)
         val ar: TextView = v.findViewById(R.id.ar)
         val note: TextView = v.findViewById(R.id.note)
+        val title: TextView = v.findViewById(R.id.ztitle)
         val editIc: ImageView = v.findViewById(R.id.edit_ic)
         init {
             v.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) onTap(getItem(p)) }
@@ -96,6 +99,8 @@ class ZikrAdapter(
         val ctx = h.itemView.context
         val d = ctx.resources.displayMetrics.density
         h.ar.text = r.arabic
+        h.title.text = r.title
+        h.title.visibility = if (r.title.isBlank()) View.GONE else View.VISIBLE
         h.rep.text = "×${r.repeat}"
         h.note.text = r.note
         h.note.visibility = if (r.note.isBlank()) View.GONE else View.VISIBLE
