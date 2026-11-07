@@ -90,11 +90,8 @@ object WidgetUpdater {
         NewWidgetUpdater.updateAll(ctx)
     }
 
-    fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
-        val cfg = WidgetStore.config(ctx, id, kind)
-        val model = WidgetModel.load(ctx, id, cfg.folder)
-
-        // Real size of this widget on the launcher grid, in dp.
+    /** Real size of this widget on the launcher grid, in dp (falls back to the default size for its kind). */
+    fun sizeDp(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind): Pair<Float, Float> {
         val o = mgr.getAppWidgetOptions(id)
         val land = ctx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val def = DEFAULT_DP.getValue(kind)
@@ -102,6 +99,20 @@ object WidgetUpdater {
             .takeIf { it > 0 }?.toFloat() ?: def.first
         val h = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
             .takeIf { it > 0 }?.toFloat() ?: def.second
+        return w to h
+    }
+
+    /** Draws widget [id] exactly as the home screen shows it, but with [cfg] (e.g. an unapplied draft). */
+    fun renderBitmap(ctx: Context, id: Int, kind: WidgetKind, cfg: WidgetStore.Config): android.graphics.Bitmap {
+        val model = WidgetModel.load(ctx, id, cfg.folder)
+        val (w, h) = sizeDp(ctx, AppWidgetManager.getInstance(ctx), id, kind)
+        return WidgetRenderer(ctx).render(cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density, cfg.appearance)
+    }
+
+    fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
+        val cfg = WidgetStore.config(ctx, id, kind)
+        val model = WidgetModel.load(ctx, id, cfg.folder)
+        val (w, h) = sizeDp(ctx, mgr, id, kind)
 
         val bmp = WidgetRenderer(ctx).render(
             cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density, cfg.appearance

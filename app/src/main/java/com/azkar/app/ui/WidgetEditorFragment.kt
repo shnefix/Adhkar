@@ -368,7 +368,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             peekId = item.id
             fillPeek(peek, item)
             peek.layoutParams = peek.layoutParams.apply {
-                height = view.findViewById<View>(R.id.preview_face).height.coerceAtLeast(Ui.pxi(requireContext(), 128f))
+                height = peekBitmap(item)?.let { faceHeight(it) }
+                    ?: view.findViewById<View>(R.id.preview_face).height.coerceAtLeast(Ui.pxi(requireContext(), 128f))
             }
         }
         peek.visibility = View.VISIBLE
@@ -382,14 +383,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private var prewarm: Runnable? = null
 
     private fun peekBitmap(item: PlacedWidget, model: WidgetModel? = null): android.graphics.Bitmap? {
-        val family = item.family ?: return null
         peekCache[item.id]?.let { (config, bmp) -> if (config == item.config) return bmp }
-        val ctx = requireContext()
-        val (dw, dh) = AzkarWidgetSizes.design(family)
-        val bmp = try {
-            NewWidgetRenderer(ctx).render(family, model ?: WidgetModel.load(ctx, item.id, item.config.folder), dw, dh,
-                if (family.tracking) TrackingModel.load(ctx, item.config.folder) else null)
-        } catch (e: Exception) { null }
+        val bmp = widgetBitmap(item, model)
         peekCache[item.id] = item.config to bmp
         return bmp
     }
@@ -399,7 +394,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         prewarm?.let { view.removeCallbacks(it) }
         prewarm = Runnable {
             if (!isAdded) return@Runnable
-            val keep = mutableSetOf<Int>()
+            val keep = mutableSetOf<Int>().apply { selected?.let { add(it.id) } }
             listOf(-1, 1).forEach { by -> neighbourItem(by)?.let { keep += it.id; peekBitmap(it) } }
             peekCache.keys.retainAll(keep)
         }.also { view.postDelayed(it, 150) }
@@ -772,31 +767,45 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         render(view)
     }
 
-    /** Live preview: the real OLED bitmap for the new designs, the Arabic text mock-up for the old ones. */
-    private fun applyPreview(view: View, item: PlacedWidget, model: WidgetModel) {
+    /**
+     * The widget exactly as the home screen draws it, with the current draft settings: the OLED renderer for the
+     * new designs, the classic renderer (at the widget's real launcher size) for the original ones.
+     */
+    private fun widgetBitmap(item: PlacedWidget, model: WidgetModel? = null): android.graphics.Bitmap? {
         val ctx = requireContext()
-        val family = item.family
-        if (family == null) {
-            showTextPreview(view, item)
-            return
-        }
-        val (dw, dh) = AzkarWidgetSizes.design(family)
-        val bitmap = try {
-            NewWidgetRenderer(ctx).render(family, model, dw, dh, if (family.tracking) TrackingModel.load(ctx, item.config.folder) else null)
+        return try {
+            val family = item.family
+            if (family == null) com.azkar.app.widgets.WidgetUpdater.renderBitmap(ctx, item.id, item.kind, item.config)
+            else {
+                val (dw, dh) = AzkarWidgetSizes.design(family)
+                NewWidgetRenderer(ctx).render(family, model ?: WidgetModel.load(ctx, item.id, item.config.folder), dw, dh,
+                    if (family.tracking) TrackingModel.load(ctx, item.config.folder) else null)
+            }
         } catch (e: Exception) {
-            Log.e("WidgetEditor", "preview failed for $family", e)
+            Log.e("WidgetEditor", "preview failed for ${item.family ?: item.kind}", e)
             null
         }
+    }
+
+    /** Height of the preview frame for [bmp]: same proportions as the real widget, within sensible limits. */
+    private fun faceHeight(bmp: android.graphics.Bitmap): Int {
+        val ctx = requireContext()
+        val innerWidth = ctx.resources.displayMetrics.widthPixels - Ui.pxi(ctx, 104f)
+        val wanted = (innerWidth.toFloat() * bmp.height / bmp.width.coerceAtLeast(1)).toInt() + Ui.pxi(ctx, 32f)
+        return wanted.coerceIn(Ui.pxi(ctx, 128f), Ui.pxi(ctx, 420f))
+    }
+
+    /** Live preview: the real widget picture; the Arabic text mock-up only if drawing it fails. */
+    private fun applyPreview(view: View, item: PlacedWidget, model: WidgetModel) {
+        val ctx = requireContext()
+        val bitmap = widgetBitmap(item, model)
         if (bitmap == null) {
             showTextPreview(view, item)
             return
         }
+        peekCache[item.id] = item.config to bitmap
         val face = view.findViewById<LinearLayout>(R.id.preview_face)
-        val innerWidth = ctx.resources.displayMetrics.widthPixels - Ui.pxi(ctx, 104f)
-        val wanted = (innerWidth * dh / dw).toInt() + Ui.pxi(ctx, 32f)
-        face.layoutParams = face.layoutParams.apply {
-            height = wanted.coerceIn(Ui.pxi(ctx, 128f), Ui.pxi(ctx, 380f))
-        }
+        face.layoutParams = face.layoutParams.apply { height = faceHeight(bitmap) }
         val existing: ImageView? = face.findViewWithTag(FAMILY_PREVIEW_TAG)
         val image = existing ?: ImageView(ctx).apply {
             tag = FAMILY_PREVIEW_TAG
