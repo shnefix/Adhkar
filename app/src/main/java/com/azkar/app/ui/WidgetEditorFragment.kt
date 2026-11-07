@@ -12,7 +12,6 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -36,8 +35,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private var selected: PlacedWidget? = null
     private var activeTab = EditorTab.CONTENT
     private var tabs: List<View> = emptyList()
-    /** Edits made since the last Apply or Reset, shown beside the Apply button. */
-    private var dirty = false
     private var picker: WidgetPickerDialog? = null
     private var tabsInFamilyMode: Boolean? = null
     private val customHours = HashMap<Int, Boolean>()
@@ -61,14 +58,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             picker?.release()
             picker = WidgetPickerDialog(requireContext(), viewModel).also { it.show() }
         }
-        view.findViewById<View>(R.id.btn_apply).setOnClickListener {
-            selected?.let {
-                viewModel.apply(requireContext(), it.id)
-                setDirty(view, false)
-                peekCache.remove(it.id)
-                Toast.makeText(requireContext(), R.string.widget_applied, Toast.LENGTH_SHORT).show()
-            }
-        }
         selected = placed.firstOrNull { it.id == viewModel.selectedId() } ?: placed.firstOrNull()
         selected?.let { viewModel.setSelectedId(it.id) }
         activeTab = EditorTab.values().getOrElse(viewModel.activeTab()) { EditorTab.CONTENT }
@@ -76,42 +65,42 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         renderChips(view, placed)
         renderTabs(view)
         render(view)
-        setDirty(view, false)
     }
 
-    /** Shows "Not applied" beside Apply while the selected widget's draft differs from the home screen. */
-    private fun setDirty(view: View, on: Boolean) {
-        dirty = on
-        refreshApplied(view)
+    /** Edits save themselves: each change is written to the home-screen widget shortly after it is made. */
+    private val autoSaveHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pendingSaveId: Int? = null
+    private val autoSave = Runnable { flushSave() }
+
+    /** Saves [id] after a short pause, so dragging a slider doesn't redraw the widget on every step. */
+    private fun scheduleSave(id: Int) {
+        if (pendingSaveId != null && pendingSaveId != id) flushSave()
+        pendingSaveId = id
+        autoSaveHandler.removeCallbacks(autoSave)
+        autoSaveHandler.postDelayed(autoSave, AUTO_SAVE_DELAY_MS)
     }
 
-    private fun refreshApplied(view: View) {
-        val pending = selected?.let { viewModel.hasChanges(requireContext(), it.id) } == true
-        view.findViewById<View>(R.id.not_applied).visibility = if (pending) View.VISIBLE else View.INVISIBLE
+    /** Writes any pending edit to the home screen now. */
+    private fun flushSave() {
+        autoSaveHandler.removeCallbacks(autoSave)
+        val id = pendingSaveId ?: return
+        pendingSaveId = null
+        val ctx = context ?: return
+        if (viewModel.hasChanges(ctx, id)) {
+            viewModel.apply(ctx, id)
+            peekCache.remove(id)
+        }
     }
 
-    /**
-     * Before leaving a widget with unapplied edits, asks whether to apply or discard them; [go] runs after either.
-     * Cancel stays on the widget. Without edits, [go] runs straight away.
-     */
-    private fun confirmLeave(view: View, go: () -> Unit) {
-        val item = selected
-        if (item == null || !viewModel.hasChanges(requireContext(), item.id)) return go()
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(R.string.widget_apply_changes_title)
-            .setMessage(R.string.widget_apply_changes_body)
-            .setPositiveButton(R.string.apply) { _, _ ->
-                viewModel.apply(requireContext(), item.id)
-                peekCache.remove(item.id)
-                Toast.makeText(requireContext(), R.string.widget_applied, Toast.LENGTH_SHORT).show()
-                go()
-            }
-            .setNegativeButton(R.string.widget_discard) { _, _ ->
-                viewModel.reset(item.id, requireContext())
-                go()
-            }
-            .setNeutralButton(R.string.cancel, null)
-            .show()
+    override fun onPause() {
+        flushSave()
+        super.onPause()
+    }
+
+    /** Saves any pending edit, then runs [go] (moving to another widget). */
+    private fun confirmLeave(@Suppress("UNUSED_PARAMETER") view: View, go: () -> Unit) {
+        flushSave()
+        go()
     }
 
     private fun render(view: View, rebuildTabContent: Boolean = true) {
@@ -147,7 +136,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             "${model.folderName} · ${model.shown} / ${model.target}"
         applyPreview(view, item, model)
         if (rebuildTabContent) renderTabContent(view)
-        refreshApplied(view)
         prewarmPeeks(view)
     }
 
@@ -748,7 +736,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private fun update(view: View, rebuild: Boolean = true, change: (WidgetStore.Appearance) -> WidgetStore.Appearance) {
         val item = selected ?: return
         viewModel.update(item.id, item.config.copy(appearance = change(item.config.appearance)))
-        setDirty(view, true)
+        scheduleSave(item.id)
         selected = viewModel.load(requireContext()).firstOrNull { it.id == item.id }
         selected?.let { viewModel.setSelectedId(it.id) }
         render(view, rebuild)
@@ -760,7 +748,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private fun updateConfig(view: View, change: (WidgetStore.Config) -> WidgetStore.Config) {
         val item = selected ?: return
         viewModel.update(item.id, change(item.config))
-        setDirty(view, true)
+        scheduleSave(item.id)
         selected = viewModel.load(requireContext()).firstOrNull { it.id == item.id }
         selected?.let { viewModel.setSelectedId(it.id) }
         renderChips(view, viewModel.load(requireContext()))
@@ -846,6 +834,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     }
 
     override fun onDestroyView() {
+        flushSave()
         picker?.release()
         picker = null
         super.onDestroyView()
@@ -868,4 +857,5 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     )
 }
 
+private const val AUTO_SAVE_DELAY_MS = 350L
 private const val FAMILY_PREVIEW_TAG = "family_preview"
