@@ -68,18 +68,11 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 Toast.makeText(requireContext(), R.string.widget_applied, Toast.LENGTH_SHORT).show()
             }
         }
-        view.findViewById<View>(R.id.btn_reset).setOnClickListener {
-            selected?.let {
-                viewModel.reset(it.id, requireContext())
-                setDirty(view, false)
-                selected = viewModel.load(requireContext()).firstOrNull { p -> p.id == it.id }
-                render(view)
-            }
-        }
         selected = placed.firstOrNull { it.id == viewModel.selectedId() } ?: placed.firstOrNull()
         selected?.let { viewModel.setSelectedId(it.id) }
         activeTab = EditorTab.values().getOrElse(viewModel.activeTab()) { EditorTab.CONTENT }
         renderChips(view, placed)
+        bindSwipe(view)
         renderTabs(view)
         render(view)
         setDirty(view, false)
@@ -87,8 +80,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
     private fun setDirty(view: View, on: Boolean) {
         dirty = on
-        view.findViewById<View>(R.id.unsaved_dot).visibility = if (on) View.VISIBLE else View.GONE
-        view.findViewById<TextView>(R.id.unsaved_text).setText(if (on) R.string.unsaved_changes else R.string.changes_applied)
     }
 
     private fun render(view: View, rebuildTabContent: Boolean = true) {
@@ -126,28 +117,56 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         if (rebuildTabContent) renderTabContent(view)
     }
 
+    /** Page dots under the preview: the long gold one is the widget being edited. */
     private fun renderChips(view: View, placed: List<PlacedWidget>) {
+        val ctx = requireContext()
         val root = view.findViewById<LinearLayout>(R.id.placed_widgets)
         root.removeAllViews()
-        placed.forEach { item ->
-            val chip = TextView(requireContext(), null, 0, R.style.WidgetEditorButton).apply {
-                text = item.family?.let { f -> FAMILY_LABELS[f] }?.let { getString(it) }
-                    ?: "${getString(item.config.style.label)} · ${widgetSizeName(requireContext(), item.kind)}"
-                setTextColor(requireContext().getColor(R.color.widget_editor_muted))
-                textSize = 13f
-                gravity = Gravity.CENTER
-                minWidth = Ui.pxi(requireContext(), 40f)
-                setPadding(Ui.pxi(requireContext(), 16f), 0, Ui.pxi(requireContext(), 16f), 0)
-                setOnClickListener {
-                    selected = viewModel.load(requireContext()).firstOrNull { p -> p.id == item.id }
-                    renderChips(view, placed)
-                    render(view)
-                }
-                background = chipBackground(item.id == selected?.id)
+        root.visibility = if (placed.size > 1) View.VISIBLE else View.GONE
+        placed.forEachIndexed { index, item ->
+            val on = item.id == selected?.id
+            val dot = View(ctx).apply {
+                background = editorShape(if (on) EditorColors.Gold else ctx.getColor(R.color.widget_editor_border), 3f, ctx)
+                contentDescription = (item.family?.let { f -> FAMILY_LABELS[f] }?.let { getString(it) }
+                    ?: "${getString(item.config.style.label)} · ${widgetSizeName(ctx, item.kind)}") + " (${index + 1}/${placed.size})"
             }
-            root.addView(chip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(requireContext(), 40f)).also {
-                it.marginEnd = Ui.pxi(requireContext(), 8f)
-            })
+            // Each dot sits in a 24dp-tall touch box so it can be tapped too.
+            val box = FrameLayout(ctx).apply {
+                setPadding(Ui.pxi(ctx, 4f), 0, Ui.pxi(ctx, 4f), 0)
+                setOnClickListener { select(view, item.id) }
+                addView(dot, FrameLayout.LayoutParams(Ui.pxi(ctx, if (on) 18f else 6f), Ui.pxi(ctx, 6f), Gravity.CENTER))
+            }
+            root.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    private fun select(view: View, id: Int) {
+        val placed = viewModel.load(requireContext())
+        selected = placed.firstOrNull { it.id == id } ?: return
+        viewModel.setSelectedId(id)
+        renderChips(view, placed)
+        render(view)
+    }
+
+    /** Swipe the preview sideways to move to the next or previous widget. */
+    private fun bindSwipe(view: View) {
+        val detector = android.view.GestureDetector(requireContext(), object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: android.view.MotionEvent) = true
+            override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+                val start = e1 ?: return false
+                val dx = e2.x - start.x
+                if (Math.abs(dx) < Ui.px(requireContext(), 40f) || Math.abs(dx) < Math.abs(e2.y - start.y)) return false
+                val placed = viewModel.load(requireContext())
+                val i = placed.indexOfFirst { it.id == selected?.id }
+                if (i < 0) return false
+                val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
+                val next = if ((dx < 0) != rtl) i + 1 else i - 1
+                placed.getOrNull(next)?.let { select(view, it.id) }
+                return true
+            }
+        })
+        view.findViewById<View>(R.id.preview_card).setOnTouchListener { _, e ->
+            detector.onTouchEvent(e)
         }
     }
 

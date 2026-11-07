@@ -115,18 +115,14 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <HorizontalScrollView
+                <LinearLayout
+                    android:id="@+id/placed_widgets"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="24dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="14dp"
-                    android:scrollbars="none">
-                    <LinearLayout
-                        android:id="@+id/placed_widgets"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:orientation="horizontal" />
-                </HorizontalScrollView>
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal" />
             </LinearLayout>
 
             <!-- Icon tabs and their settings -->
@@ -156,44 +152,15 @@
         android:id="@+id/editor_bottom_bar"
         android:layout_width="match_parent"
         android:layout_height="76dp"
-        android:background="@color/widget_editor_black"
-        android:gravity="center_vertical"
+        android:gravity="center_vertical|end"
         android:orientation="horizontal"
         android:paddingStart="24dp"
         android:paddingEnd="24dp">
-        <View
-            android:id="@+id/unsaved_dot"
-            android:layout_width="8dp"
-            android:layout_height="8dp"
-            android:layout_marginEnd="10dp"
-            android:background="@drawable/widget_editor_dot" />
-        <TextView
-            android:id="@+id/unsaved_text"
-            style="@style/T"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/changes_applied"
-            android:textColor="@color/widget_editor_muted"
-            android:textSize="13sp" />
-        <TextView
-            android:id="@+id/btn_reset"
-            style="@style/WidgetEditorButton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="@string/reset"
-            android:textColor="@color/widget_editor_muted"
-            android:textSize="14sp" />
         <TextView
             android:id="@+id/btn_apply"
             style="@style/WidgetEditorButton"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
-            android:layout_marginStart="6dp"
             android:background="@drawable/widget_editor_button_gold"
             android:gravity="center"
             android:paddingStart="28dp"
