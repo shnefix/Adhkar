@@ -51,6 +51,8 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var canPage: ((Int) -> Boolean)? = null
     var onPage: ((Int) -> Unit)? = null
     var tapEnabled = true
+    /** When on, a tap on the left third of the card goes back to the previous zikr instead of counting. */
+    var tapLeftBack = false
     var canFinish: (() -> Boolean)? = null
     var onFinish: (() -> Unit)? = null
     private var rawDx = 0f
@@ -124,7 +126,10 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     }
 
     private fun finishTap(e: MotionEvent) {
-        if (tapEnabled && tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()) performClick()
+        val quick = tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()
+        val c = card
+        if (quick && tapLeftBack && c != null && e.x < c.left + c.width / 3f) previous()
+        else if (tapEnabled && quick) performClick()
         tapOk = false
     }
 

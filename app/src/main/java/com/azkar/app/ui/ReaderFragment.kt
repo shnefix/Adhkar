@@ -259,6 +259,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         swipe.apply {
             card = view.findViewById(R.id.card)
             tapEnabled = AppPrefs.tapAdvance()
+            tapLeftBack = AppPrefs.tapLeftBack()
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
             onFinish = finish@{

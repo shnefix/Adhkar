@@ -12,6 +12,7 @@ object AppPrefs {
     private const val K_NOTIF = "notif_on"
     private const val K_SP = "arabic_sp"
     private const val K_TAP = "tap_advance"
+    private const val K_TAP_BACK = "tap_left_back"
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
     private const val K_COMPLETE = "completion_screen"
@@ -56,6 +57,9 @@ object AppPrefs {
     fun setArabicSp(v: Int) = sp.edit().putInt(K_SP, ReaderPrefs.clampSp(v)).apply()
     fun tapAdvance() = sp.getBoolean(K_TAP, true)
     fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
+    /** Off by default: tapping the left side of the reading card goes back one zikr. */
+    fun tapLeftBack() = sp.getBoolean(K_TAP_BACK, false)
+    fun setTapLeftBack(v: Boolean) = sp.edit().putBoolean(K_TAP_BACK, v).apply()
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
     fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()
     /** The reader's progress bar has a handle to drag to another zikr (off: the plain segment bar). */
