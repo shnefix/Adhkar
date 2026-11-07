@@ -431,12 +431,11 @@
     <string name="location_manual">Set by hand: %1$s</string>
     <string name="location_none">Not set · reminders use their fixed times</string>
     <string name="location_use_phone">Use my phone’s location</string>
-    <string name="location_choose_city">Choose a city</string>
     <string name="location_enter_coords">Enter coordinates</string>
     <string name="latitude_hint">Latitude (−90 to 90)</string>
     <string name="longitude_hint">Longitude (−180 to 180)</string>
     <string name="location_out_of_range">Enter a number in range</string>
-    <string name="location_permission_denied">Location access is off. Choose a city or enter coordinates instead.</string>
+    <string name="location_permission_denied">Location access is off. Enter coordinates instead.</string>
     <string name="previous_zikr">Previous zikr</string>
     <string name="zikr_exists_title">Already saved</string>
     <string name="zikr_exists_message">This zikr is already in “%1$s” (×%2$d). Update it with your changes?</string>

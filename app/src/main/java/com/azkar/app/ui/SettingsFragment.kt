@@ -139,7 +139,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         renderPrayer()
         view.findViewById<View>(R.id.loc_row).setOnClickListener {
             val choices = arrayOf(
-                getString(R.string.location_use_phone), getString(R.string.location_choose_city), getString(R.string.location_enter_coords)
+                getString(R.string.location_use_phone), getString(R.string.location_enter_coords)
             )
             AlertDialog.Builder(ctx)
                 .setTitle(R.string.location)
@@ -154,7 +154,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                                 locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                             }
                         }
-                        1 -> chooseCity(arabicUi) { prayerChanged() }
                         else -> enterCoordinates { prayerChanged() }
                     }
                 }
@@ -185,23 +184,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
     }
 
-    /** Picks one of [Cities.ALL], sorted by its name in the app's language. */
-    private fun chooseCity(arabic: Boolean, onSet: () -> Unit) {
-        val cities = Cities.ALL.sortedWith(compareBy(java.text.Collator.getInstance()) { it.name(arabic) })
-        val current = cities.indexOfFirst { it.id == AppPrefs.locationCity() }
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.location_choose_city)
-            .setSingleChoiceItems(cities.map { it.name(arabic) }.toTypedArray(), current) { d, which ->
-                val c = cities[which]
-                AppPrefs.setManualLocation(c.lat, c.lng, c.id)
-                d.dismiss()
-                onSet()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    /** Latitude / longitude typed by hand, for places the city list doesn't have. */
+    /** Latitude / longitude typed by hand, when the phone's location is off. */
     private fun enterCoordinates(onSet: () -> Unit) {
         val ctx = requireContext()
         fun field(hint: Int, value: Double?) = EditText(ctx).apply {
