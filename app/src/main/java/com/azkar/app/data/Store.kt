@@ -42,9 +42,10 @@ object Store {
     private const val SCHEMA_VERSION = 1
 
     // Compatibility snapshots; Room is the durable source of truth for content.
-    private var zCache: List<Zikr> = emptyList()
-    private var fCache: List<Folder> = emptyList()
-    private var sCache: List<Schedule> = emptyList()
+    // Written under the Store lock (often on IO) but read without it from the main thread: @Volatile so readers see the latest list.
+    @Volatile private var zCache: List<Zikr> = emptyList()
+    @Volatile private var fCache: List<Folder> = emptyList()
+    @Volatile private var sCache: List<Schedule> = emptyList()
     private var defaultFolderIds: Set<String> = emptySet()
     /** Home layout and hidden azkar (SharedPreferences); the functions below keep their old names for callers. */
     private val home = HomePrefs()
@@ -426,6 +427,7 @@ object Store {
     fun deleteZikr(id: String) {
         saveZikrs(zCache.filter { it.id != id })
         if (id in hzCache) setZikrsHidden(listOf(id), false)
+        if (AppPrefs.zikrSourceHidden(id)) AppPrefs.setZikrSourceHidden(id, false)   // don't leave a stale per-zikr pref behind
     }
 
     /** Takes a zikr out of its folder (it stays saved as "Anytime"). */
@@ -526,7 +528,18 @@ object Store {
                 true
             }
         }
-        if (published) notifyWidgets()
+        if (!published) {
+            // The user edited something while the import ran: the database now holds the import (plus any edit
+            // written after it), so reload the caches from it instead of keeping a snapshot that no longer matches.
+            repository.awaitPendingWrites()
+            synchronized(this) {
+                fCache = repository.folders()
+                zCache = repository.zikrs()
+                sCache = repository.schedules()
+                cacheGeneration++
+            }
+        }
+        notifyWidgets()
         sp.edit().putBoolean(K_SCHEDULES_INITIALIZED, true).apply()
         val sp2 = p.settings?.arabicSp ?: p.settings?.arabicSize?.let { ReaderPrefs.spFromOldIndex(it) }
         sp2?.let { AppPrefs.setArabicSp(it) }
@@ -572,9 +585,13 @@ object Store {
             RoomMigration.LegacyData(legacy.folders, legacy.zikrs, legacy.schedules)
         )
         if (restored) {
-            fCache = legacy.folders
-            zCache = legacy.zikrs
-            sCache = legacy.schedules
+            synchronized(this) {
+                fCache = legacy.folders
+                zCache = legacy.zikrs
+                sCache = legacy.schedules
+                cacheGeneration++
+            }
+            notifyWidgets()
             sp.edit()
                 .putBoolean(K_ROOM_MIGRATION_VERIFIED, true)
                 .putBoolean(K_SCHEDULES_INITIALIZED, true)

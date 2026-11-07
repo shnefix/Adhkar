@@ -63,6 +63,7 @@ object ReminderScheduler {
 
     // ---------- "Not finished yet" (tracked morning / evening only) ----------
     private const val NUDGE = "nudge_"
+    private const val NUDGE_NOTIFICATION_BASE = 70_000
 
     /** Sets or cancels the reminder before Dhuhr / Maghrib for each session, by the tracking and nudge switches. */
     fun scheduleNudges(ctx: Context) {
@@ -92,7 +93,7 @@ object ReminderScheduler {
         if (items.isEmpty() || done >= items.size) return              // finished (or nothing to read): stay quiet
         val end = PrayerSessions.endAfter(s, now) ?: return
         val morning = s == PrayerSessions.Session.MORNING
-        val nid = 200 + s.ordinal
+        val nid = NUDGE_NOTIFICATION_BASE + s.ordinal   // outside the 100..65635 range used by reminders, so they never replace each other
         val open = PendingIntent.getActivity(
             ctx, nid,
             Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
