@@ -620,14 +620,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             // Tracking widgets follow every tracked folder together, or one of them.
             val tracked = Tracking.tracked()
             val selectedFolder = item.config.folder.takeIf { it in tracked } ?: Tracking.ALL
-            val card = sectionCard(ctx, getString(R.string.tracking), getString(R.string.tracking_widget_folders))
+            val card = sectionCard(ctx, getString(R.string.tracking))
             card.addSpaced(folderPicker(ctx, getString(R.string.tracking), listOf(Tracking.ALL to getString(R.string.widget_all_tracked)) + tracked.map { it to Store.folderName(it) }, selectedFolder) { id ->
                 updateConfig(view) { cfg -> cfg.copy(folder = id) }
             })
             column.addCard(card)
             return
         }
-        val folder = sectionCard(ctx, getString(R.string.folder), getString(R.string.widget_folder_summary))
+        val folder = sectionCard(ctx, getString(R.string.folder))
         folder.addSpaced(folderPicker(ctx, getString(R.string.folder), Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
@@ -635,7 +635,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
         if (item.family == null) {
             val counter = sectionCard(ctx, getString(R.string.widget_counter))
-            counter.addSpaced(toggleRow(ctx, getString(R.string.show_counter), getString(R.string.widget_counter_summary),
+            counter.addSpaced(toggleRow(ctx, getString(R.string.show_counter), null,
                 item.config.appearance.showCounter) { on -> update(view) { it.copy(showCounter = on) } })
             column.addCard(counter)
         }
@@ -644,7 +644,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private fun styleCards(view: View, item: PlacedWidget, column: LinearLayout) {
         val ctx = requireContext()
         val styles = WidgetStyle.values().filter { item.kind in it.offered }
-        val card = sectionCard(ctx, getString(R.string.widget_design), getString(R.string.widget_design_summary, widgetSizeName(ctx, item.kind).lowercase()))
+        val card = sectionCard(ctx, getString(R.string.widget_design))
         card.addSpaced(chipGroup(ctx, styles.map { it to getString(it.label) }, item.config.style) { s ->
             updateConfig(view) { cfg -> cfg.copy(style = s) }
         })
@@ -695,7 +695,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val a = item.config.appearance
         // OLED designs: a tap always adds one, so the tap-action card only exists for the old widgets.
         if (item.family == null) {
-            val tap = sectionCard(ctx, getString(R.string.tap_action), getString(R.string.widget_tap_summary))
+            val tap = sectionCard(ctx, getString(R.string.tap_action))
             tap.addSpaced(chipGroup(ctx, WidgetStore.TapAction.values().map { it to tapLabel(it) }, a.tapAction) { action ->
                 update(view) { it.copy(tapAction = action) }
             })
@@ -704,7 +704,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
         val presets = listOf(0, 15, 30, 60, 360, 1440)
         val minutes = a.refreshMinutes
-        val refresh = sectionCard(ctx, getString(R.string.refresh), getString(R.string.widget_refresh_summary))
+        val refresh = sectionCard(ctx, getString(R.string.refresh))
         refresh.addSpaced(chipGroup(ctx, presets.map { it to presetLabel(it) }, minutes.takeIf { it in presets }) { m ->
             // A preset decides its own unit; a unit left over from the custom box would show 15 min as "0 hours".
             customHours.remove(item.id)

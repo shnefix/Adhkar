@@ -239,7 +239,7 @@ internal fun colorRow(ctx: Context, label: String, colors: List<Int>, selected: 
     return column
 }
 
-internal fun toggleRow(ctx: Context, title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit): View =
+internal fun toggleRow(ctx: Context, title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit): View =
     LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -247,7 +247,7 @@ internal fun toggleRow(ctx: Context, title: String, subtitle: String, checked: B
         addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             addView(editorText(ctx, title, 15f, EditorColors.Text))
-            addSpaced(editorText(ctx, subtitle, 13f, EditorColors.Muted), 2f)
+            if (subtitle != null) addSpaced(editorText(ctx, subtitle, 13f, EditorColors.Muted), 2f)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         addView(ToggleSwitch(ctx).apply {
             on = checked
