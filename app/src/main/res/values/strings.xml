@@ -237,6 +237,10 @@
     <string name="edit_zikr">Edit zikr</string>
     <string name="hide_from_reading">Hide from reading</string>
     <string name="folder">Folder</string>
+    <string name="unsaved_changes">Unsaved changes</string>
+    <string name="apply">Apply</string>
+    <string name="changes_applied">Up to date</string>
+    <string name="add_widget">Add a widget</string>
     <string name="save_changes">Save changes</string>
     <string name="delete_zikr">Delete zikr</string>
     <string name="back_to_library">Back to Library</string>

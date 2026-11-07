@@ -241,6 +241,10 @@
     <string name="edit_zikr">تعديل الذكر</string>
     <string name="hide_from_reading">إخفاء أثناء القراءة</string>
     <string name="folder">المجلد</string>
+    <string name="unsaved_changes">تغييرات غير محفوظة</string>
+    <string name="apply">تطبيق</string>
+    <string name="changes_applied">محدَّث</string>
+    <string name="add_widget">إضافة ويدجت</string>
     <string name="save_changes">حفظ التغييرات</string>
     <string name="delete_zikr">حذف الذكر</string>
     <string name="back_to_library">العودة إلى المكتبة</string>
