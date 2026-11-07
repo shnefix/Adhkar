@@ -121,6 +121,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
     private fun renderChips(view: View, placed: List<PlacedWidget>) {
         val ctx = requireContext()
         val root = view.findViewById<LinearLayout>(R.id.placed_widgets)
+        val before = root.tag as? Int
+        root.tag = selected?.id
         root.removeAllViews()
         root.visibility = if (placed.size > 1) View.VISIBLE else View.GONE
         placed.forEachIndexed { index, item ->
@@ -134,18 +136,46 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             val box = FrameLayout(ctx).apply {
                 setPadding(Ui.pxi(ctx, 4f), 0, Ui.pxi(ctx, 4f), 0)
                 setOnClickListener { select(view, item.id) }
-                addView(dot, FrameLayout.LayoutParams(Ui.pxi(ctx, if (on) 18f else 6f), Ui.pxi(ctx, 6f), Gravity.CENTER))
+                val wasOn = item.id == before
+                val from = Ui.pxi(ctx, if (before == null || before == selected?.id) (if (on) 18f else 6f) else if (wasOn) 18f else 6f)
+                val to = Ui.pxi(ctx, if (on) 18f else 6f)
+                addView(dot, FrameLayout.LayoutParams(from, Ui.pxi(ctx, 6f), Gravity.CENTER))
+                if (from != to) android.animation.ValueAnimator.ofInt(from, to).apply {
+                    duration = 260
+                    interpolator = android.view.animation.DecelerateInterpolator()
+                    addUpdateListener { a -> dot.layoutParams = dot.layoutParams.apply { width = a.animatedValue as Int } }
+                    start()
+                }
             }
             root.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
 
-    private fun select(view: View, id: Int) {
+    /** [direction] 1 = next (slides in from the end), -1 = previous, 0 = no slide. */
+    private fun select(view: View, id: Int, direction: Int = 0) {
         val placed = viewModel.load(requireContext())
-        selected = placed.firstOrNull { it.id == id } ?: return
-        viewModel.setSelectedId(id)
-        renderChips(view, placed)
-        render(view)
+        if (id == selected?.id) return
+        val target = placed.firstOrNull { it.id == id } ?: return
+        val dir = if (direction != 0) direction else {
+            val from = placed.indexOfFirst { it.id == selected?.id }
+            if (placed.indexOf(target) > from) 1 else -1
+        }
+        val card = view.findViewById<View>(R.id.preview_card)
+        val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val shift = card.width * 0.35f * dir * (if (rtl) -1 else 1)
+        card.animate().cancel()
+        card.animate().translationX(-shift).alpha(0f).setDuration(140)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                if (!isAdded) return@withEndAction
+                selected = target
+                viewModel.setSelectedId(id)
+                renderChips(view, placed)
+                render(view)
+                card.translationX = shift
+                card.animate().translationX(0f).alpha(1f).setDuration(220)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            }.start()
     }
 
     /** Swipe the preview sideways to move to the next or previous widget. */
@@ -160,8 +190,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 val i = placed.indexOfFirst { it.id == selected?.id }
                 if (i < 0) return false
                 val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
-                val next = if ((dx < 0) != rtl) i + 1 else i - 1
-                placed.getOrNull(next)?.let { select(view, it.id) }
+                val step = if ((dx < 0) != rtl) 1 else -1
+                placed.getOrNull(i + step)?.let { select(view, it.id, step) }
                 return true
             }
         })
