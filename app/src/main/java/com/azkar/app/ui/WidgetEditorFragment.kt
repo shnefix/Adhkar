@@ -176,7 +176,9 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
         val shift = card.width * 0.35f * dir * (if (rtl) -1 else 1)
         card.animate().cancel()
-        card.animate().translationX(-shift).alpha(0f).setDuration(140)
+        // Leave from wherever a drag left the card, always moving away (never back toward the middle).
+        val exit = if (Math.abs(card.translationX) > Math.abs(shift)) card.translationX + -shift * 0.5f else -shift
+        card.animate().translationX(exit).alpha(0f).setDuration(120)
             .setInterpolator(android.view.animation.AccelerateInterpolator())
             .withEndAction {
                 if (!isAdded) return@withEndAction
@@ -214,23 +216,68 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                     .withEndAction { mini.visibility = View.GONE }.start()
             }
         }
-        val detector = android.view.GestureDetector(requireContext(), object : android.view.GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: android.view.MotionEvent) = true
-            override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
-                val start = e1 ?: return false
-                val dx = e2.x - start.x
-                if (Math.abs(dx) < Ui.px(requireContext(), 40f) || Math.abs(dx) < Math.abs(e2.y - start.y)) return false
-                val placed = viewModel.load(requireContext())
-                val i = placed.indexOfFirst { it.id == selected?.id }
-                if (i < 0) return false
-                val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
-                val step = if ((dx < 0) != rtl) 1 else -1
-                placed.getOrNull(i + step)?.let { select(view, it.id, step) }
-                return true
+        // The card follows the finger; letting go past a quarter of its width (or with a quick flick) moves on,
+        // otherwise it springs back. Once the drag is clearly sideways the scroll view can't steal it.
+        val card = view.findViewById<View>(R.id.preview_card)
+        val slop = android.view.ViewConfiguration.get(requireContext()).scaledTouchSlop
+        val minFling = Ui.px(requireContext(), 400f)
+        var downX = 0f
+        var downY = 0f
+        var dragging = false
+        var tracker: android.view.VelocityTracker? = null
+        fun neighbour(dx: Float): Int? {
+            val placed = viewModel.load(requireContext())
+            val i = placed.indexOfFirst { it.id == selected?.id }
+            if (i < 0) return null
+            val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
+            val step = if ((dx < 0) != rtl) 1 else -1
+            return if (placed.getOrNull(i + step) != null) step else null
+        }
+        card.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = e.rawX; downY = e.rawY; dragging = false
+                    card.animate().cancel()
+                    tracker?.recycle()
+                    tracker = android.view.VelocityTracker.obtain().also { it.addMovement(e) }
+                    true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    tracker?.addMovement(e)
+                    val dx = e.rawX - downX
+                    val dy = e.rawY - downY
+                    if (!dragging && Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy)) {
+                        dragging = true
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    if (dragging) {
+                        // Rubber-band at the first / last widget.
+                        val tx = if (neighbour(dx) == null) dx * 0.25f else dx
+                        card.translationX = tx
+                        card.alpha = 1f - (Math.abs(tx) / card.width.coerceAtLeast(1)).coerceAtMost(1f) * 0.5f
+                    }
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    tracker?.addMovement(e)
+                    tracker?.computeCurrentVelocity(1000)
+                    val vx = tracker?.xVelocity ?: 0f
+                    tracker?.recycle(); tracker = null
+                    val dx = e.rawX - downX
+                    val step = if (dragging && e.actionMasked == android.view.MotionEvent.ACTION_UP) neighbour(dx) else null
+                    val far = Math.abs(dx) > card.width * 0.25f
+                    val flick = Math.abs(vx) > minFling && (vx < 0) == (dx < 0)
+                    if (step != null && (far || flick)) {
+                        step(view, step)
+                    } else {
+                        card.animate().translationX(0f).alpha(1f).setDuration(200)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                    }
+                    dragging = false
+                    true
+                }
+                else -> true
             }
-        })
-        view.findViewById<View>(R.id.preview_card).setOnTouchListener { _, e ->
-            detector.onTouchEvent(e)
         }
     }
 
