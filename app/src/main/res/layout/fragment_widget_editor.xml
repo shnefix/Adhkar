@@ -73,11 +73,24 @@
                     </FrameLayout>
                 </LinearLayout>
 
+                <!-- Pager frame: while dragging, the neighbouring widget (preview_peek) slides in beside the card. -->
+                <FrameLayout
+                    android:id="@+id/preview_pager"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp">
+                <FrameLayout
+                    android:id="@+id/preview_peek"
+                    android:layout_width="match_parent"
+                    android:layout_height="128dp"
+                    android:background="@drawable/widget_editor_preview_face"
+                    android:importantForAccessibility="noHideDescendants"
+                    android:padding="16dp"
+                    android:visibility="gone" />
                 <LinearLayout
                     android:id="@+id/preview_card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
                     android:orientation="vertical">
                     <LinearLayout
                         android:id="@+id/preview_face"
@@ -114,6 +127,7 @@
                         android:textColor="@color/widget_editor_gold"
                         android:textSize="11sp" />
                 </LinearLayout>
+                </FrameLayout>
 
                 <LinearLayout
                     android:id="@+id/placed_widgets"

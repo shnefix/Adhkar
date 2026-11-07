@@ -224,6 +224,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         var downX = 0f
         var downY = 0f
         var dragging = false
+        var hitEnd = false
         var tracker: android.view.VelocityTracker? = null
         fun neighbour(dx: Float): Int? {
             val placed = viewModel.load(requireContext())
@@ -236,6 +237,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         card.setOnTouchListener { v, e ->
             when (e.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
+                    if (settling) return@setOnTouchListener false
                     downX = e.rawX; downY = e.rawY; dragging = false
                     card.animate().cancel()
                     tracker?.recycle()
@@ -251,10 +253,19 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                         v.parent?.requestDisallowInterceptTouchEvent(true)
                     }
                     if (dragging) {
-                        // Rubber-band at the first / last widget.
-                        val tx = if (neighbour(dx) == null) dx * 0.25f else dx
-                        card.translationX = tx
-                        card.alpha = 1f - (Math.abs(tx) / card.width.coerceAtLeast(1)).coerceAtMost(1f) * 0.5f
+                        val step = neighbour(dx)
+                        if (step == null) {
+                            // Rubber-band at the first / last widget, with one tick when you hit the end.
+                            if (!hitEnd) { hitEnd = true; card.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK) }
+                            hidePeek(view)
+                            card.translationX = dx * 0.25f
+                            dragProgress(view, 0, 0f)
+                        } else {
+                            hitEnd = false
+                            showPeek(view, step, dx)
+                            card.translationX = dx
+                            dragProgress(view, step, Math.abs(dx) / card.width.coerceAtLeast(1))
+                        }
                     }
                     true
                 }
@@ -268,17 +279,180 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                     val far = Math.abs(dx) > card.width * 0.25f
                     val flick = Math.abs(vx) > minFling && (vx < 0) == (dx < 0)
                     if (step != null && (far || flick)) {
-                        step(view, step)
+                        card.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        settle(view, step, dx < 0)
                     } else {
-                        card.animate().translationX(0f).alpha(1f).setDuration(200)
-                            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                        springBack(view)
                     }
                     dragging = false
+                    hitEnd = false
                     true
                 }
                 else -> true
             }
         }
+    }
+
+    /** Which neighbour the peek card currently shows (its widget id), so it is built once per drag. */
+    private var peekId: Int? = null
+    /** True while a swipe is finishing or springing back; new touches wait for it. */
+    private var settling = false
+    private val peekGap get() = Ui.px(requireContext(), 12f)
+
+    private fun neighbourItem(by: Int): PlacedWidget? {
+        val placed = viewModel.load(requireContext())
+        val i = placed.indexOfFirst { it.id == selected?.id }
+        return if (i < 0) null else placed.getOrNull(i + by)
+    }
+
+    /** Fills the peek card with the neighbouring widget's preview and keeps it just beside the dragged card. */
+    private fun showPeek(view: View, by: Int, dx: Float) {
+        val peek = view.findViewById<FrameLayout>(R.id.preview_peek)
+        val card = view.findViewById<View>(R.id.preview_card)
+        val item = neighbourItem(by) ?: return hidePeek(view)
+        if (peekId != item.id) {
+            peekId = item.id
+            fillPeek(peek, item)
+            peek.layoutParams = peek.layoutParams.apply {
+                height = view.findViewById<View>(R.id.preview_face).height.coerceAtLeast(Ui.pxi(requireContext(), 128f))
+            }
+        }
+        peek.visibility = View.VISIBLE
+        val offset = card.width + peekGap
+        peek.translationX = dx + if (dx < 0) offset else -offset
+        peek.alpha = 1f
+    }
+
+    private fun hidePeek(view: View) {
+        view.findViewById<View>(R.id.preview_peek).apply { animate().cancel(); visibility = View.GONE; translationX = 0f }
+    }
+
+    private fun fillPeek(peek: FrameLayout, item: PlacedWidget) {
+        val ctx = requireContext()
+        peek.removeAllViews()
+        val model = WidgetModel.load(ctx, item.id, item.config.folder)
+        val family = item.family
+        val bitmap = family?.let {
+            val (dw, dh) = AzkarWidgetSizes.design(it)
+            try {
+                NewWidgetRenderer(ctx).render(it, model, dw, dh, if (it.tracking) TrackingModel.load(ctx, item.config.folder) else null)
+            } catch (e: Exception) { null }
+        }
+        if (bitmap != null) {
+            peek.addView(ImageView(ctx).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageBitmap(bitmap)
+            }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            return
+        }
+        val appearance = item.config.appearance
+        peek.addView(TextView(ctx, null, 0, R.style.ArB).apply {
+            text = model.cur?.arabic ?: getString(R.string.widget_no_azkar)
+            textSize = appearance.fontSizeSp
+            gravity = Gravity.CENTER
+            setTextColor(appearance.textColor.takeIf { it != 0 } ?: ctx.getColor(R.color.widget_editor_gold))
+        }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER))
+    }
+
+    /** Moves the page dots and the mini bar along with the drag: 0 = resting, 1 = fully on the neighbour. */
+    private fun dragProgress(view: View, by: Int, p: Float) {
+        val ctx = requireContext()
+        val t = p.coerceIn(0f, 1f)
+        val placed = viewModel.load(ctx)
+        val i = placed.indexOfFirst { it.id == selected?.id }
+        val small = Ui.px(ctx, 6f)
+        val big = Ui.px(ctx, 18f)
+        for (root in listOf(view.findViewById<LinearLayout>(R.id.placed_widgets), view.findViewById(R.id.mini_dots))) {
+            for (k in 0 until root.childCount) {
+                val dot = (root.getChildAt(k) as? ViewGroup)?.getChildAt(0) ?: continue
+                val w = when {
+                    k == i -> big - (big - small) * t
+                    by != 0 && k == i + by -> small + (big - small) * t
+                    else -> small
+                }.toInt()
+                if (dot.layoutParams.width != w) dot.layoutParams = dot.layoutParams.apply { width = w }
+            }
+        }
+        view.findViewById<View>(R.id.mini_title).alpha = 1f - t * 0.8f
+        val rtl = view.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val nudge = Ui.px(ctx, 6f) * t
+        view.findViewById<View>(R.id.mini_next).translationX = if (by == 1) (if (rtl) -nudge else nudge) else 0f
+        view.findViewById<View>(R.id.mini_prev).translationX = if (by == -1) (if (rtl) nudge else -nudge) else 0f
+    }
+
+    /** Finishes a swipe: the card slides out, the peek slides into place, then the editor switches to it. */
+    private fun settle(view: View, by: Int, towardStart: Boolean) {
+        val target = neighbourItem(by) ?: return springBack(view)
+        val card = view.findViewById<View>(R.id.preview_card)
+        val peek = view.findViewById<View>(R.id.preview_peek)
+        val out = (card.width + peekGap) * if (towardStart) -1 else 1
+        val start = card.translationX
+        val total = Math.abs(out - start).coerceAtLeast(1f)
+        val ms = (220 * total / card.width.coerceAtLeast(1)).toLong().coerceIn(90, 220)
+        val interp = android.view.animation.DecelerateInterpolator()
+        settling = true
+        val anim = android.animation.ValueAnimator.ofFloat(0f, 1f).setDuration(ms)
+        anim.interpolator = interp
+        anim.addUpdateListener { a ->
+            if (!isAdded) return@addUpdateListener
+            val f = a.animatedValue as Float
+            val tx = start + (out - start) * f
+            card.translationX = tx
+            peek.translationX = tx - out
+            dragProgress(view, by, Math.abs(tx) / card.width.coerceAtLeast(1))
+        }
+        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(a: android.animation.Animator) {
+                settling = false
+                if (!isAdded) return
+                selected = target
+                viewModel.setSelectedId(target.id)
+                // The dots are already in their new place; stop renderChips from animating them again.
+                view.findViewById<View>(R.id.placed_widgets).tag = target.id
+                view.findViewById<View>(R.id.mini_dots).tag = target.id
+                renderChips(view, viewModel.load(requireContext()))
+                render(view)
+                card.translationX = 0f
+                card.alpha = 1f
+                resetDrag(view)
+            }
+        })
+        anim.start()
+    }
+
+    private fun springBack(view: View) {
+        val card = view.findViewById<View>(R.id.preview_card)
+        val peek = view.findViewById<View>(R.id.preview_peek)
+        val start = card.translationX
+        val peekStart = peek.translationX
+        val by = when {
+            peek.visibility != View.VISIBLE -> 0
+            else -> neighbourItem(1)?.takeIf { it.id == peekId }?.let { 1 } ?: -1
+        }
+        settling = true
+        android.animation.ValueAnimator.ofFloat(1f, 0f).setDuration(200).apply {
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { a ->
+                if (!isAdded) return@addUpdateListener
+                val f = a.animatedValue as Float
+                card.translationX = start * f
+                peek.translationX = peekStart + start * (f - 1f)
+                dragProgress(view, by, Math.abs(card.translationX) / card.width.coerceAtLeast(1))
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(a: android.animation.Animator) { settling = false; if (isAdded) resetDrag(view) }
+            })
+            start()
+        }
+    }
+
+    private fun resetDrag(view: View) {
+        settling = false
+        hidePeek(view)
+        peekId = null
+        view.findViewById<View>(R.id.mini_title).alpha = 1f
+        view.findViewById<View>(R.id.mini_next).translationX = 0f
+        view.findViewById<View>(R.id.mini_prev).translationX = 0f
     }
 
     private fun renderTabs(view: View) {
