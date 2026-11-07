@@ -13,7 +13,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.azkar.app.R
@@ -87,7 +86,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
     private fun setDirty(view: View, on: Boolean) {
         dirty = on
-        view.findViewById<View>(R.id.unsaved_dot).visibility = if (on) View.VISIBLE else View.INVISIBLE
+        view.findViewById<View>(R.id.unsaved_dot).visibility = if (on) View.VISIBLE else View.GONE
         view.findViewById<TextView>(R.id.unsaved_text).setText(if (on) R.string.unsaved_changes else R.string.changes_applied)
     }
 
@@ -195,43 +194,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         }
     }
 
-    /** Design A's folder control: one row showing the current folder; a tap opens the list. */
-    private fun <T> folderPicker(ctx: android.content.Context, title: String, options: List<Pair<T, String>>, selected: T?, onSelect: (T) -> Unit): View {
-        val current = options.firstOrNull { it.first == selected }?.second ?: options.firstOrNull()?.second ?: ""
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            isClickable = true
-            isFocusable = true
-            contentDescription = "$title: $current"
-            background = editorShape(EditorColors.Chip, 18f, ctx, EditorColors.Border)
-            val pad = Ui.pxi(ctx, 16f)
-            setPadding(pad, 0, pad, 0)
-            minimumHeight = Ui.pxi(ctx, 52f)
-            addView(editorText(ctx, current, 16f, EditorColors.Text).apply {
-                textDirection = View.TEXT_DIRECTION_LOCALE
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(ImageView(ctx).apply {
-                setImageResource(R.drawable.ic_chev_dn_2p25)
-                imageTintList = android.content.res.ColorStateList.valueOf(EditorColors.Muted)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(Ui.pxi(ctx, 18f), Ui.pxi(ctx, 18f)))
-            setOnClickListener {
-                val checked = options.indexOfFirst { it.first == selected }
-                AlertDialog.Builder(ctx)
-                    .setTitle(title)
-                    .setSingleChoiceItems(options.map { it.second }.toTypedArray(), checked) { d, which ->
-                        d.dismiss()
-                        onSelect(options[which].first)
-                    }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-            }
-        }
-    }
-
     private fun LinearLayout.addCard(card: View) {
         addView(card, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -258,14 +220,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             val tracked = Tracking.tracked()
             val selectedFolder = item.config.folder.takeIf { it in tracked } ?: Tracking.ALL
             val card = sectionCard(ctx, getString(R.string.tracking), getString(R.string.tracking_widget_folders))
-            card.addSpaced(folderPicker(ctx, getString(R.string.tracking), listOf(Tracking.ALL to getString(R.string.widget_all_tracked)) + tracked.map { it to Store.folderName(it) }, selectedFolder) { id ->
+            card.addSpaced(chipSlider(ctx, listOf(Tracking.ALL to getString(R.string.widget_all_tracked)) + tracked.map { it to Store.folderName(it) }, selectedFolder) { id ->
                 updateConfig(view) { cfg -> cfg.copy(folder = id) }
             })
             column.addCard(card)
             return
         }
         val folder = sectionCard(ctx, getString(R.string.folder), getString(R.string.widget_folder_summary))
-        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
+        folder.addSpaced(chipSlider(ctx, Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
         column.addCard(folder)
