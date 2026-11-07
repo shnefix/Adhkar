@@ -125,8 +125,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
                     f.icon,
                     if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
                     if (isDefault) teal else gold,
-                    false,
-                    onMenu = { nav().push(EditFolderFragment.of(f.id)) }
+                    false
                 ) {
                     nav().push(FolderFragment.of(f.id))
                 }
