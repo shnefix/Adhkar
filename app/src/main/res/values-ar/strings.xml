@@ -514,4 +514,6 @@
     <string name="zikr_source_off">مصدر هذا الذكر مخفي</string>
     <string name="show_or_hide_source">إظهار المصدر أو إخفاؤه</string>
     <string name="source_hidden_label">المصدر مخفي</string>
+    <string name="previous_widget">الويدجت السابقة</string>
+    <string name="next_widget">الويدجت التالية</string>
 </resources>

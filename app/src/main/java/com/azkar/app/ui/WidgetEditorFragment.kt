@@ -119,8 +119,20 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
     /** Page dots under the preview: the long gold one is the widget being edited. */
     private fun renderChips(view: View, placed: List<PlacedWidget>) {
+        renderDots(view, view.findViewById(R.id.placed_widgets), placed)
+        renderDots(view, view.findViewById(R.id.mini_dots), placed)
+        val item = selected
+        view.findViewById<TextView>(R.id.mini_title).text = item?.let {
+            it.family?.let { f -> FAMILY_LABELS[f] }?.let { r -> getString(r) }
+                ?: "${getString(it.config.style.label)} · ${widgetSizeName(requireContext(), it.kind)}"
+        } ?: ""
+        val i = placed.indexOfFirst { it.id == item?.id }
+        view.findViewById<View>(R.id.mini_prev).alpha = if (i > 0) 1f else 0.3f
+        view.findViewById<View>(R.id.mini_next).alpha = if (i in 0 until placed.lastIndex) 1f else 0.3f
+    }
+
+    private fun renderDots(view: View, root: LinearLayout, placed: List<PlacedWidget>) {
         val ctx = requireContext()
-        val root = view.findViewById<LinearLayout>(R.id.placed_widgets)
         val before = root.tag as? Int
         root.tag = selected?.id
         root.removeAllViews()
@@ -178,8 +190,30 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             }.start()
     }
 
+    private fun step(view: View, by: Int) {
+        val placed = viewModel.load(requireContext())
+        val i = placed.indexOfFirst { it.id == selected?.id }
+        placed.getOrNull(i + by)?.let { select(view, it.id, by) }
+    }
+
     /** Swipe the preview sideways to move to the next or previous widget. */
     private fun bindSwipe(view: View) {
+        view.findViewById<View>(R.id.mini_prev).setOnClickListener { step(view, -1) }
+        view.findViewById<View>(R.id.mini_next).setOnClickListener { step(view, 1) }
+        // The mini bar slides in once the preview has scrolled out of sight.
+        val mini = view.findViewById<View>(R.id.mini_bar)
+        val panelBottom = { view.findViewById<View>(R.id.placed_widgets).bottom }
+        view.findViewById<android.widget.ScrollView>(R.id.editor_scroll).setOnScrollChangeListener { _, _, y, _, _ ->
+            val show = y > panelBottom()
+            if (show && mini.visibility != View.VISIBLE) {
+                mini.visibility = View.VISIBLE
+                mini.translationY = -mini.height.toFloat().coerceAtLeast(200f)
+                mini.animate().translationY(0f).setDuration(200).start()
+            } else if (!show && mini.visibility == View.VISIBLE && mini.translationY == 0f) {
+                mini.animate().translationY(-mini.height.toFloat()).setDuration(160)
+                    .withEndAction { mini.visibility = View.GONE }.start()
+            }
+        }
         val detector = android.view.GestureDetector(requireContext(), object : android.view.GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: android.view.MotionEvent) = true
             override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {

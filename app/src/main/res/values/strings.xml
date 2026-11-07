@@ -484,4 +484,6 @@
     <string name="zikr_source_off">This zikr\'s source is hidden</string>
     <string name="show_or_hide_source">Show or hide source</string>
     <string name="source_hidden_label">Source hidden</string>
+    <string name="previous_widget">Previous widget</string>
+    <string name="next_widget">Next widget</string>
 </resources>
