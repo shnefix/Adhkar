@@ -107,39 +107,6 @@ internal fun LinearLayout.addDivider() {
         .also { it.topMargin = Ui.pxi(context, 14f) })
 }
 
-/** Design C's folder chips: one row that slides sideways, opened at the selected chip. */
-internal fun <T> chipSlider(ctx: Context, options: List<Pair<T, String>>, selected: T?, onSelect: (T) -> Unit): View {
-    val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-    var selectedView: View? = null
-    options.forEach { (value, label) ->
-        val on = value == selected
-        val chip = TextView(ctx, null, 0, R.style.WidgetEditorBody).apply {
-            text = label
-            textSize = 14f
-            maxLines = 1
-            gravity = Gravity.CENTER
-            setTextColor(if (on) EditorColors.Bg else EditorColors.ChipText)
-            setTypeface(typeface, if (on) Typeface.BOLD else Typeface.NORMAL)
-            setPadding(Ui.pxi(ctx, 18f), 0, Ui.pxi(ctx, 18f), 0)
-            background = editorShape(
-                if (on) EditorColors.Gold else EditorColors.Chip, 22f, ctx,
-                if (on) EditorColors.Gold else EditorColors.ChipBorder
-            )
-            setOnClickListener { onSelect(value) }
-        }
-        if (on) selectedView = chip
-        row.addView(chip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(ctx, 44f)).also {
-            it.marginEnd = Ui.pxi(ctx, 8f)
-        })
-    }
-    return android.widget.HorizontalScrollView(ctx).apply {
-        isHorizontalScrollBarEnabled = false
-        overScrollMode = View.OVER_SCROLL_NEVER
-        addView(row)
-        post { selectedView?.let { v -> smoothScrollTo((v.left - Ui.pxi(ctx, 24f)).coerceAtLeast(0), 0) } }
-    }
-}
-
 internal fun <T> chipGroup(ctx: Context, options: List<Pair<T, String>>, selected: T?, onSelect: (T) -> Unit): View {
     val group = FlowLayout(ctx)
     options.forEach { (value, label) ->
