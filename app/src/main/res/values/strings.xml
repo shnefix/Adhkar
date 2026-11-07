@@ -497,4 +497,8 @@
     <string name="all_folders">ALL FOLDERS</string>
     <string name="search_n_folders">Search %1$d folders</string>
     <string name="no_folders_match">No folder has that name.</string>
+    <string name="widget_not_applied">Not applied</string>
+    <string name="widget_apply_changes_title">Apply changes to this widget?</string>
+    <string name="widget_apply_changes_body">Your changes to this widget haven\'t been applied to the home screen yet.</string>
+    <string name="widget_discard">Discard</string>
 </resources>

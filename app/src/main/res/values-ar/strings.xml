@@ -527,4 +527,8 @@
     <string name="all_folders">كل المجلدات</string>
     <string name="search_n_folders">ابحث في %1$d مجلدًا</string>
     <string name="no_folders_match">لا يوجد مجلد بهذا الاسم.</string>
+    <string name="widget_not_applied">غير مطبّق</string>
+    <string name="widget_apply_changes_title">تطبيق التغييرات على هذه الأداة؟</string>
+    <string name="widget_apply_changes_body">لم تُطبَّق تغييراتك على هذه الأداة في الشاشة الرئيسية بعد.</string>
+    <string name="widget_discard">تجاهل</string>
 </resources>

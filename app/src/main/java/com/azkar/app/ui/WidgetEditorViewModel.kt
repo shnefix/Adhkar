@@ -86,6 +86,12 @@ class WidgetEditorViewModel @Inject constructor(
         drafts[id]?.let { drafts[id] = it.copy(config = config) }
     }
 
+    /** True when the draft for [id] differs from what the home-screen widget currently uses. */
+    fun hasChanges(context: Context, id: Int): Boolean {
+        val placed = drafts[id] ?: return false
+        return placed.config != WidgetStore.config(context, id, placed.kind)
+    }
+
     fun reset(id: Int, context: Context) {
         val placed = drafts[id] ?: return
         drafts[id] = placed.copy(config = WidgetStore.config(context, id, placed.kind))

@@ -65,21 +65,53 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             selected?.let {
                 viewModel.apply(requireContext(), it.id)
                 setDirty(view, false)
+                peekCache.remove(it.id)
                 Toast.makeText(requireContext(), R.string.widget_applied, Toast.LENGTH_SHORT).show()
             }
         }
         selected = placed.firstOrNull { it.id == viewModel.selectedId() } ?: placed.firstOrNull()
         selected?.let { viewModel.setSelectedId(it.id) }
         activeTab = EditorTab.values().getOrElse(viewModel.activeTab()) { EditorTab.CONTENT }
-        renderChips(view, placed)
         bindSwipe(view)
+        renderChips(view, placed)
         renderTabs(view)
         render(view)
         setDirty(view, false)
     }
 
+    /** Shows "Not applied" beside Apply while the selected widget's draft differs from the home screen. */
     private fun setDirty(view: View, on: Boolean) {
         dirty = on
+        refreshApplied(view)
+    }
+
+    private fun refreshApplied(view: View) {
+        val pending = selected?.let { viewModel.hasChanges(requireContext(), it.id) } == true
+        view.findViewById<View>(R.id.not_applied).visibility = if (pending) View.VISIBLE else View.INVISIBLE
+    }
+
+    /**
+     * Before leaving a widget with unapplied edits, asks whether to apply or discard them; [go] runs after either.
+     * Cancel stays on the widget. Without edits, [go] runs straight away.
+     */
+    private fun confirmLeave(view: View, go: () -> Unit) {
+        val item = selected
+        if (item == null || !viewModel.hasChanges(requireContext(), item.id)) return go()
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.widget_apply_changes_title)
+            .setMessage(R.string.widget_apply_changes_body)
+            .setPositiveButton(R.string.apply) { _, _ ->
+                viewModel.apply(requireContext(), item.id)
+                peekCache.remove(item.id)
+                Toast.makeText(requireContext(), R.string.widget_applied, Toast.LENGTH_SHORT).show()
+                go()
+            }
+            .setNegativeButton(R.string.widget_discard) { _, _ ->
+                viewModel.reset(item.id, requireContext())
+                go()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
     }
 
     private fun render(view: View, rebuildTabContent: Boolean = true) {
@@ -115,6 +147,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             "${model.folderName} · ${model.shown} / ${model.target}"
         applyPreview(view, item, model)
         if (rebuildTabContent) renderTabContent(view)
+        refreshApplied(view)
+        prewarmPeeks(view)
     }
 
     /** Page dots under the preview: the long gold one is the widget being edited. */
@@ -148,6 +182,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             val box = FrameLayout(ctx).apply {
                 setPadding(Ui.pxi(ctx, 4f), 0, Ui.pxi(ctx, 4f), 0)
                 setOnClickListener { select(view, item.id) }
+                // The dots are part of the swipe area; a tap still selects.
+                swipeTouch?.let { setOnTouchListener(it) }
                 val wasOn = item.id == before
                 val from = Ui.pxi(ctx, if (before == null || before == selected?.id) (if (on) 18f else 6f) else if (wasOn) 18f else 6f)
                 val to = Ui.pxi(ctx, if (on) 18f else 6f)
@@ -165,6 +201,11 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
     /** [direction] 1 = next (slides in from the end), -1 = previous, 0 = no slide. */
     private fun select(view: View, id: Int, direction: Int = 0) {
+        if (id == selected?.id) return
+        confirmLeave(view) { if (isAdded) switchTo(view, id, direction) }
+    }
+
+    private fun switchTo(view: View, id: Int, direction: Int) {
         val placed = viewModel.load(requireContext())
         if (id == selected?.id) return
         val target = placed.firstOrNull { it.id == id } ?: return
@@ -234,10 +275,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             val step = if ((dx < 0) != rtl) 1 else -1
             return if (placed.getOrNull(i + step) != null) step else null
         }
-        card.setOnTouchListener { v, e ->
+        swipeTouch = View.OnTouchListener { v, e ->
             when (e.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
-                    if (settling) return@setOnTouchListener false
+                    if (settling) return@OnTouchListener false
                     downX = e.rawX; downY = e.rawY; dragging = false
                     card.animate().cancel()
                     tracker?.recycle()
@@ -278,9 +319,15 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                     val step = if (dragging && e.actionMasked == android.view.MotionEvent.ACTION_UP) neighbour(dx) else null
                     val far = Math.abs(dx) > card.width * 0.25f
                     val flick = Math.abs(vx) > minFling && (vx < 0) == (dx < 0)
-                    if (step != null && (far || flick)) {
+                    if (!dragging) {
+                        // A plain tap: dots still select their widget.
+                        if (e.actionMasked == android.view.MotionEvent.ACTION_UP && v !== card) v.performClick()
+                    } else if (step != null && (far || flick)) {
                         card.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        settle(view, step, dx < 0)
+                        if (selected?.let { viewModel.hasChanges(requireContext(), it.id) } == true) {
+                            springBack(view)
+                            confirmLeave(view) { if (isAdded) step(view, step) }
+                        } else settle(view, step, dx < 0)
                     } else {
                         springBack(view)
                     }
@@ -291,7 +338,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 else -> true
             }
         }
+        // Swipes can start on the card (with its size label), anywhere in the pager frame, or on the dots row.
+        listOf(R.id.preview_card, R.id.preview_pager, R.id.placed_widgets).forEach {
+            view.findViewById<View>(it).setOnTouchListener(swipeTouch)
+        }
     }
+
+    /** One touch handler shared by the card, the size label under it and the page dots. */
+    private var swipeTouch: View.OnTouchListener? = null
 
     /** Which neighbour the peek card currently shows (its widget id), so it is built once per drag. */
     private var peekId: Int? = null
@@ -323,6 +377,34 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         peek.alpha = 1f
     }
 
+    /** Neighbour previews drawn ahead of time, keyed by widget id; reused while the config is unchanged. */
+    private val peekCache = HashMap<Int, Pair<WidgetStore.Config, android.graphics.Bitmap?>>()
+    private var prewarm: Runnable? = null
+
+    private fun peekBitmap(item: PlacedWidget, model: WidgetModel? = null): android.graphics.Bitmap? {
+        val family = item.family ?: return null
+        peekCache[item.id]?.let { (config, bmp) -> if (config == item.config) return bmp }
+        val ctx = requireContext()
+        val (dw, dh) = AzkarWidgetSizes.design(family)
+        val bmp = try {
+            NewWidgetRenderer(ctx).render(family, model ?: WidgetModel.load(ctx, item.id, item.config.folder), dw, dh,
+                if (family.tracking) TrackingModel.load(ctx, item.config.folder) else null)
+        } catch (e: Exception) { null }
+        peekCache[item.id] = item.config to bmp
+        return bmp
+    }
+
+    /** Right after a widget is shown, draws both neighbours' previews so the first drag doesn't stutter. */
+    private fun prewarmPeeks(view: View) {
+        prewarm?.let { view.removeCallbacks(it) }
+        prewarm = Runnable {
+            if (!isAdded) return@Runnable
+            val keep = mutableSetOf<Int>()
+            listOf(-1, 1).forEach { by -> neighbourItem(by)?.let { keep += it.id; peekBitmap(it) } }
+            peekCache.keys.retainAll(keep)
+        }.also { view.postDelayed(it, 150) }
+    }
+
     private fun hidePeek(view: View) {
         view.findViewById<View>(R.id.preview_peek).apply { animate().cancel(); visibility = View.GONE; translationX = 0f }
     }
@@ -331,13 +413,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val ctx = requireContext()
         peek.removeAllViews()
         val model = WidgetModel.load(ctx, item.id, item.config.folder)
-        val family = item.family
-        val bitmap = family?.let {
-            val (dw, dh) = AzkarWidgetSizes.design(it)
-            try {
-                NewWidgetRenderer(ctx).render(it, model, dw, dh, if (it.tracking) TrackingModel.load(ctx, item.config.folder) else null)
-            } catch (e: Exception) { null }
-        }
+        val bitmap = peekBitmap(item, model)
         if (bitmap != null) {
             peek.addView(ImageView(ctx).apply {
                 scaleType = ImageView.ScaleType.FIT_CENTER

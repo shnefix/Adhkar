@@ -241,6 +241,17 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp">
         <TextView
+            android:id="@+id/not_applied"
+            style="@style/TM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="14dp"
+            android:accessibilityLiveRegion="polite"
+            android:text="@string/widget_not_applied"
+            android:textColor="@color/widget_editor_gold"
+            android:textSize="13sp"
+            android:visibility="invisible" />
+        <TextView
             android:id="@+id/btn_apply"
             style="@style/WidgetEditorButton"
             android:layout_width="wrap_content"
