@@ -493,4 +493,8 @@
     <string name="export_folder_complete">Saved «%1$s» with %2$s.</string>
     <string name="tap_left_back">Tap left side to go back</string>
     <string name="tap_left_back_summary">Tapping the left third of the card shows the previous zikr</string>
+    <string name="recent">RECENT</string>
+    <string name="all_folders">ALL FOLDERS</string>
+    <string name="search_n_folders">Search %1$d folders</string>
+    <string name="no_folders_match">No folder has that name.</string>
 </resources>

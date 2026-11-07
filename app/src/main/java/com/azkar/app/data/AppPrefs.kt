@@ -13,6 +13,7 @@ object AppPrefs {
     private const val K_SP = "arabic_sp"
     private const val K_TAP = "tap_advance"
     private const val K_TAP_BACK = "tap_left_back"
+    private const val K_RECENT_FOLDERS = "recent_folders"
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
     private const val K_COMPLETE = "completion_screen"
@@ -59,6 +60,12 @@ object AppPrefs {
     fun setTapAdvance(v: Boolean) = sp.edit().putBoolean(K_TAP, v).apply()
     /** Off by default: tapping the left side of the reading card goes back one zikr. */
     fun tapLeftBack() = sp.getBoolean(K_TAP_BACK, false)
+    /** Folder ids azkar were saved to last, newest first (at most 5). */
+    fun recentFolders(): List<String> = sp.getString(K_RECENT_FOLDERS, "").orEmpty().split(',').filter { it.isNotBlank() }
+    fun addRecentFolder(id: String) {
+        val list = (listOf(id) + recentFolders().filter { it != id }).take(5)
+        sp.edit().putString(K_RECENT_FOLDERS, list.joinToString(",")).apply()
+    }
     fun setTapLeftBack(v: Boolean) = sp.edit().putBoolean(K_TAP_BACK, v).apply()
     fun keepScreenOn() = sp.getBoolean(K_AWAKE, true)
     fun setKeepScreenOn(v: Boolean) = sp.edit().putBoolean(K_AWAKE, v).apply()

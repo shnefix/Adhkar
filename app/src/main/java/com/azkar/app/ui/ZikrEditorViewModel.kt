@@ -12,7 +12,10 @@ class ZikrEditorViewModel @Inject constructor() : ViewModel() {
     fun zikr(id: String): Zikr? = Store.zikr(id)
     fun isHidden(id: String) = id in Store.hiddenZikrs()
     fun setHidden(id: String, hide: Boolean) = Store.setZikrsHidden(listOf(id), hide)
-    fun update(zikr: Zikr) = Store.updateZikr(zikr)
+    fun update(zikr: Zikr) {
+        Store.updateZikr(zikr)
+        zikr.folderId?.let { com.azkar.app.data.AppPrefs.addRecentFolder(it) }
+    }
     fun delete(id: String) = Store.deleteZikr(id)
 
     /**
@@ -35,5 +38,6 @@ class ZikrEditorViewModel @Inject constructor() : ViewModel() {
             else (Store.folders().firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Store.addFolder(name)).id
         } else folderSel
         Store.addZikr(arabic, "", repeat, folderId, title, titlePos, titleBelow)
+        folderId?.let { com.azkar.app.data.AppPrefs.addRecentFolder(it) }
     }
 }

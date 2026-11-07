@@ -523,4 +523,8 @@
     <string name="export_folder_complete">تم حفظ «%1$s» مع %2$s.</string>
     <string name="tap_left_back">النقر على اليسار للرجوع</string>
     <string name="tap_left_back_summary">النقر على الثلث الأيسر من البطاقة يعرض الذكر السابق</string>
+    <string name="recent">الأخيرة</string>
+    <string name="all_folders">كل المجلدات</string>
+    <string name="search_n_folders">ابحث في %1$d مجلدًا</string>
+    <string name="no_folders_match">لا يوجد مجلد بهذا الاسم.</string>
 </resources>

@@ -12,7 +12,7 @@ import com.azkar.app.data.TitlePos
 
 /**
  * Shared behaviour of the Add zikr and Edit zikr screens:
- * repeat stepper and folder chips.
+ * repeat stepper and the folder row.
  */
 class ZikrForm(
     private val view: View,
@@ -174,30 +174,19 @@ class ZikrForm(
         view.findViewById<View>(R.id.btn_dec).isEnabled = n > 1
     }
 
+    /** The one-row folder control; a tap opens [FolderSheet]. */
     fun renderChips() {
         val ctx = view.context
-        val chips = view.findViewById<FlowLayout>(R.id.chips)
-
-        chips.removeAllViews()
-
-        val choices = Store.folders().map {
-            it.id to ((it.icon?.let { e -> "$e " } ?: "") + it.name)
+        val name = when (val k = sel) {
+            "new" -> ctx.getString(R.string.new_folder)
+            null -> ctx.getString(R.string.anytime)
+            else -> Store.folders().firstOrNull { it.id == k }?.let { (it.icon?.let { e -> "$e " } ?: "") + it.name }
+                ?: ctx.getString(R.string.anytime)
         }
-
-        choices.forEach { (k, label) ->
-            chips.addView(
-                Ui.chip(ctx, label, sel == k, false) {
-                    sel = k
-                }
-            )
-        }
-
-        if (allowNew) {
-            chips.addView(
-                Ui.chip(ctx, ctx.getString(R.string.new_folder_chip), sel == "new", true) {
-                    sel = "new"
-                }
-            )
+        view.findViewById<android.widget.TextView>(R.id.folder_name).text = name
+        view.findViewById<View>(R.id.folder_row).apply {
+            contentDescription = ctx.getString(R.string.save_to_folder) + ": " + name
+            setOnClickListener { FolderSheet.show(ctx, sel, allowNew) { picked -> sel = picked } }
         }
     }
 }

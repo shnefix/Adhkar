@@ -19,7 +19,9 @@ class AddZikrFragment : Fragment(R.layout.fragment_add_zikr) {
         val newName = view.findViewById<EditText>(R.id.newname)
         val form = ZikrForm(view, allowNew = true) { newBox.visibility = if (it == "new") View.VISIBLE else View.GONE }
         form.n = 1
-        form.sel = arguments?.getString("folder") ?: "new"
+        form.sel = arguments?.getString("folder")
+            ?: com.azkar.app.data.AppPrefs.recentFolders().firstOrNull { id -> com.azkar.app.data.Store.folders().any { it.id == id } }
+            ?: "new"
 
         view.findViewById<View>(R.id.btn_close).setOnClickListener { nav().pop() }
         view.findViewById<View>(R.id.btn_save).setOnClickListener {
