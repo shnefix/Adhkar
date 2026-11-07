@@ -22,7 +22,6 @@ import com.azkar.app.reminders.LocationUpdater
 import com.azkar.app.ui.HandlesOwnInsets
 import com.azkar.app.ui.HomeFragment
 import com.azkar.app.ui.LibraryFragment
-import com.azkar.app.ui.MyAzkarFragment
 import com.azkar.app.ui.ReaderFragment
 import com.azkar.app.ui.Tab
 import com.azkar.app.ui.safeBottom
@@ -160,7 +159,7 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.popBackStack()
     }
 
-    /** The last zikr of a collection was finished: back to the tab it was opened from (Home, Library or My Azkar). */
+    /** The last zikr of a collection was finished: back to the tab it was opened from (Home or Library). */
     fun finishReading() {
         showRoot(rootOf(currentTab))
     }
@@ -171,7 +170,6 @@ class MainActivity : AppCompatActivity() {
     private fun rootOf(tab: Tab): Fragment = when (tab) {
         Tab.HOME -> HomeFragment()
         Tab.LIBRARY -> LibraryFragment()
-        Tab.MY -> MyAzkarFragment()
     }
     /** Resets the back stack and shows Home. */
     fun goHome() {

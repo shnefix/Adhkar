@@ -247,6 +247,7 @@
     <string name="library">Library</string>
     <string name="search_folders">Search folders</string>
     <string name="my_azkar">My azkar</string>
+    <string name="folder_options">Folder options</string>
     <string name="import_label">Import</string>
     <string name="export_label">Export</string>
     <string name="my_folders">My folders</string>

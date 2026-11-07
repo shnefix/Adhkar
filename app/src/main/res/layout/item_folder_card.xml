@@ -13,6 +13,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
     <LinearLayout
         android:gravity="center"
         android:background="@drawable/bg_icon20"
@@ -34,6 +38,23 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/menu"
+        android:src="@drawable/ic_more_v"
+        android:contentDescription="@string/folder_options"
+        android:visibility="gone"
+        android:padding="10dp"
+        android:layout_marginTop="-8dp"
+        android:layout_marginEnd="-12dp"
+        android:layout_gravity="top|end"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        app:tint="@color/muted"/>
+    </FrameLayout>
 
     <View
         android:layout_width="match_parent"

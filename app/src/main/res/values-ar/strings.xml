@@ -251,6 +251,7 @@
     <string name="library">المكتبة</string>
     <string name="search_folders">البحث في المجلدات</string>
     <string name="my_azkar">أذكاري</string>
+    <string name="folder_options">خيارات المجلد</string>
     <string name="import_label">استيراد</string>
     <string name="export_label">تصدير</string>
     <string name="my_folders">مجلداتي</string>

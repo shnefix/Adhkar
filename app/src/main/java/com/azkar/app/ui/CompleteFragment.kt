@@ -23,7 +23,6 @@ class CompleteFragment : Fragment(R.layout.fragment_complete) {
             setText(when (nav().readingTab) {
                 Tab.HOME -> R.string.back_to_home
                 Tab.LIBRARY -> R.string.back_to_library
-                Tab.MY -> R.string.back_to_my_azkar
             })
             setOnClickListener { nav().pop() }
         }

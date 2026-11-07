@@ -17,10 +17,10 @@ import com.azkar.app.R
 /** "1 zikr" / "5 azkar", with Arabic's own plural forms on an Arabic phone. */
 fun azkarCount(ctx: android.content.Context, n: Int): String = ctx.resources.getQuantityString(R.plurals.azkar_count, n, n)
 
-/** One folder card (Library and My azkar). [isNew] draws the dashed "New folder" card. */
+/** One folder card (Library). [isNew] draws the dashed "New folder" card. */
 data class Card(
     val id: String, val name: String, val count: String, val emoji: String?, val vector: Int,
-    val tint: Int, val isNew: Boolean, val onClick: () -> Unit
+    val tint: Int, val isNew: Boolean, val onMenu: (() -> Unit)? = null, val onClick: () -> Unit
 )
 
 private val ARABIC = Regex("[\u0600-\u06FF]")
@@ -28,17 +28,19 @@ private val ARABIC = Regex("[\u0600-\u06FF]")
 class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCallback<Card>() {
     override fun areItemsTheSame(a: Card, b: Card) = a.id == b.id
     override fun areContentsTheSame(a: Card, b: Card) =
-        a.name == b.name && a.count == b.count && a.emoji == b.emoji && a.vector == b.vector && a.tint == b.tint && a.isNew == b.isNew
+        a.name == b.name && a.count == b.count && a.emoji == b.emoji && a.vector == b.vector && a.tint == b.tint && a.isNew == b.isNew && (a.onMenu == null) == (b.onMenu == null)
 }) {
     inner class VH(v: View) : RecyclerView.ViewHolder(v) {
         val ic: ImageView = v.findViewById(R.id.ic)
         val emoji: TextView = v.findViewById(R.id.emoji)
         val name: TextView = v.findViewById(R.id.name)
         val count: TextView = v.findViewById(R.id.count)
+        val menu: View = v.findViewById(R.id.menu)
         val amiri = Ui.font(v.context, R.font.amiri_regular)
         val dmBold = Ui.font(v.context, R.font.dm_sans_bold)
         init {
             v.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) getItem(p).onClick() }
+            menu.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) getItem(p).onMenu?.invoke() }
         }
     }
 
@@ -54,6 +56,7 @@ class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCall
         h.name.text = c.name
         h.name.setTextColor(ctx.getColor(if (c.isNew) R.color.gold else R.color.text))
         h.count.text = c.count
+        h.menu.visibility = if (c.onMenu != null) View.VISIBLE else View.GONE
         h.count.visibility = if (c.count.isEmpty()) View.GONE else View.VISIBLE
         // Views are recycled: every property is set in both branches.
         if (!c.isNew && ARABIC.containsMatchIn(c.name)) {
