@@ -24,7 +24,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
         bindNav(view, Tab.HOME)
-        view.findViewById<View>(R.id.btn_widgets).setOnClickListener { nav().push(WidgetEditorFragment()) }
+        view.findViewById<View>(R.id.btn_widgets).setOnClickListener { nav().openTab(Tab.WIDGETS) }
         view.findViewById<View>(R.id.btn_notifications).setOnClickListener { nav().push(RemindersFragment()) }
         view.findViewById<View>(R.id.btn_settings).setOnClickListener { nav().push(SettingsFragment()) }
         view.findViewById<View>(R.id.btn_customize).setOnClickListener { nav().push(CustomizeHomeFragment()) }

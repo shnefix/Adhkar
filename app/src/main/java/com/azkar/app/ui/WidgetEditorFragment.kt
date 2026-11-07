@@ -30,7 +30,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
-class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
+class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesOwnInsets {
     private val viewModel: WidgetEditorViewModel by viewModels()
     private var selected: PlacedWidget? = null
     private var activeTab = EditorTab.CONTENT
@@ -48,7 +48,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor) {
         EditorColors.load(requireContext())
         Store.init(requireContext())
         val placed = viewModel.load(requireContext())
-        view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
+        // A bottom-bar tab now: no back arrow.
+        view.findViewById<View>(R.id.btn_back).visibility = View.GONE
+        bindNav(view, Tab.WIDGETS)
+        bindNavInsets(view, view.findViewById(R.id.editor_content))
         view.findViewById<View>(R.id.btn_choose_widget).setOnClickListener {
             picker?.release()
             picker = WidgetPickerDialog(requireContext(), viewModel).also { it.show() }

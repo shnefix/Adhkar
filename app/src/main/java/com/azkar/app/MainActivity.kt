@@ -170,6 +170,7 @@ class MainActivity : AppCompatActivity() {
     private fun rootOf(tab: Tab): Fragment = when (tab) {
         Tab.HOME -> HomeFragment()
         Tab.LIBRARY -> LibraryFragment()
+        Tab.WIDGETS -> com.azkar.app.ui.WidgetEditorFragment()
     }
     /** Resets the back stack and shows Home. */
     fun goHome() {

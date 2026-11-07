@@ -10,5 +10,9 @@
 <ImageView android:importantForAccessibility="no" android:src="@drawable/ic_book_1p75" android:layout_width="24dp" android:layout_height="24dp" app:tint="@color/muted" android:id="@+id/nav_library_ic"/>
 <TextView style="@style/TM" android:text="@string/library" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_library_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
+<LinearLayout android:orientation="vertical" android:id="@+id/nav_widgets" android:layout_weight="1" android:layout_width="0dp" android:layout_height="match_parent" android:gravity="center" android:clickable="true" android:focusable="true" android:minHeight="44dp">
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_widgets_1p75" android:layout_width="24dp" android:layout_height="24dp" app:tint="@color/muted" android:id="@+id/nav_widgets_ic"/>
+<TextView style="@style/TM" android:text="@string/widgets" android:textSize="12sp" android:textColor="@color/muted" android:id="@+id/nav_widgets_tx" android:layout_marginTop="4dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
 </LinearLayout>
 </LinearLayout>

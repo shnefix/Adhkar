@@ -21,7 +21,7 @@ class CompleteFragment : Fragment(R.layout.fragment_complete) {
         }
         view.findViewById<TextView>(R.id.btn_home).apply {
             setText(when (nav().readingTab) {
-                Tab.HOME -> R.string.back_to_home
+                Tab.HOME, Tab.WIDGETS -> R.string.back_to_home
                 Tab.LIBRARY -> R.string.back_to_library
             })
             setOnClickListener { nav().pop() }

@@ -9,7 +9,8 @@ import com.azkar.app.R
 
 enum class Tab(val root: Int, val ic: Int, val tx: Int) {
     HOME(R.id.nav_home, R.id.nav_home_ic, R.id.nav_home_tx),
-    LIBRARY(R.id.nav_library, R.id.nav_library_ic, R.id.nav_library_tx)
+    LIBRARY(R.id.nav_library, R.id.nav_library_ic, R.id.nav_library_tx),
+    WIDGETS(R.id.nav_widgets, R.id.nav_widgets_ic, R.id.nav_widgets_tx)
 }
 
 /** Colours the bottom bar for [active] (gold + bold) and wires tab switching. */
