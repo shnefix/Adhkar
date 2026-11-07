@@ -73,7 +73,7 @@ class WidgetModel(
             }
             return WidgetModel(
                 Store.folderName(folder), items, labels, idx, cnt,
-                DateFormat.format("EEE, d MMM", Date()).toString()
+                DateFormat.format(DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "EEEdMMM"), Date()).toString()
             )
         }
     }

@@ -64,7 +64,7 @@ object WidgetStore {
             null
         }
             ?.takeIf { kind in it.kinds } ?: defaultStyle(kind)
-        val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: "anytime"
+        val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: Store.ANYTIME
         return Config(style, folder, Appearance(
             fontSizeSp = s.getFloat("font_size_$id", 28f),
             lineHeight = s.getFloat("line_height_$id", 1.5f),

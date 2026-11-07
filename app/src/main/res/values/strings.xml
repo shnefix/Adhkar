@@ -501,4 +501,11 @@
     <string name="widget_apply_changes_title">Apply changes to this widget?</string>
     <string name="widget_apply_changes_body">Your changes to this widget haven\'t been applied to the home screen yet.</string>
     <string name="widget_discard">Discard</string>
+    <string name="zikr_source_toggle">Add a source</string>
+    <string name="zikr_source_toggle_summary">Where this zikr comes from, shown on its source page while reading</string>
+    <string name="zikr_source_reference_hint">Reference (book or surah), e.g. Sahih Muslim</string>
+    <string name="zikr_source_detail_hint">Chapter or hadith number</string>
+    <string name="zikr_source_narrator_hint">Narrator</string>
+    <string name="zikr_source_when_hint">When to say it</string>
+    <string name="zikr_source_grade_hint">Grade, e.g. Sahih</string>
 </resources>

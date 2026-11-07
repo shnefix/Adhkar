@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Compatibility facade over Room content and lightweight SharedPreferences settings. */
 object Store {
+    /** Reader/widget key for azkar saved without a folder. */
+    const val ANYTIME = "anytime"
+
     private lateinit var sp: SharedPreferences
     private lateinit var appCtx: Context
 
@@ -401,17 +404,18 @@ object Store {
     fun zikrCounts(): Map<String?, Int> = zCache.groupingBy { it.folderId }.eachCount()
 
     @Synchronized
-    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titlePos: TitlePos = TitlePos.ABOVE, titleBelow: String = ""): Zikr {
+    fun addZikr(arabic: String, note: String, repeat: Int, folderId: String?, title: String = "", titlePos: TitlePos = TitlePos.ABOVE, titleBelow: String = "", source: ZikrSource = ZikrSource()): Zikr {
         zCache.firstOrNull { it.arabic == arabic && it.folderId == folderId }?.let {
             val merged = it.copy(
                 note = note.ifBlank { it.note }, repeat = repeat,
                 title = title.ifBlank { it.title }, titlePos = if (title.isBlank()) it.titlePos else titlePos,
-                titleBelow = if (title.isBlank()) it.titleBelow else titleBelow
+                titleBelow = if (title.isBlank()) it.titleBelow else titleBelow,
+                source = if (source.isEmpty) it.source else source
             )
             updateZikr(merged)
             return merged
         }
-        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titlePos, titleBelow = titleBelow)
+        val z = Zikr(UUID.randomUUID().toString(), arabic, note, repeat, folderId, title, titlePos, source, titleBelow)
         saveZikrs(zCache + z)
         return z
     }
@@ -647,11 +651,11 @@ object Store {
         if (key.startsWith("zikr:")) {
             return zikr(key.removePrefix("zikr:"))?.let { listOf(ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source, it.titleBelow)) } ?: emptyList()
         }
-        val src = if (key == "anytime") zCache.filter { it.folderId == null } else zikrsIn(key)
+        val src = if (key == ANYTIME) zCache.filter { it.folderId == null } else zikrsIn(key)
         return Visibility.visible(src, hzCache).map { ReaderItem(it.arabic, it.repeat, it.id, it.title, it.titlePos, it.note, it.source, it.titleBelow) }
     }
 
-    fun readerKey(z: Zikr): String = z.folderId ?: "anytime"
+    fun readerKey(z: Zikr): String = z.folderId ?: ANYTIME
 
     fun readerIndex(z: Zikr): Int {
         val src = if (z.folderId == null) zCache.filter { it.folderId == null } else zikrsIn(z.folderId)

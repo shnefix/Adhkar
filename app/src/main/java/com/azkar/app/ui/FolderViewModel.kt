@@ -27,7 +27,7 @@ data class FolderState(
     val exists: Boolean get() = id == ANYTIME || folder != null || Store.folder(id) != null
 
     companion object {
-        const val ANYTIME = "anytime"
+        const val ANYTIME = Store.ANYTIME
     }
 }
 

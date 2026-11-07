@@ -117,7 +117,7 @@ class WidgetRenderer(ctx: Context) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
         val leftR = r - 84f - 14f
-        text(c, "${m.folderName.uppercase()} · ${m.position} OF ${m.n}", l, t + 6, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, leftR - l)
+        text(c, "${m.folderName.uppercase()} · ${strings.countOf(m.position, m.n)}", l, t + 6, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, leftR - l)
         arabic(c, m.cur!!.arabic, l, t + 16, leftR, b, 24f, 1.6f, TEXT, true, Layout.Alignment.ALIGN_CENTER, V.BOTTOM)
         val cx = r - 42f
         val top = h / 2f - 48f
@@ -154,7 +154,7 @@ class WidgetRenderer(ctx: Context) {
     private fun checklistMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 15f
-        text(c, "${m.folderName.uppercase()} AZKAR", l, t + 9, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 50)
+        text(c, m.folderName.uppercase(), l, t + 9, 10f, GOLD, dmBold, Paint.Align.LEFT, 0.1f, r - l - 50)
         counterText(c, "${m.done} / ${m.n}", r, t + 9, 11f, MUTED, dmReg, Paint.Align.RIGHT)
         val shown = min(3, m.n)
         val start = (m.curIdx - 1).coerceIn(0, m.n - shown)
@@ -257,7 +257,7 @@ class WidgetRenderer(ctx: Context) {
     private fun calligraphyMedium(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         card(c, w, h, CARD_BORDER)
         val l = 17f; val r = w - 17f; val t = 17f; val b = h - 17f
-        text(c, "${m.folderName.uppercase()} · ${m.position} OF ${m.n}", w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f, r - l)
+        text(c, "${m.folderName.uppercase()} · ${strings.countOf(m.position, m.n)}", w / 2, t + 6, 10f, GOLD, dmBold, Paint.Align.CENTER, 0.12f, r - l)
         if (m.n <= 24) segments(c, l, b - 3f, r, 3f, m.n, m.done) else bar(c, l, b - 3f, r, 3f, m.done / m.n.toFloat())
         arabic(c, m.cur!!.arabic, l, t + 20, r, b - 13f, 31f, 1.4f, TEXT)
     }

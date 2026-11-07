@@ -9,6 +9,7 @@ import android.widget.EditText
 import com.azkar.app.R
 import com.azkar.app.data.Store
 import com.azkar.app.data.TitlePos
+import com.azkar.app.data.ZikrSource
 
 /**
  * Shared behaviour of the Add zikr and Edit zikr screens:
@@ -69,6 +70,33 @@ class ZikrForm(
         renderTitle()
     }
 
+    // Optional source, off by default: fills the reader's source page.
+    private val sourceSwitch: ToggleSwitch = view.findViewById(R.id.sw_zikr_source)
+    private val sourceBox: View = view.findViewById(R.id.zikr_source_box)
+    private val srcReference: EditText = view.findViewById(R.id.src_reference)
+    private val srcDetail: EditText = view.findViewById(R.id.src_detail)
+    private val srcNarrator: EditText = view.findViewById(R.id.src_narrator)
+    private val srcWhen: EditText = view.findViewById(R.id.src_when)
+    private val srcGrade: EditText = view.findViewById(R.id.src_grade)
+
+    /** The source to save: empty while the switch is off. */
+    val source: ZikrSource
+        get() = if (!sourceSwitch.on) ZikrSource() else ZikrSource(
+            srcReference.text.toString().trim(), srcDetail.text.toString().trim(),
+            srcNarrator.text.toString().trim(), srcWhen.text.toString().trim(), srcGrade.text.toString().trim()
+        )
+
+    /** Fills the source fields; the switch starts on only when there is a source. */
+    fun setSource(s: ZikrSource) {
+        srcReference.setText(s.reference)
+        srcDetail.setText(s.detail)
+        srcNarrator.setText(s.narrator)
+        srcWhen.setText(s.whenToSay)
+        srcGrade.setText(s.grade)
+        sourceSwitch.on = !s.isEmpty
+        sourceBox.visibility = if (sourceSwitch.on) View.VISIBLE else View.GONE
+    }
+
     private fun renderTitle() {
         titleBox.visibility = if (titleSwitch.on) View.VISIBLE else View.GONE
         val both = pos == TitlePos.BOTH
@@ -112,6 +140,11 @@ class ZikrForm(
             if (on) titleInput.requestFocus()
         }
         renderTitle()
+
+        sourceSwitch.onToggle = { on ->
+            sourceBox.visibility = if (on) View.VISIBLE else View.GONE
+            if (on) srcReference.requestFocus()
+        }
 
         view.findViewById<View>(R.id.btn_dec).setOnClickListener {
             n = n - 1

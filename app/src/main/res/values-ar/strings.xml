@@ -531,4 +531,11 @@
     <string name="widget_apply_changes_title">تطبيق التغييرات على هذه الأداة؟</string>
     <string name="widget_apply_changes_body">لم تُطبَّق تغييراتك على هذه الأداة في الشاشة الرئيسية بعد.</string>
     <string name="widget_discard">تجاهل</string>
+    <string name="zikr_source_toggle">إضافة مصدر</string>
+    <string name="zikr_source_toggle_summary">من أين جاء هذا الذكر، يظهر في صفحة المصدر أثناء القراءة</string>
+    <string name="zikr_source_reference_hint">المرجع (كتاب أو سورة)، مثل صحيح مسلم</string>
+    <string name="zikr_source_detail_hint">الباب أو رقم الحديث</string>
+    <string name="zikr_source_narrator_hint">الراوي</string>
+    <string name="zikr_source_when_hint">متى يُقال</string>
+    <string name="zikr_source_grade_hint">الدرجة، مثل صحيح</string>
 </resources>

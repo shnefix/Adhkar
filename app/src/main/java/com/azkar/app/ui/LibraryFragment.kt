@@ -94,10 +94,13 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
             object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
                     view.viewTreeObserver.removeOnPreDrawListener(this)
-                    android.util.Log.d(
-                        "AzkarPerf",
-                        "Library first frame: ${SystemClock.elapsedRealtime() - t0} ms"
-                    )
+                    // Debug builds only: release builds shouldn't spam logcat.
+                    if (view.context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+                        android.util.Log.d(
+                            "AzkarPerf",
+                            "Library first frame: ${SystemClock.elapsedRealtime() - t0} ms"
+                        )
+                    }
                     return true
                 }
             }
@@ -137,7 +140,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
         if (anytime > 0 && (query.isEmpty() || getString(R.string.anytime).lowercase().contains(query))) {
             list.add(
                 Card(
-                    "anytime",
+                    Store.ANYTIME,
                     getString(R.string.anytime),
                     azkarCount(ctx, anytime),
                     null,
@@ -145,7 +148,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
                     gold,
                     false
                 ) {
-                    nav().push(FolderFragment.of("anytime"))
+                    nav().push(FolderFragment.of(Store.ANYTIME))
                 }
             )
         }
