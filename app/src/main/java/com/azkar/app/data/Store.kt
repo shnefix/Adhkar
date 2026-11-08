@@ -630,7 +630,7 @@ object Store {
 
     /** One folder and its azkar only, in the same format, so it can be shared or imported elsewhere. */
     suspend fun exportFolderJsonAsync(folderId: String): String = withContext(Dispatchers.Default) {
-        val folder = fCache.first { it.id == folderId }
+        val folder = fCache.firstOrNull { it.id == folderId } ?: error("Folder no longer exists")
         ExportJson.folder(folder, zCache.filter { it.folderId == folderId })
     }
 

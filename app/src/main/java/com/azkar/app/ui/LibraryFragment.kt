@@ -31,6 +31,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private const val K_EXPORT_FOLDER = "export_folder_id"
+
 @AndroidEntryPoint
 class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     private val viewModel: AzkarContentViewModel by viewModels()
@@ -52,6 +54,13 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         t0 = SystemClock.elapsedRealtime()
+        // The file picker may outlive this fragment (rotation, low memory): keep which folder was being exported.
+        exportFolderId = savedInstanceState?.getString(K_EXPORT_FOLDER)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(K_EXPORT_FOLDER, exportFolderId)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
