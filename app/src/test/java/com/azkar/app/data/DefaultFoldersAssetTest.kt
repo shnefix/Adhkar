@@ -31,8 +31,15 @@ class DefaultFoldersAssetTest {
 
     @Test
     fun addedAzkarHaveSourcesAndNoDuplicatesInAFolder() {
-        val added = parsed.folders.filter { it.id in DefaultFolders.ADDED_IN_V8 }
-        assertEquals(643, added.sumOf { it.items.size })
+        val added = parsed.folders.filter { it.id in DefaultFolders.ADDED_IN_V8 || it.id in DefaultFolders.ADDED_IN_V13 }
+        // 643 from version 8, 4 more in كفارة المجلس and 801 in the new folders from version 13.
+        assertEquals(643 + 4 + 801, added.sumOf { it.items.size })
+        assertTrue(DefaultFolders.ADDED_IN_V13.all { id -> parsed.folders.any { it.id == id } })
+        // Every dua added to an existing folder in version 13 is really in that folder's file entry.
+        DefaultFolders.ADDED_TO_EXISTING_IN_V13.forEach { (id, texts) ->
+            val inFile = parsed.folders.first { it.id == id }.items.map { it.text }.toSet()
+            assertTrue(id, texts.all { it in inFile })
+        }
         added.forEach { f ->
             // A zikr with no source has none at all, not a "no source found" placeholder.
             f.items.forEach {

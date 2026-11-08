@@ -508,4 +508,6 @@
     <string name="zikr_source_narrator_hint">Narrator</string>
     <string name="zikr_source_when_hint">When to say it</string>
     <string name="zikr_source_grade_hint">Grade, e.g. Sahih</string>
+    <string name="focus_mode">Focus mode</string>
+    <string name="focus_mode_summary">While reading, show only the zikr and the counting ring: no title, back button, numbers, source or slider (press back twice to leave)</string>
 </resources>

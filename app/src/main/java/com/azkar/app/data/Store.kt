@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 12
+    private const val DEFAULTS_VERSION = 13
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -204,6 +204,7 @@ object Store {
         if (!fresh && from < 10) fillDefaultSources(p)
         if (!fresh && from < 11) clearPlaceholderSources()
         if (!fresh && from < 12) addShortAzkarAndPraised(p)
+        if (!fresh && from < 13) addBookDuas(p)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -301,6 +302,22 @@ object Store {
                 DefaultFolders.HOME -> f.takeIf { folder(DefaultFolders.HOME) != null }
                     ?.copy(items = f.items.filter { it.text in DefaultFolders.ADDED_TO_HOME_IN_V12 })
                 DefaultFolders.PRAISED -> f
+                else -> null
+            }
+        }
+        mergeDefaults(p.copy(folders = folders))
+    }
+
+    /**
+     * Version 13: the topic folders built from five dua books (they start hidden from Home, like other added
+     * defaults), plus their duas that belong in existing folders. A folder the user deleted doesn't come back.
+     */
+    private fun addBookDuas(p: ImportJson.Parsed.Ok) {
+        val folders = p.folders.mapNotNull { f ->
+            val toExisting = DefaultFolders.ADDED_TO_EXISTING_IN_V13[f.id]
+            when {
+                f.id in DefaultFolders.ADDED_IN_V13 -> f
+                toExisting != null -> f.takeIf { folder(f.id!!) != null }?.copy(items = f.items.filter { it.text in toExisting })
                 else -> null
             }
         }

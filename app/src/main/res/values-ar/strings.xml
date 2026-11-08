@@ -538,4 +538,6 @@
     <string name="zikr_source_narrator_hint">الراوي</string>
     <string name="zikr_source_when_hint">متى يُقال</string>
     <string name="zikr_source_grade_hint">الدرجة، مثل صحيح</string>
+    <string name="focus_mode">وضع التركيز</string>
+    <string name="focus_mode_summary">أثناء القراءة، يظهر الذكر ودائرة العدّ فقط: بلا عنوان ولا زر رجوع ولا أرقام ولا مصدر ولا شريط (اضغط رجوع مرتين للخروج)</string>
 </resources>

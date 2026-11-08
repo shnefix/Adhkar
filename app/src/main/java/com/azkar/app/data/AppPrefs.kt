@@ -16,6 +16,7 @@ object AppPrefs {
     private const val K_RECENT_FOLDERS = "recent_folders"
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
+    private const val K_FOCUS = "reader_focus"
     private const val K_COMPLETE = "completion_screen"
     private const val K_SOURCES = "sources_on"
     private const val K_SRC_OFF_FOLDERS = "sources_off_folders"   // folder ids whose sources are hidden
@@ -72,6 +73,9 @@ object AppPrefs {
     /** The reader's progress bar has a handle to drag to another zikr (off: the plain segment bar). */
     fun readerSlider() = sp.getBoolean(K_SLIDER, true)
     fun setReaderSlider(v: Boolean) = sp.edit().putBoolean(K_SLIDER, v).apply()
+    /** Focus mode: the reader shows only the card and the counting ring (no numbers, source or slider). */
+    fun focusMode() = sp.getBoolean(K_FOCUS, false)
+    fun setFocusMode(v: Boolean) = sp.edit().putBoolean(K_FOCUS, v).apply()
     /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
     fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
     fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()

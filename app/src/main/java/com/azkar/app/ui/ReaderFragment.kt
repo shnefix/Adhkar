@@ -98,13 +98,23 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val titleBelow = view.findViewById<TextView>(R.id.title_below)
         val note = view.findViewById<TextView>(R.id.note)
         val arScroll = view.findViewById<ScrollView>(R.id.ar_scroll)
-        val segs = view.findViewById<ReaderScrubber>(R.id.segs).apply { slider = AppPrefs.readerSlider() }
+        val focus = AppPrefs.focusMode()
+        val segs = view.findViewById<ReaderScrubber>(R.id.segs).apply {
+            slider = AppPrefs.readerSlider()
+            if (focus) visibility = View.GONE
+        }
         val ring = view.findViewById<RingView>(R.id.ring).apply { isHapticFeedbackEnabled = false }
         val countTv = view.findViewById<TextView>(R.id.count)
         val sub = view.findViewById<TextView>(R.id.sub)
         val hint = view.findViewById<TextView>(R.id.hint)
         val pos = view.findViewById<TextView>(R.id.pos)
         val titleTv = view.findViewById<TextView>(R.id.title)
+        // Focus mode: no folder title and no back button either (the phone's back gesture still leaves).
+        // The source page can't be opened in focus mode, so they never need to come back while reading.
+        if (focus) {
+            titleTv.visibility = View.INVISIBLE
+            view.findViewById<View>(R.id.btn_back).visibility = View.INVISIBLE
+        }
         val swipe = view as SwipeLayout
         val flipArea = view.findViewById<View>(R.id.flip_area).apply { cameraDistance = 8000 * d }
         val front = view.findViewById<View>(R.id.front)
@@ -123,12 +133,24 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         var showingSource = false
         var shownIndex = -1
 
+        /** [text] with the parts that repeat the zikr [zikr] in gold (none when [zikr] is blank). */
+        fun marked(text: String, zikr: String): CharSequence {
+            if (zikr.isBlank()) return text
+            val ranges = com.azkar.app.data.SourceHighlight.ranges(text, zikr)
+            if (ranges.isEmpty()) return text
+            return android.text.SpannableString(text).apply {
+                ranges.forEach { r ->
+                    setSpan(android.text.style.ForegroundColorSpan(ctx.getColor(R.color.gold)), r.first, r.last + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        }
+
         /** One card on the source page: a gold label, the value, and an optional muted second line. */
-        fun infoCard(label: Int, value: String, extra: String = "") = LinearLayout(ctx).apply {
+        fun infoCard(label: Int, value: CharSequence, extra: CharSequence = "") = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 20f)
             setPadding(Ui.pxi(ctx, 18f), Ui.pxi(ctx, 16f), Ui.pxi(ctx, 18f), Ui.pxi(ctx, 16f))
-            fun line(text: String, sp: Float, color: Int, bold: Boolean, top: Float) = TextView(ctx, null, 0, if (bold) R.style.TB else R.style.T).apply {
+            fun line(text: CharSequence, sp: Float, color: Int, bold: Boolean, top: Float) = TextView(ctx, null, 0, if (bold) R.style.TB else R.style.T).apply {
                 this.text = text; textSize = sp; setTextColor(ctx.getColor(color))
                 textDirection = View.TEXT_DIRECTION_RTL
                 textAlignment = View.TEXT_ALIGNMENT_VIEW_START
@@ -158,7 +180,11 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             val gap = Ui.pxi(ctx, 12f)
             fun add(v: View) = srcCards.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (srcCards.childCount > 0) topMargin = gap })
             if (s.reference.isNotBlank() || s.detail.isNotBlank())
-                add(infoCard(R.string.source_reference, s.reference.ifBlank { s.detail }, if (s.reference.isNotBlank()) s.detail else ""))
+                add(infoCard(
+                    R.string.source_reference,
+                    if (s.reference.isNotBlank()) s.reference else marked(s.detail, it.arabic),
+                    if (s.reference.isNotBlank()) marked(s.detail, it.arabic) else ""
+                ))
             if (s.whenToSay.isNotBlank()) add(infoCard(R.string.source_when, s.whenToSay))
             srcChips.removeAllViews()
             if (s.grade.isNotBlank()) srcChips.addView(chip(s.grade, true))
@@ -174,7 +200,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             sourcePage.visibility = if (back) View.VISIBLE else View.GONE
             swipe.paused = back
             titleTv.text = if (back) arRes.getString(R.string.source_title) else folderTitle
-            pos.text = if (back) arRes.getString(R.string.source_position, rn.index + 1, items.size)
+            pos.visibility = if (focus && !back) View.GONE else View.VISIBLE
+            // Arabic words, English digits («الذكر 6 من 37»), like the numbers in the references below.
+            pos.text = if (back) String.format(java.util.Locale.US, arRes.getString(R.string.source_position), rn.index + 1, items.size)
                 else getString(R.string.reader_position, rn.index + 1, items.size)
         }
 
@@ -218,16 +246,18 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 flipArea.rotationY = 0f
                 showSide(false)
             }
-            sourceBtn.visibility = if (cur.source.isEmpty || !AppPrefs.showsSource(cur.id, Store.zikr(cur.id)?.folderId)) View.GONE else View.VISIBLE
+            sourceBtn.visibility = if (focus || cur.source.isEmpty || !AppPrefs.showsSource(cur.id, Store.zikr(cur.id)?.folderId)) View.GONE else View.VISIBLE
             pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.setPosition(i, items.size, animate = moved)
             countTv.text = rn.count.toString()
+            countTv.visibility = if (focus) View.GONE else View.VISIBLE
+            sub.visibility = if (focus) View.GONE else View.VISIBLE
             sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             // Level with the ring's centre; with no ring, it sits on its own at the right.
             (sourceBtn.layoutParams as android.widget.FrameLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (cur.target <= 1) 0f else 42f)
-            hint.text = if (rn.isLast && cur.target > 1)
+            hint.text = if (focus) "" else if (rn.isLast && cur.target > 1)
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
             // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
             if (moved && remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
@@ -245,7 +275,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
         // Progress-bar slider: the position label follows the finger, and letting go opens that zikr.
         val cardView = view.findViewById<View>(R.id.card)
-        segs.onScrub = { k -> if (alive) pos.text = getString(R.string.reader_position, k + 1, items.size) }
+        segs.onScrub = { k -> if (alive && !focus) pos.text = getString(R.string.reader_position, k + 1, items.size) }
         segs.onPick = pick@{ k ->
             if (!alive) return@pick
             if (rn.jumpTo(k)) {

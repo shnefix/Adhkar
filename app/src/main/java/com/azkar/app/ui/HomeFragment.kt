@@ -47,14 +47,14 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
                 return if (Store.isDefaultFolder(f.id)) {
                     layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
                         Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_book_1p75)
-                        findViewById<TextView>(R.id.title).text = f.name
+                        Ui.folderName(findViewById(R.id.title), f.name, latinSp = 16f)
                         findViewById<TextView>(R.id.sub_ar).text = ""
                         setOnClickListener { open(f) }
                     }
                 } else {
                     layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
                         Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
-                        findViewById<TextView>(R.id.title).text = f.name
+                        Ui.folderName(findViewById(R.id.title), f.name)
                         setOnClickListener { open(f) }
                     }
                 }

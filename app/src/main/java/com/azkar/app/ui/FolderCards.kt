@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
-import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -23,8 +22,6 @@ data class Card(
     val tint: Int, val isNew: Boolean, val onMenu: (() -> Unit)? = null, val onClick: () -> Unit
 )
 
-private val ARABIC = Regex("[\u0600-\u06FF]")
-
 class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCallback<Card>() {
     override fun areItemsTheSame(a: Card, b: Card) = a.id == b.id
     override fun areContentsTheSame(a: Card, b: Card) =
@@ -36,8 +33,6 @@ class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCall
         val name: TextView = v.findViewById(R.id.name)
         val count: TextView = v.findViewById(R.id.count)
         val menu: View = v.findViewById(R.id.menu)
-        val amiri = Ui.font(v.context, R.font.amiri_regular)
-        val dmBold = Ui.font(v.context, R.font.dm_sans_bold)
         init {
             v.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) getItem(p).onClick() }
             menu.setOnClickListener { val p = bindingAdapterPosition; if (p != RecyclerView.NO_POSITION) getItem(p).onMenu?.invoke() }
@@ -53,23 +48,11 @@ class CardAdapter : ListAdapter<Card, CardAdapter.VH>(object : DiffUtil.ItemCall
         Ui.folderIcon(h.ic, h.emoji, c.emoji, c.vector)
         ImageViewCompat.setImageTintList(h.ic, ColorStateList.valueOf(c.tint))
         h.itemView.setBackgroundResource(if (c.isNew) R.drawable.bg_dashgold24 else R.drawable.bg_card24)
-        h.name.text = c.name
+        Ui.folderName(h.name, c.name, arabic = !c.isNew)
         h.name.setTextColor(ctx.getColor(if (c.isNew) R.color.gold else R.color.text))
         h.count.text = c.count
         h.menu.visibility = if (c.onMenu != null) View.VISIBLE else View.GONE
         h.count.visibility = if (c.count.isEmpty()) View.GONE else View.VISIBLE
-        // Views are recycled: every property is set in both branches.
-        if (!c.isNew && ARABIC.containsMatchIn(c.name)) {
-            h.name.typeface = h.amiri
-            h.name.textSize = 22f
-            h.name.textDirection = View.TEXT_DIRECTION_RTL
-            TextViewCompat.setLineHeight(h.name, android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 22f * 1.4f, ctx.resources.displayMetrics).toInt())
-        } else {
-            h.name.typeface = h.dmBold
-            h.name.textSize = 17f
-            h.name.textDirection = View.TEXT_DIRECTION_LTR
-            h.name.setLineSpacing(0f, 1f)
-        }
     }
 }
 
