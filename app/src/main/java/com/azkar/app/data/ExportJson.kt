@@ -5,8 +5,9 @@ import org.json.JSONObject
 
 /** Builds a backup file that ImportJson reads back. Read-only: never touches stored data. */
 object ExportJson {
-    private fun item(z: Zikr) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
+    private fun item(z: Zikr, hidden: Set<String> = emptySet()) = JSONObject().put("text", z.arabic).put("count", z.repeat).also {
         if (z.note.isNotBlank()) it.put("note", z.note)
+        if (z.id in hidden) it.put("hidden", true)
         with(z.source) {
             if (reference.isNotBlank()) it.put("source", reference)
             if (detail.isNotBlank()) it.put("sourceDetail", detail)
@@ -18,9 +19,9 @@ object ExportJson {
         if (z.title.isNotBlank() && z.titlePos == TitlePos.BOTH && z.titleBelow.isNotBlank()) it.put("titleBelow", z.titleBelow)
     }
 
-    private fun folderJson(f: Folder, zikrs: List<Zikr>): JSONObject {
+    private fun folderJson(f: Folder, zikrs: List<Zikr>, hidden: Set<String> = emptySet()): JSONObject {
         val az = JSONArray()
-        zikrs.forEach { az.put(item(it)) }
+        zikrs.forEach { az.put(item(it, hidden)) }
         val o = JSONObject().put("id", f.id).put("name", f.name)
         f.icon?.let { o.put("icon", it) }
         if (f.remember) o.put("remember", true)
@@ -41,13 +42,14 @@ object ExportJson {
         s: ImportMerge.State, arabicSize: Int, notificationsOn: Boolean, arabicSp: Int = ReaderPrefs.FONT_DEFAULT,
         sessionDelays: Map<String, Int> = emptyMap(), nudgeOn: Boolean = true, nudgeMinutes: Int? = null,
         tracking: JSONObject? = null, calcMethod: String? = null, asrHanafi: Boolean = false,
-        reminderRules: Map<String, String> = emptyMap(), resetRules: Map<String, String> = emptyMap()
+        reminderRules: Map<String, String> = emptyMap(), resetRules: Map<String, String> = emptyMap(),
+        hiddenZikrs: Set<String> = emptySet(), homeOrder: List<String>? = null, homeHidden: Set<String>? = null
     ): String {
         val folders = JSONArray()
-        s.folders.forEach { f -> folders.put(folderJson(f, s.zikrs.filter { it.folderId == f.id })) }
+        s.folders.forEach { f -> folders.put(folderJson(f, s.zikrs.filter { it.folderId == f.id }, hiddenZikrs)) }
         val root = JSONObject().put("app", "azkar").put("version", 1).put("folders", folders)
         val unfiled = JSONArray()
-        s.zikrs.filter { it.folderId == null }.forEach { unfiled.put(item(it)) }
+        s.zikrs.filter { it.folderId == null }.forEach { unfiled.put(item(it, hiddenZikrs)) }
         if (unfiled.length() > 0) root.put("unfiled", unfiled)
         val rems = JSONArray()
         s.schedules.forEach {
@@ -64,6 +66,8 @@ object ExportJson {
         calcMethod?.let { settings.put("calcMethod", it).put("asrHanafi", asrHanafi) }
         if (reminderRules.isNotEmpty()) settings.put("reminderRules", JSONObject(reminderRules))
         if (resetRules.isNotEmpty()) settings.put("resetRules", JSONObject(resetRules))
+        homeOrder?.let { settings.put("homeOrder", JSONArray(it)) }
+        homeHidden?.let { settings.put("homeHidden", JSONArray(it.toList())) }
         root.put("settings", settings)
         tracking?.let { root.put("tracking", it) }
         return root.toString(2)

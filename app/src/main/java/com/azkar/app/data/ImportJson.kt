@@ -11,7 +11,8 @@ import org.json.JSONObject
  * top-level "unfiled", "reminders", "settings".
  */
 object ImportJson {
-    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val source: ZikrSource = ZikrSource(), val titleBelow: String = "")
+    /** [hidden]: the zikr was hidden from the reader in the app that wrote the file. */
+    data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val source: ZikrSource = ZikrSource(), val titleBelow: String = "", val hidden: Boolean = false)
     data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null, val parent: String? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
     data class SettingsIn(
@@ -19,7 +20,9 @@ object ImportJson {
         val prayerDelays: Map<String, Int> = emptyMap(), val nudgeOn: Boolean? = null, val nudgeMinutes: Int? = null,
         val calcMethod: String? = null, val asrHanafi: Boolean? = null,
         /** Reminder id -> prayer rule, and folder id -> start-over rule (ids as in the file). */
-        val reminderRules: Map<String, String> = emptyMap(), val resetRules: Map<String, String> = emptyMap()
+        val reminderRules: Map<String, String> = emptyMap(), val resetRules: Map<String, String> = emptyMap(),
+        /** Home: folder ids in their order, and the ones left off Home (null = not in the file). */
+        val homeOrder: List<String>? = null, val homeHidden: List<String>? = null
     )
     /** Tracked folder ids and their daily history, as written by Export (ids are the file's own). */
     data class TrackingIn(val folders: List<String>, val history: Map<String, Map<String, Tracking.Progress>>)
@@ -61,7 +64,7 @@ object ImportJson {
             val pos = TitlePos.ofKey(o.optString("titlePosition", "above"))
             fun str(k: String) = if (o.isNull(k)) "" else o.optString(k, "").trim()
             val source = ZikrSource(str("source"), str("sourceDetail"), str("narrator"), str("when"), str("grade"))
-            out.add(Item(text, n, note, title, pos, source, str("titleBelow")))
+            out.add(Item(text, n, note, title, pos, source, str("titleBelow"), o.optBoolean("hidden", false)))
         }
         return out
     }
@@ -138,7 +141,9 @@ object ImportJson {
                 (so.opt("calcMethod") as? String)?.takeIf { it.isNotBlank() },
                 if (so.opt("asrHanafi") is Boolean) so.getBoolean("asrHanafi") else null,
                 stringMap(so.optJSONObject("reminderRules")),
-                stringMap(so.optJSONObject("resetRules"))
+                stringMap(so.optJSONObject("resetRules")),
+                so.optJSONArray("homeOrder")?.let { a -> (0 until a.length()).mapNotNull { a.opt(it) as? String } },
+                so.optJSONArray("homeHidden")?.let { a -> (0 until a.length()).mapNotNull { a.opt(it) as? String } }
             )
         }
         // Tracking is optional and never fails an import: unreadable entries are skipped.

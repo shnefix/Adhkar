@@ -615,14 +615,18 @@ object Store {
         notifyWidgets()
     }
 
+    /** One background thread draws the widgets after a change, so the screen never waits on the bitmaps. */
+    private val widgetExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "azkar-widgets").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }
+    }
+
     private fun notifyWidgets() {
         if (::appCtx.isInitialized && widgetRefreshPending.compareAndSet(false, true)) {
-            androidx.core.content.ContextCompat.getMainExecutor(appCtx).execute {
-                try {
-                    WidgetUpdater.updateAll(appCtx)
-                } finally {
-                    widgetRefreshPending.set(false)
-                }
+            widgetExecutor.execute {
+                // Cleared first: a change made while drawing queues one more pass instead of being missed.
+                widgetRefreshPending.set(false)
+                runCatching { WidgetUpdater.updateAll(appCtx) }
+                    .onFailure { android.util.Log.e("Azkar", "Widget refresh failed", it) }
             }
         }
     }
@@ -701,6 +705,9 @@ object Store {
         val hidden = hzCache
         return zCache.mapNotNullTo(HashSet()) { z -> z.folderId?.takeIf { z.id !in hidden } }
     }
+
+    /** The folder's name after the folders it sits in («الْيَوْمُ وَاللَّيْلَةُ ‹ أذكار الصباح»), for pickers. */
+    fun folderPath(id: String): String = FolderTree.path(fCache, id).ifEmpty { folderName(id) }
 
     /** Folders a widget can show, in Library order. Parent folders that only hold other folders are left out. */
     fun readableFolders(): List<Folder> = FolderTree.readable(fCache, foldersWithAzkar())
@@ -856,11 +863,41 @@ object Store {
         p.settings?.resetRules?.forEach { (id, raw) ->
             (sum.folderIds[id] ?: id).takeIf { folder(it) != null }?.let { AppPrefs.setResetRuleRaw(it, raw) }
         }
+        restoreHiddenAndHome(p, sum)
         // Tracked folders follow their folder: same id if it kept it, else the id the merge gave it.
         p.tracking?.let { t ->
             Tracking.restore(t.folders, t.history) { fileId -> (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null } }
         }
         return sum
+    }
+
+    /**
+     * After an import: azkar the file marks hidden are hidden again (matched by folder and text, since the merge gives
+     * them new ids), and the file's Home order and hidden folders apply to the folders it holds. Folders that are only
+     * in this app keep their place after them.
+     */
+    private fun restoreHiddenAndHome(p: ImportJson.Parsed.Ok, sum: ImportMerge.Summary) {
+        fun mapped(fileId: String) = (sum.folderIds[fileId] ?: fileId).takeIf { folder(it) != null }
+        val hide = HashSet<String>()
+        fun hideMatching(folderId: String?, items: List<ImportJson.Item>) {
+            val texts = items.filter { it.hidden }.mapTo(HashSet()) { it.text }
+            if (texts.isEmpty()) return
+            zCache.forEach { z -> if (z.folderId == folderId && z.arabic in texts) hide += z.id }
+        }
+        p.folders.forEach { f -> f.id?.let { mapped(it) }?.let { hideMatching(it, f.items) } }
+        hideMatching(null, p.unfiled)
+        if (hide.isNotEmpty()) setZikrsHidden(hide, true)
+
+        val s = p.settings ?: return
+        s.homeOrder?.let { order ->
+            val ids = order.mapNotNull { mapped(it) }.distinct()
+            if (ids.isNotEmpty()) setHomeOrder(ids + homeOrder().filter { it !in ids })
+        }
+        s.homeHidden?.let { fileHidden ->
+            val inFile = p.folders.mapNotNull { f -> f.id?.let { mapped(it) } }.toSet()
+            val nowHidden = fileHidden.mapNotNull { mapped(it) }.toSet()
+            setHidden(hidden() - inFile + nowHidden)
+        }
     }
 
     /** Restores the retained pre-Room content only when Room is still completely empty. */
@@ -907,7 +944,8 @@ object Store {
             nudgeOn = AppPrefs.nudgeOn(), nudgeMinutes = AppPrefs.nudgeLeadMinutes(),
             tracking = Tracking.toJson(),
             calcMethod = AppPrefs.calcMethod(), asrHanafi = AppPrefs.asrHanafi(),
-            reminderRules = AppPrefs.reminderRules(), resetRules = AppPrefs.resetRules()
+            reminderRules = AppPrefs.reminderRules(), resetRules = AppPrefs.resetRules(),
+            hiddenZikrs = hzCache, homeOrder = homeOrder(), homeHidden = hidden()
         )
     }
 

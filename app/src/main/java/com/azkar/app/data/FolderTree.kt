@@ -53,6 +53,19 @@ object FolderTree {
     fun readable(folders: List<Folder>, withAzkar: Set<String>): List<Folder> =
         flatten(folders).map { it.first }.filter { it.id in withAzkar }
 
+    /** "Parent ‹ Child" for pickers: [id]'s name after the names of the folders it sits in (stops at a loop). */
+    fun path(folders: List<Folder>, id: String): String {
+        val byId = folders.associateBy { it.id }
+        val names = ArrayList<String>()
+        val seen = HashSet<String>()
+        var cur = byId[id]
+        while (cur != null && seen.add(cur.id)) {
+            names.add(0, cur.name)
+            cur = cur.parent?.let { byId[it] }
+        }
+        return names.joinToString(" ‹ ")
+    }
+
     /** [id] when it holds azkar, else the first folder below it that does; [id] itself when none does. */
     fun firstReadable(folders: List<Folder>, id: String, withAzkar: Set<String>): String {
         if (id in withAzkar) return id

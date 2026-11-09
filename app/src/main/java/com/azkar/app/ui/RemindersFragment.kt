@@ -365,7 +365,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
 
         var folder: String? = existing?.open?.takeIf { Store.folder(it) != null }   // a deleted folder just becomes "open the app"
         val folderTv = v.findViewById<TextView>(R.id.r_folder)
-        fun folderLabel(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + f.name
+        fun folderLabel(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + Store.folderPath(f.id)
         fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: getString(R.string.just_open_app) }
         showFolder()
         folderTv.setOnClickListener {

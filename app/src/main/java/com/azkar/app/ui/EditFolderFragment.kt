@@ -118,6 +118,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         renderTrack()
         swTrack.onToggle = { on -> setTracking(ctx, listOf(viewModel.id), on); renderTrack() }
 
+        // A folder that only holds other folders has nothing to read: its reading settings would do nothing.
+        fun renderParentMode(zikrCount: Int) {
+            val parentOnly = zikrCount == 0 && Store.childFolders(viewModel.id).isNotEmpty()
+            val v = if (parentOnly) View.GONE else View.VISIBLE
+            listOf(swRem, swSrc, swTrack).forEach { (it.parent as? View)?.visibility = v }
+            if (parentOnly) resetRow.visibility = View.GONE else renderRem()
+        }
+        renderParentMode(Store.zikrsIn(viewModel.id).size)
+
         // Order list
         val rows = view.findViewById<LinearLayout>(R.id.rows)
         val empty = view.findViewById<View>(R.id.empty)
@@ -217,6 +226,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
                 viewModel.state.collect { state ->
                     if (state == null || !state.exists) return@collect
                     current = state
+                    renderParentMode(state.zikrs.size)
                     renderRows(state)
                 }
             }

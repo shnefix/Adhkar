@@ -56,6 +56,15 @@ class FolderTreeTest {
     }
 
     @Test
+    fun pathNamesTheFoldersAFolderSitsIn() {
+        assertEquals("A ‹ B ‹ C", FolderTree.path(folders, "c"))
+        assertEquals("O", FolderTree.path(folders, "orphan"))
+        assertEquals("", FolderTree.path(folders, "gone"))
+        val loop = listOf(Folder("x", "X", parent = "y"), Folder("y", "Y", parent = "x"))
+        assertEquals("Y ‹ X", FolderTree.path(loop, "x"))
+    }
+
+    @Test
     fun importKeepsParentsOfCreatedFoldersAndMapsFileIds() {
         val p = ImportJson.parse(
             """{"folders":[
