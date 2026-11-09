@@ -3,6 +3,7 @@
     <string name="widget_config_label">إعداد ويدجت الأذكار</string>
     <string name="data_load_failed">تعذّر تحميل بيانات الأذكار.</string>
     <string name="anytime">أي وقت</string>
+    <string name="anytime_no_folder">أي وقت (بدون مجلد)</string>
     <string name="widget_done">تم</string>
     <string name="widget_tasbih">تسبيح</string>
     <string name="widget_reset">إعادة ضبط</string>
@@ -47,20 +48,12 @@
     
     <string name="azkar_widget_j_tall_ring_label">حلقة الأذكار الطويلة</string><string name="azkar_widget_j_tall_ring_desc">حلقة تقدم الأذكار الطويلة</string>
     <string name="azkar_widget_j_tall_timeline_label">خط أذكار زمني</string><string name="azkar_widget_j_tall_timeline_desc">خط أذكار زمني طويل</string>
-    <string name="widget_editor_title">محرر الأدوات</string>
-    <string name="widgets_on_home">الأدوات على الشاشة الرئيسية</string>
     <string name="show_counter">إظهار العداد</string>
-    <string name="reset">إعادة ضبط</string>
     <string name="no_widgets_on_home">لا توجد أدوات أذكار على شاشتك الرئيسية.</string>
     <string name="widget_pin_unsupported">لا يدعم المشغّل إضافة الأدوات من هذه الشاشة.</string>
     <string name="widget_pin_requested">اختر مكان الأداة على شاشتك الرئيسية.</string>
     <string name="widget_pin_failed">تعذر إضافة الأداة. حاول مرة أخرى.</string>
-    <string name="widget_applied">تم تطبيق تغييرات الأداة.</string>
     <string name="widgets">الويدجت</string>
-    <string name="choose_widget">اختيار أداة</string>
-    <string name="widget_sizes">صغيرة · متوسطة · كبيرة</string>
-    <string name="live_preview">معاينة مباشرة</string>
-    <string name="apply_changes">تطبيق التغييرات</string>
     <string name="available_widgets">الأدوات المتاحة</string>
     <string name="pick_widget_subtitle">اختر أداة لإضافتها إلى شاشتك الرئيسية</string>
     <string name="small_grid">صغيرة · ٢×٢</string>
@@ -117,7 +110,6 @@
     <string name="track_folder">متابعة هذا المجلد</string>
     <string name="tracking_off_summary">متوقفة · تحسب الأيام التي تُتمه فيها</string>
     <string name="tracking_streak_summary">مواظبة %1$d يوم · الأفضل %2$d</string>
-    <string name="tracking_widget_folders">المجلدات المتابَعة التي تعرضها هذه الودجة.</string>
     <string name="zikr_title_toggle">إضافة عنوان</string>
     <string name="zikr_title_toggle_summary">سطر يظهر مع الذكر أثناء القراءة</string>
     <string name="zikr_title_hint">مثال: يقال بعد الفجر</string>
@@ -225,7 +217,6 @@
     <string name="collection_complete">اكتملت المجموعة</string>
     <string name="collection_complete_message">لقد أتممت هذه المجموعة.</string>
     <string name="back_to_home">العودة إلى الرئيسية</string>
-    <string name="back_to_my_azkar">العودة إلى أذكاري</string>
     <string name="customize">تخصيص</string>
     <string name="done">تم</string>
     <string name="reset_home">إعادة الرئيسية إلى الوضع الافتراضي</string>
@@ -241,9 +232,6 @@
     <string name="edit_zikr">تعديل الذكر</string>
     <string name="hide_from_reading">إخفاء أثناء القراءة</string>
     <string name="folder">المجلد</string>
-    <string name="unsaved_changes">تغييرات غير محفوظة</string>
-    <string name="apply">تطبيق</string>
-    <string name="changes_applied">محدَّث</string>
     <string name="add_widget">إضافة ويدجت</string>
     <string name="save_changes">حفظ التغييرات</string>
     <string name="delete_zikr">حذف الذكر</string>
@@ -428,18 +416,13 @@
     <string name="import_complete_title">اكتمل الاستيراد</string>
     <string name="import_complete_message">مجلدات جديدة: %1$d · مدمجة: %2$d · أذكار مضافة: %3$d · مكررات متخطاة: %4$d · تذكيرات مضافة: %5$d</string>
     <string name="import_failed">فشل الاستيراد: %1$s</string>
-    <string name="widget_folder_summary">مجلد الأذكار الذي يعرضه هذا الويدجت.</string>
     <string name="widget_counter">العدّاد</string>
-    <string name="widget_counter_summary">عرض التقدم على الويدجت</string>
     <string name="widget_design">التصميم</string>
-    <string name="widget_design_summary">طريقة ترتيب هذا الويدجت (%1$s).</string>
     <string name="font_size_label">حجم الخط</string>
     <string name="line_height_label">ارتفاع السطر</string>
     <string name="widget_colors">الألوان</string>
     <string name="refresh_manual">يدوي</string>
     <string name="refresh_hourly">كل ساعة</string>
-    <string name="widget_tap_summary">ما يحدث عند الضغط على العدّاد.</string>
-    <string name="widget_refresh_summary">كم مرة يُعاد رسم الويدجت. الفترات الأقصر تستهلك بطارية أكثر.</string>
     <string name="custom_interval">فترة مخصصة</string>
     <string name="active">مفعّلة</string>
     <string name="decrease_interval">تقليل الفترة</string>
@@ -527,10 +510,6 @@
     <string name="all_folders">كل المجلدات</string>
     <string name="search_n_folders">ابحث في %1$d مجلدًا</string>
     <string name="no_folders_match">لا يوجد مجلد بهذا الاسم.</string>
-    <string name="widget_not_applied">غير مطبّق</string>
-    <string name="widget_apply_changes_title">تطبيق التغييرات على هذه الأداة؟</string>
-    <string name="widget_apply_changes_body">لم تُطبَّق تغييراتك على هذه الأداة في الشاشة الرئيسية بعد.</string>
-    <string name="widget_discard">تجاهل</string>
     <string name="zikr_source_toggle">إضافة مصدر</string>
     <string name="zikr_source_toggle_summary">من أين جاء هذا الذكر، يظهر في صفحة المصدر أثناء القراءة</string>
     <string name="zikr_source_reference_hint">المرجع (كتاب أو سورة)، مثل صحيح مسلم</string>

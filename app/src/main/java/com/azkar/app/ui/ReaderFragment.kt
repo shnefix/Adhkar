@@ -188,7 +188,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             if (s.whenToSay.isNotBlank()) add(infoCard(R.string.source_when, s.whenToSay))
             srcChips.removeAllViews()
             if (s.grade.isNotBlank()) srcChips.addView(chip(s.grade, true))
-            if (s.reference.isNotBlank()) srcChips.addView(chip(s.reference, false))
             srcChips.visibility = if (srcChips.childCount > 0) View.VISIBLE else View.GONE
             (srcChips.layoutParams as LinearLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (srcCards.childCount > 0) 16f else 0f)
         }
@@ -250,8 +249,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             pos.text = getString(R.string.reader_position, i + 1, items.size)
             segs.setPosition(i, items.size, animate = moved)
             countTv.text = rn.count.toString()
-            countTv.visibility = if (focus) View.GONE else View.VISIBLE
-            sub.visibility = if (focus) View.GONE else View.VISIBLE
             sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
@@ -290,6 +287,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             card = view.findViewById(R.id.card)
             tapEnabled = AppPrefs.tapAdvance()
             tapLeftBack = AppPrefs.tapLeftBack()
+            // Focus mode: tapping the card counts, swiping moves to another zikr.
+            if (focus) onTap = { if (alive && rn.tapRing()) render() }
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
             onFinish = finish@{
@@ -333,7 +332,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     override fun onDestroyView() {
         // Stop anything still moving so its end callback never reaches a closed reader.
         view?.let { v ->
-            (v as? SwipeLayout)?.apply { onPage = null; onFinish = null; card?.animate()?.cancel() }
+            (v as? SwipeLayout)?.apply { onPage = null; onFinish = null; onTap = null; card?.animate()?.cancel() }
             v.findViewById<View>(R.id.flip_area)?.animate()?.cancel()
             v.findViewById<ReaderScrubber>(R.id.segs)?.apply { onPick = null; onScrub = null }
         }

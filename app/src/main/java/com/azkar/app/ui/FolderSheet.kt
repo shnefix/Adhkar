@@ -19,10 +19,10 @@ import com.azkar.app.data.Store
 
 /**
  * Bottom sheet for "Save to folder": a search box, the folders used last, then every folder.
- * [onPick] gets a folder id, or "new" for a new folder.
+ * [onPick] gets a folder id, "new" for a new folder, or null for no folder ("Anytime").
  */
 object FolderSheet {
-    fun show(ctx: Context, selected: String?, allowNew: Boolean, onPick: (String) -> Unit) {
+    fun show(ctx: Context, selected: String?, allowNew: Boolean, onPick: (String?) -> Unit) {
         val dialog = Dialog(ctx)
         val gold = ctx.getColor(R.color.gold)
         val text = ctx.getColor(R.color.text)
@@ -78,7 +78,7 @@ object FolderSheet {
             setText(t); textSize = 11f; setTextColor(muted)
             setPadding(0, dp(16f), 0, dp(4f))
         }
-        fun row(id: String, name: String) = LinearLayout(ctx).apply {
+        fun row(id: String?, name: String) = LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
             minimumHeight = dp(52f)
             isClickable = true; isFocusable = true
@@ -118,6 +118,10 @@ object FolderSheet {
                     if (i > 0) list.addView(divider(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
                     list.addView(row(f.id, nameOf(f)))
                 }
+            }
+            // No folder: always offered while not searching, so a zikr can be taken out of every folder.
+            if (query.isEmpty()) {
+                list.addView(row(null, ctx.getString(R.string.anytime_no_folder)))
             }
             section(R.string.recent, recentIds.mapNotNull { id -> folders.firstOrNull { it.id == id } })
             section(R.string.all_folders, matches)

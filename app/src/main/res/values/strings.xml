@@ -4,6 +4,7 @@
     <string name="widget_config_label">Configure Adhkar widget</string>
     <string name="data_load_failed">Azkar data could not be loaded.</string>
     <string name="anytime">Anytime</string>
+    <string name="anytime_no_folder">Anytime (no folder)</string>
     <string name="widget_done">Done</string>
     <string name="widget_tasbih">Tasbih</string>
     <string name="widget_reset">Reset</string>
@@ -69,21 +70,13 @@
     
     <string name="azkar_widget_j_tall_ring_label">Azkar tall ring</string><string name="azkar_widget_j_tall_ring_desc">Tall azkar progress ring</string>
     <string name="azkar_widget_j_tall_timeline_label">Azkar tall timeline</string><string name="azkar_widget_j_tall_timeline_desc">Tall azkar timeline</string>
-    <string name="widget_editor_title">Widget editor</string>
-    <string name="widgets_on_home">Widgets on your home screen</string>
     <string name="show_counter">Show counter</string>
-    <string name="reset">Reset</string>
     <string name="no_widgets_on_home">No Azkar widgets are placed on your home screen.</string>
     <string name="widget_pin_unsupported">Your launcher does not support adding widgets from this screen.</string>
     <string name="widget_pin_requested">Choose a location for the widget on your home screen.</string>
     <string name="widget_pin_failed">The widget could not be added. Please try again.</string>
-    <string name="widget_applied">Widget changes applied.</string>
     <string name="widgets">Widgets</string>
     <string name="widget_preview_unavailable">Preview unavailable</string>
-    <string name="choose_widget">Choose a widget</string>
-    <string name="widget_sizes">Small · Medium · Large</string>
-    <string name="live_preview">LIVE PREVIEW</string>
-    <string name="apply_changes">Apply Changes</string>
     <string name="available_widgets">Available widgets</string>
     <string name="pick_widget_subtitle">Pick one to add to your home screen</string>
     <string name="small_grid">SMALL · 2×2</string>
@@ -140,7 +133,6 @@
     <string name="track_folder">Track this folder</string>
     <string name="tracking_off_summary">Off · counts the days you finish it</string>
     <string name="tracking_streak_summary">%1$d-day streak · best %2$d</string>
-    <string name="tracking_widget_folders">Which tracked folders this widget follows.</string>
     <string name="zikr_title_toggle">Add a title</string>
     <string name="zikr_title_toggle_summary">A line shown with the zikr while reading</string>
     <string name="zikr_title_hint">e.g. Recite after Fajr</string>
@@ -221,7 +213,6 @@
     <string name="collection_complete">Collection complete</string>
     <string name="collection_complete_message">You have finished this collection.</string>
     <string name="back_to_home">Back to Home</string>
-    <string name="back_to_my_azkar">Back to My Azkar</string>
     <string name="customize">Customize</string>
     <string name="done">Done</string>
     <string name="reset_home">Reset Home to default</string>
@@ -237,9 +228,6 @@
     <string name="edit_zikr">Edit zikr</string>
     <string name="hide_from_reading">Hide from reading</string>
     <string name="folder">Folder</string>
-    <string name="unsaved_changes">Unsaved changes</string>
-    <string name="apply">Apply</string>
-    <string name="changes_applied">Up to date</string>
     <string name="add_widget">Add a widget</string>
     <string name="save_changes">Save changes</string>
     <string name="delete_zikr">Delete zikr</string>
@@ -396,18 +384,13 @@
     <string name="import_complete_title">Import complete</string>
     <string name="import_complete_message">New folders: %1$d · merged: %2$d · azkar added: %3$d · duplicates skipped: %4$d · reminders added: %5$d</string>
     <string name="import_failed">Import failed: %1$s</string>
-    <string name="widget_folder_summary">Which azkar folder this widget shows.</string>
     <string name="widget_counter">Counter</string>
-    <string name="widget_counter_summary">Display progress on the widget</string>
     <string name="widget_design">Design</string>
-    <string name="widget_design_summary">How this %1$s widget is laid out.</string>
     <string name="font_size_label">Font size</string>
     <string name="line_height_label">Line height</string>
     <string name="widget_colors">Colors</string>
     <string name="refresh_manual">Manual</string>
     <string name="refresh_hourly">Hourly</string>
-    <string name="widget_tap_summary">What happens when you tap the counter.</string>
-    <string name="widget_refresh_summary">How often the widget redraws. Shorter uses more battery.</string>
     <string name="custom_interval">Custom interval</string>
     <string name="active">Active</string>
     <string name="decrease_interval">Decrease interval</string>
@@ -497,10 +480,6 @@
     <string name="all_folders">ALL FOLDERS</string>
     <string name="search_n_folders">Search %1$d folders</string>
     <string name="no_folders_match">No folder has that name.</string>
-    <string name="widget_not_applied">Not applied</string>
-    <string name="widget_apply_changes_title">Apply changes to this widget?</string>
-    <string name="widget_apply_changes_body">Your changes to this widget haven\'t been applied to the home screen yet.</string>
-    <string name="widget_discard">Discard</string>
     <string name="zikr_source_toggle">Add a source</string>
     <string name="zikr_source_toggle_summary">Where this zikr comes from, shown on its source page while reading</string>
     <string name="zikr_source_reference_hint">Reference (book or surah), e.g. Sahih Muslim</string>

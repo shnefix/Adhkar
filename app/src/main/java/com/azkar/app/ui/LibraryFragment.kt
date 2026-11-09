@@ -350,20 +350,29 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
             .setTitle(R.string.import_json)
             .setMessage(msg)
             .setPositiveButton(R.string.import_label) { _, _ ->
+                val app = requireContext().applicationContext
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
-                        val r = Store.importAllAsync(p)
-                        ReminderScheduler.rescheduleAll(requireContext())
-                        // A backup with tracking turns the tracking widgets on.
-                        com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(requireContext())
-                        com.azkar.app.widgets.WidgetUpdater.updateAll(requireContext())
+                        // Not cancellable: leaving the screen mid-import must not stop it between the database
+                        // write and the settings / alarms / widgets that follow it.
+                        val r = withContext(kotlinx.coroutines.NonCancellable) {
+                            val sum = Store.importAllAsync(p)
+                            ReminderScheduler.rescheduleAll(app)
+                            // A backup with tracking turns the tracking widgets on.
+                            com.azkar.app.widgets.NewWidgetUpdater.syncTrackingProviders(app)
+                            com.azkar.app.widgets.WidgetUpdater.updateAll(app)
+                            sum
+                        }
+                        if (!isAdded) return@launch
                         AlertDialog.Builder(requireContext())
                             .setTitle(R.string.import_complete_title)
                             .setMessage(getString(R.string.import_complete_message, r.created, r.merged, r.added, r.skipped, r.reminders))
                             .setPositiveButton(android.R.string.ok, null)
                             .show()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
-                        showError(getString(R.string.import_failed, e.message ?: ""))
+                        if (isAdded) showError(getString(R.string.import_failed, e.message ?: ""))
                     }
                 }
             }

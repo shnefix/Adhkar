@@ -12,13 +12,25 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.azkar.app.R
 
-/** 140dp ring: track #24504F, progress arc from 12 o'clock clockwise, 122dp inner disc #0D2124. */
+/**
+ * 140dp counter: a dashed gold outer circle, then a thin ring (grey track) that fills with the progress arc from
+ * 12 o'clock clockwise, around a dark disc.
+ */
 class RingView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : FrameLayout(ctx, attrs) {
     private var deg = 0f
     private var arcColor = context.getColor(R.color.gold)
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.track) }
-    private val arc = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.bg) }
+    private val density = resources.displayMetrics.density
+    private val dashed = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 1.5f * density; color = context.getColor(R.color.gold)
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(4f * density, 3.5f * density), 0f)
+    }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 6f * density; color = context.getColor(R.color.track)
+    }
+    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 6f * density; strokeCap = Paint.Cap.ROUND
+    }
+    private val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.card) }
     private val oval = RectF()
 
     init { setWillNotDraw(false) }
@@ -28,17 +40,19 @@ class RingView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = nu
     }
 
     override fun onDraw(canvas: Canvas) {
-        val d = resources.displayMetrics.density
+        val d = density
         val cx = width / 2f
         val cy = height / 2f
-        val r = 70f * d
+        val outer = minOf(width, height) / 2f - 1f * d
+        canvas.drawCircle(cx, cy, outer, dashed)
+        val r = outer - 12f * d                        // centre line of the progress ring
+        canvas.drawCircle(cx, cy, r - 3f * d, inner)
         canvas.drawCircle(cx, cy, r, track)
         if (deg > 0f) {
             arc.color = arcColor
             oval.set(cx - r, cy - r, cx + r, cy + r)
-            canvas.drawArc(oval, -90f, deg, true, arc)
+            canvas.drawArc(oval, -90f, deg, false, arc)
         }
-        canvas.drawCircle(cx, cy, 61f * d, inner)
     }
 }
 
@@ -53,6 +67,8 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var tapEnabled = true
     /** When on, a tap on the left third of the card goes back to the previous zikr instead of counting. */
     var tapLeftBack = false
+    /** When set (focus mode), a quick tap on the card calls this instead of moving; only swipes change the zikr. */
+    var onTap: (() -> Unit)? = null
     var canFinish: (() -> Boolean)? = null
     var onFinish: (() -> Unit)? = null
     private var rawDx = 0f
@@ -128,7 +144,9 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     private fun finishTap(e: MotionEvent) {
         val quick = tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()
         val c = card
-        if (quick && tapLeftBack && c != null && e.x < c.left + c.width / 3f) previous()
+        val tap = onTap
+        if (quick && tap != null) tap()
+        else if (quick && tapLeftBack && c != null && e.x < c.left + c.width / 3f) previous()
         else if (tapEnabled && quick) performClick()
         tapOk = false
     }

@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 13
+    private const val DEFAULTS_VERSION = 14
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -86,6 +86,8 @@ object Store {
         initResult?.await()?.getOrThrow()
     }
 
+    // commit(), not apply(): migration markers must be on disk before the next step runs (off the main thread).
+    @android.annotation.SuppressLint("ApplySharedPref")
     private suspend fun initialize() {
         val loaded = repository.loadContent()
         zCache = loaded.zikrs
@@ -139,6 +141,8 @@ object Store {
         repository.awaitPendingWrites()
     }
 
+    // commit(), not apply(): migration markers must be on disk before the next step runs (off the main thread).
+    @android.annotation.SuppressLint("ApplySharedPref")
     private suspend fun migrateLegacy(legacy: LegacyContent): Boolean {
         val backup = JSONObject()
             .put("folders", sp.getString(K_FOLDERS, "[]"))
@@ -153,6 +157,8 @@ object Store {
         return verified
     }
 
+    // commit(), not apply(): migration markers must be on disk before the next step runs (off the main thread).
+    @android.annotation.SuppressLint("ApplySharedPref")
     private fun verifyRoomMigration(legacy: LegacyContent) {
         if (repository.folders() == legacy.folders &&
             repository.zikrs() == legacy.zikrs &&
@@ -162,6 +168,8 @@ object Store {
         }
     }
 
+    // commit(), not apply(): migration markers must be on disk before the next step runs (off the main thread).
+    @android.annotation.SuppressLint("ApplySharedPref")
     private fun migrateSchema() {
         val version = sp.getInt(K_SCHEMA, 0)
         if (version < SCHEMA_VERSION) sp.edit().putInt(K_SCHEMA, SCHEMA_VERSION).commit()
@@ -205,6 +213,7 @@ object Store {
         if (!fresh && from < 11) clearPlaceholderSources()
         if (!fresh && from < 12) addShortAzkarAndPraised(p)
         if (!fresh && from < 13) addBookDuas(p)
+        if (!fresh && from < 14) fillMissingDetails(p)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -322,6 +331,22 @@ object Store {
             }
         }
         mergeDefaults(p.copy(folders = folders))
+    }
+
+    /**
+     * Version 14: default azkar whose source was a reference only get the full hadith text. Only filled in where the
+     * zikr text and reference are still the default's and no detail was written, so a user's own edits stay.
+     */
+    private fun fillMissingDetails(p: ImportJson.Parsed.Ok) {
+        val byText = p.folders.filter { it.id != null }.associate { f -> f.id to f.items.associate { it.text to it.source } }
+        var changed = false
+        val next = zCache.map { z ->
+            val src = byText[z.folderId]?.get(z.arabic) ?: return@map z
+            if (z.source.detail.isBlank() && src.detail.isNotBlank() && z.source.reference == src.reference) {
+                changed = true; z.copy(source = z.source.copy(detail = src.detail))
+            } else z
+        }
+        if (changed) saveZikrs(next)
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
@@ -583,6 +608,8 @@ object Store {
     }
 
     /** Restores the retained pre-Room content only when Room is still completely empty. */
+    // commit(), not apply(): migration markers must be on disk before the next step runs (off the main thread).
+    @android.annotation.SuppressLint("ApplySharedPref")
     suspend fun recoverMigrationBackup(): Boolean {
         if (repository.folderCount() != 0 || repository.zikrCount() != 0 || repository.scheduleCount() != 0) return false
         val raw = sp.getString(K_ROOM_MIGRATION_BACKUP, null) ?: return false

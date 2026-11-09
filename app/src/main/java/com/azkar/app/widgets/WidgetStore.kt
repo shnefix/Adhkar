@@ -39,7 +39,7 @@ object WidgetStore {
         sp(ctx).edit()
             .putString("pending_pin_kind", kind.name)
             .putString("pending_pin_style", style.name)
-            .commit()
+            .apply()
     }
 
     fun consumePendingPin(ctx: Context): Pair<WidgetKind, WidgetStyle>? {
@@ -103,7 +103,7 @@ object WidgetStore {
             .putBoolean("counter_$id", appearance.showCounter)
             .putString("tap_$id", appearance.tapAction.name)
             .putInt("refresh_$id", appearance.refreshMinutes)
-        edit.commit()
+        edit.apply()   // same process: readers see the new values at once
         saveProgress(ctx, id, 0, 0)
     }
 

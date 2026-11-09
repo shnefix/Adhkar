@@ -31,7 +31,7 @@
 <LinearLayout android:orientation="vertical" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
 <com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="140dp" android:layout_height="140dp" android:clickable="true" android:focusable="true" android:contentDescription="@string/widget_action_count">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="match_parent" android:layout_height="match_parent">
-<TextView style="@style/TB" android:text="0" android:textSize="44sp" android:textColor="@color/text" android:lineHeight="48sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="0" android:textSize="44sp" android:textColor="@color/gold" android:lineHeight="48sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/sub" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </com.azkar.app.ui.RingView>
