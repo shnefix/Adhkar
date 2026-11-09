@@ -16,7 +16,7 @@ class DefaultFoldersAssetTest {
     fun everyAddedFolderIsPresent() {
         val ids = parsed.folders.mapNotNull { it.id }.toSet()
         assertTrue(DefaultFolders.ADDED_IN_V8.all { it in ids })
-        assertTrue(listOf(DefaultFolders.HOME, DefaultFolders.ZAD, DefaultFolders.MORNING).all { it in ids })
+        assertTrue(listOf(DefaultFolders.ZAD, DefaultFolders.MORNING).all { it in ids })
     }
 
     @Test

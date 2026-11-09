@@ -34,7 +34,8 @@
 </LinearLayout>
 </com.azkar.app.ui.RingView>
 </FrameLayout>
-<FrameLayout android:layout_marginTop="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<!-- Hidden when there is neither a source button nor a hint, so the card reaches the bottom. -->
+<FrameLayout android:id="@+id/bottom_bar" android:layout_marginTop="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="vertical" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
 
 <LinearLayout android:orientation="horizontal" android:layout_height="56dp" android:gravity="center" android:layout_width="match_parent">

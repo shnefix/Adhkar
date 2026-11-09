@@ -7,7 +7,7 @@ object DefaultFolders {
     const val EVENING = "d_11"
     const val SLEEP = "d_13"
     const val MORNING = "d_14"
-    const val HOME = "d_15"          // أذكار قصيرة (was الواجهة), added in defaults version 4
+    const val HOME = "d_15"          // أذكار قصيرة (was الواجهة), added in defaults version 4, removed in version 20
     const val PRAISED = "d_42"       // إذا مُدِحت, added in defaults version 12
 
     /** Azkar added to the short-azkar folder ([HOME]) in defaults version 12. */

@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 19
+    private const val DEFAULTS_VERSION = 20
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -217,6 +217,7 @@ object Store {
         if (from < 16) mergeTwinFolders()
         if (!fresh && from < 19) fillMissingSources(p)   // 17, 19: sources found for azkar that had none
         if (from < 18) createGroupFolders()
+        if (from < 20) removeShortAzkar()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -403,6 +404,24 @@ object Store {
             if (src != null && z.source.isEmpty) { changed = true; z.copy(source = src) } else z
         }
         if (changed) saveZikrs(next)
+    }
+
+    /**
+     * Version 20: the built-in «أذكار قصيرة» folder is gone, with its azkar (they are all in other folders too).
+     * Folders the user put inside it move up a level; a reminder that opened it now just opens the app.
+     */
+    @Synchronized
+    private fun removeShortAzkar() {
+        val id = DefaultFolders.HOME
+        val f = folder(id) ?: return
+        saveContent(
+            fCache.filter { it.id != id }.map { if (it.parent == id) it.copy(parent = f.parent) else it },
+            zCache.filter { it.folderId != id },
+            sCache.map { if (it.open == id) it.copy(open = null) else it }
+        )
+        setHomeOrder(homeOrder().filter { it != id })
+        setHidden(hidden() - id)
+        AppPrefs.clearPosition(id); AppPrefs.clearResetRule(id); Tracking.setTracked(id, false)
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {

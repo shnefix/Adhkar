@@ -57,6 +57,28 @@ object SourceViews {
         setLineSpacing(0f, 1.55f)
     }
 
+    /** The small copy button in the hadith card's bottom-left corner: copies the hadith and its reference. */
+    private fun copyIcon(ctx: Context, ar: Resources, s: com.azkar.app.data.ZikrSource) = android.widget.ImageView(ctx).apply {
+        setImageResource(R.drawable.ic_copy_1p75)
+        setColorFilter(ctx.getColor(R.color.gold))
+        background = Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(R.color.border2), 999f)
+        val pad = dp(ctx, 9f); setPadding(pad, pad, pad, pad)
+        contentDescription = ar.getString(R.string.source_copy)
+        isClickable = true; isFocusable = true
+        setOnClickListener {
+            val clip = ctx.getSystemService(ClipboardManager::class.java)
+            clip?.setPrimaryClip(ClipData.newPlainText(ar.getString(R.string.source_title), listOf(s.detail, s.reference).filter { it.isNotBlank() }.joinToString("\n\n")))
+            Toast.makeText(ctx, ar.getString(R.string.source_copied), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** The row under the hadith: copy icon on the left, [end] (if any) on the right. */
+    private fun hadithFooter(ctx: Context, ar: Resources, s: com.azkar.app.data.ZikrSource, end: View? = null) = FrameLayout(ctx).apply {
+        layoutDirection = View.LAYOUT_DIRECTION_LTR
+        addView(copyIcon(ctx, ar, s), FrameLayout.LayoutParams(dp(ctx, 38f), dp(ctx, 38f), Gravity.LEFT or Gravity.CENTER_VERTICAL))
+        if (end != null) addView(end, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.CENTER_VERTICAL))
+    }
+
     /**
      * The chain block: «سند الحديث» with «من النبي ﷺ إلى …» beside it, then the timeline from the Prophet ﷺ
      * (gold dot) through the companion (gold ring) and the narrators (grey rings) to the author (cream square).
@@ -171,12 +193,15 @@ object SourceViews {
             when (page) {
                 R.string.source_tab_hadith -> {
                     content.addView(hadith(ctx, marked(s.detail, item.arabic)))
-                    if (chain != null) content.addView(text(ctx, ar.getString(R.string.source_show_chain), 13f, R.color.gold).apply {
-                        background = Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(R.color.border2), 999f)
-                        setPadding(dp(ctx, 14f), dp(ctx, 8f), dp(ctx, 14f), dp(ctx, 8f))
-                        isClickable = true; isFocusable = true
-                        setOnClickListener { select(R.string.source_tab_chain) }
-                    }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(ctx, 14f); gravity = Gravity.END })
+                    val showChain = chain?.let {
+                        text(ctx, ar.getString(R.string.source_show_chain), 13f, R.color.gold).apply {
+                            background = Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(R.color.border2), 999f)
+                            setPadding(dp(ctx, 14f), dp(ctx, 8f), dp(ctx, 14f), dp(ctx, 8f))
+                            isClickable = true; isFocusable = true
+                            setOnClickListener { select(R.string.source_tab_chain) }
+                        }
+                    }
+                    content.addView(hadithFooter(ctx, ar, s, showChain), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 14f) })
                 }
                 R.string.source_tab_chain -> content.addView(chainBlock(ctx, ar, chain.orEmpty()))
                 else -> content.addView(sourcesList(ctx, ar, item))
@@ -233,7 +258,10 @@ object SourceViews {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         fun add(v: View) = body.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (body.childCount > 0) topMargin = dp(ctx, 12f) })
 
-        if (s.detail.isNotBlank()) add(card(ctx, R.color.bg).apply { addView(hadith(ctx, marked(s.detail, item.arabic))) })
+        if (s.detail.isNotBlank()) add(card(ctx, R.color.bg).apply {
+            addView(hadith(ctx, marked(s.detail, item.arabic)))
+            addView(hadithFooter(ctx, ar, s), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 12f) })
+        })
         if (chain != null) add(chainBlock(ctx, ar, chain))
         if (s.narrator.isNotBlank() || s.whenToSay.isNotBlank()) add(card(ctx, R.color.bg).apply {
             if (s.narrator.isNotBlank()) addView(fact(ctx, ar.getString(R.string.source_narrator), s.narrator))
@@ -243,16 +271,6 @@ object SourceViews {
         })
 
         val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        if (s.detail.isNotBlank()) buttons.addView(text(ctx, ar.getString(R.string.source_copy), 14f, R.color.text, bold = true).apply {
-            gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER
-            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border2), 24f)
-            isClickable = true; isFocusable = true
-            setOnClickListener {
-                val clip = ctx.getSystemService(ClipboardManager::class.java)
-                clip?.setPrimaryClip(ClipData.newPlainText(ar.getString(R.string.source_title), listOf(s.detail, s.reference).filter { it.isNotBlank() }.joinToString("\n\n")))
-                Toast.makeText(ctx, ar.getString(R.string.source_copied), Toast.LENGTH_SHORT).show()
-            }
-        }, LinearLayout.LayoutParams(0, dp(ctx, 48f), 1f).apply { marginEnd = dp(ctx, 10f) })
         buttons.addView(text(ctx, ar.getString(R.string.source_back_to_zikr), 14f, R.color.bg, bold = true).apply {
             gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER
             background = Ui.shape(ctx, ctx.getColor(R.color.gold), null, 24f)

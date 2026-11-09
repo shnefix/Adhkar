@@ -107,6 +107,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val countTv = view.findViewById<TextView>(R.id.count)
         val sub = view.findViewById<TextView>(R.id.sub)
         val hint = view.findViewById<TextView>(R.id.hint)
+        val bottomBar = view.findViewById<View>(R.id.bottom_bar)
         val pos = view.findViewById<TextView>(R.id.pos)
         val titleTv = view.findViewById<TextView>(R.id.title)
         // Focus mode: no folder title and no back button either (the phone's back gesture still leaves).
@@ -248,6 +249,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
             hint.text = if (focus) "" else if (rn.isLast && cur.target > 1)
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
+            // No source button and no hint: the strip under the card goes, so the card fills the screen.
+            bottomBar.visibility = if (sourceBtn.visibility == View.GONE && hint.text.isNullOrEmpty()) View.GONE else View.VISIBLE
             // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
             if (moved && remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
             // Azkar behind the current one are read; the current one counts once its repeats are done.
