@@ -369,7 +369,7 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: getString(R.string.just_open_app) }
         showFolder()
         folderTv.setOnClickListener {
-            val fs = Store.folders()
+            val fs = Store.readableFolders()   // a parent folder has nothing to open
             val names = arrayOf(getString(R.string.just_open_app)) + fs.map { folderLabel(it) }
             AlertDialog.Builder(ctx).setTitle(R.string.open_folder)
                 .setItems(names) { _, which -> folder = if (which == 0) null else fs[which - 1].id; showFolder() }

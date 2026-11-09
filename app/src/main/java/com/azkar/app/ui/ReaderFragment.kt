@@ -216,8 +216,12 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             noTapViews = listOf(ring)   // the ring is inside the card: tapping it counts, it never moves on
             tapEnabled = AppPrefs.tapAdvance()
             tapLeftBack = AppPrefs.tapLeftBack()
-            // Focus mode: tapping the card counts, swiping moves to another zikr.
-            if (focus) onTap = { if (alive && rn.tapRing()) render() }
+            // Focus mode: while a zikr's counter is running, tapping the card counts; otherwise it moves on as usual.
+            if (focus) onTap = {
+                val counting = alive && items[rn.index].target > 1 && !rn.isDone
+                if (counting && rn.tapRing()) render()
+                counting
+            }
             canPage = { dir -> rn.canPage(dir) }
             canFinish = { rn.canFinish() }
             onFinish = finish@{

@@ -628,7 +628,12 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             return
         }
         val folder = sectionCard(ctx, getString(R.string.folder))
-        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), Store.folders().map { it.id to Store.folderName(it.id) }, item.config.folder) { id ->
+        // Only folders with azkar of their own: a parent folder would leave the widget empty. The widget's current
+        // folder stays listed even when it is empty, so the row never names a folder the widget isn't on.
+        val options = Store.readableFolders().map { it.id to it.name }.toMutableList()
+        if (Store.zikrs().any { it.folderId == null }) options += Store.ANYTIME to getString(R.string.anytime)
+        if (options.none { it.first == item.config.folder }) options.add(0, item.config.folder to Store.folderName(item.config.folder))
+        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), options, item.config.folder) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
         column.addCard(folder)

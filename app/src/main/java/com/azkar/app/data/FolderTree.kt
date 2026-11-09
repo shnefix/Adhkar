@@ -45,4 +45,18 @@ object FolderTree {
         walk(null, 0, emptySet())
         return out
     }
+
+    /**
+     * The folders that can be read, in tree order: those in [withAzkar] (the ids of folders holding azkar themselves).
+     * A parent folder that only holds other folders has nothing to recite, so it is left out.
+     */
+    fun readable(folders: List<Folder>, withAzkar: Set<String>): List<Folder> =
+        flatten(folders).map { it.first }.filter { it.id in withAzkar }
+
+    /** [id] when it holds azkar, else the first folder below it that does; [id] itself when none does. */
+    fun firstReadable(folders: List<Folder>, id: String, withAzkar: Set<String>): String {
+        if (id in withAzkar) return id
+        val below = subtree(folders, id)
+        return readable(folders, withAzkar).firstOrNull { it.id in below }?.id ?: id
+    }
 }

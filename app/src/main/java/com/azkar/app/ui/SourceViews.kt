@@ -146,13 +146,10 @@ object SourceViews {
         root.addView(View(ctx).apply { background = Ui.shape(ctx, ctx.getColor(R.color.border2), null, 2f) },
             LinearLayout.LayoutParams(dp(ctx, 40f), dp(ctx, 4f)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(ctx, 12f) })
 
-        val refInHead = s.reference.isNotBlank() && s.detail.isNotBlank() && s.reference.length <= 40
         val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         head.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             addView(text(ctx, ar.getString(R.string.source_title), 18f, R.color.text, bold = true))
-            // A short reference fits under the title; a long one, or one with no hadith text, gets its own card below.
-            if (refInHead) addView(text(ctx, s.reference, 12f, R.color.muted), LinearLayout.LayoutParams(-1, -2))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(ctx, 10f) })
         if (s.grade.isNotBlank()) head.addView(gradeBadge(ctx, s.grade), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(ctx, 10f) })
         head.addView(FrameLayout(ctx).apply {
@@ -169,11 +166,6 @@ object SourceViews {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         fun add(v: View) = body.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (body.childCount > 0) topMargin = dp(ctx, 12f) })
 
-        if (s.reference.isNotBlank() && !refInHead) add(card(ctx, R.color.bg).apply {
-            addView(text(ctx, ar.getString(R.string.source_reference), 12f, R.color.gold, bold = true))
-            addView(text(ctx, s.reference, 16f, R.color.text).apply { setLineSpacing(0f, 1.35f); setPadding(0, dp(ctx, 6f), 0, 0) })
-            if (s.detail.isBlank()) addView(hadithFooter(ctx, ar, s), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 12f) })
-        })
         if (s.detail.isNotBlank()) add(card(ctx, R.color.bg).apply {
             addView(hadith(ctx, marked(s.detail, item.arabic)))
             addView(hadithFooter(ctx, ar, s), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 12f) })
@@ -182,6 +174,12 @@ object SourceViews {
         if (s.whenToSay.isNotBlank()) add(card(ctx, R.color.bg).apply {
             addView(text(ctx, ar.getString(R.string.source_when), 12f, R.color.muted))
             addView(text(ctx, s.whenToSay, 16f, R.color.text, bold = true).apply { setPadding(0, dp(ctx, 2f), 0, 0) })
+        })
+        // The reference always comes last, under the hadith, its chain and when to say it.
+        if (s.reference.isNotBlank()) add(card(ctx, R.color.bg).apply {
+            addView(text(ctx, ar.getString(R.string.source_reference), 12f, R.color.gold, bold = true))
+            addView(text(ctx, s.reference, 16f, R.color.text).apply { setLineSpacing(0f, 1.35f); setPadding(0, dp(ctx, 6f), 0, 0) })
+            if (s.detail.isBlank()) addView(hadithFooter(ctx, ar, s), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 12f) })
         })
 
         val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }

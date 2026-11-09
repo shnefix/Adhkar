@@ -64,7 +64,9 @@ object WidgetStore {
             null
         }
             ?.takeIf { kind in it.kinds } ?: defaultStyle(kind)
-        val folder = s.getString("folder_$id", null) ?: Store.folders().firstOrNull()?.id ?: Store.ANYTIME
+        // A widget left on a parent folder (one that only holds folders) reads the first folder inside it.
+        val folder = s.getString("folder_$id", null)?.let { Store.readableFolder(it) }
+            ?: Store.readableFolders().firstOrNull()?.id ?: Store.ANYTIME
         return Config(style, folder, Appearance(
             fontSizeSp = s.getFloat("font_size_$id", 28f),
             lineHeight = s.getFloat("line_height_$id", 1.5f),
@@ -131,7 +133,7 @@ object WidgetStore {
      */
     fun syncFolderProgress(ctx: Context, folder: String, idx: Int, count: Int) {
         val s = sp(ctx)
-        val ids = s.all.mapNotNull { (k, v) -> if (k.startsWith("folder_") && v == folder) k.removePrefix("folder_").toIntOrNull() else null }
+        val ids = s.all.mapNotNull { (k, v) -> if (k.startsWith("folder_") && v is String && Store.readableFolder(v) == folder) k.removePrefix("folder_").toIntOrNull() else null }
         if (ids.isEmpty()) return
         val e = s.edit()
         val day = today()

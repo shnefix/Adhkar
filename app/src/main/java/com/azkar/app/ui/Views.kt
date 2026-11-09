@@ -67,8 +67,9 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
     var tapEnabled = true
     /** When on, a tap on the left third of the card goes back to the previous zikr instead of counting. */
     var tapLeftBack = false
-    /** When set (focus mode), a quick tap on the card calls this instead of moving; only swipes change the zikr. */
-    var onTap: (() -> Unit)? = null
+    /** When set (focus mode), a quick tap on the card calls this first; it returns true when it used the tap
+     *  (counted), false to let the tap move on as usual. */
+    var onTap: (() -> Boolean)? = null
     var canFinish: (() -> Boolean)? = null
     var onFinish: (() -> Unit)? = null
     private var rawDx = 0f
@@ -145,7 +146,7 @@ class SwipeLayout @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? =
         val quick = tapOk && e.eventTime - e.downTime < android.view.ViewConfiguration.getLongPressTimeout()
         val c = card
         val tap = onTap
-        if (quick && tap != null) tap()
+        if (quick && tap != null && tap()) Unit
         else if (quick && tapLeftBack && c != null && e.x < c.left + c.width / 3f) previous()
         else if (tapEnabled && quick) performClick()
         tapOk = false

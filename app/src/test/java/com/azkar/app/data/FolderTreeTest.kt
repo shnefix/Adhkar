@@ -41,6 +41,21 @@ class FolderTreeTest {
     }
 
     @Test
+    fun readableLeavesOutFoldersWithNoAzkarOfTheirOwn() {
+        assertEquals(listOf("c", "d"), FolderTree.readable(folders, setOf("c", "d")).map { it.id })
+        assertEquals(emptyList<String>(), FolderTree.readable(folders, emptySet()).map { it.id })
+    }
+
+    @Test
+    fun aParentFolderReadsTheFirstFolderBelowItThatHasAzkar() {
+        assertEquals("c", FolderTree.firstReadable(folders, "a", setOf("c", "d")))
+        assertEquals("b", FolderTree.firstReadable(folders, "a", setOf("b", "c")))
+        assertEquals("a", FolderTree.firstReadable(folders, "a", setOf("a", "c")))
+        assertEquals("d", FolderTree.firstReadable(folders, "d", setOf("c")))       // empty, nothing below: unchanged
+        assertEquals("gone", FolderTree.firstReadable(folders, "gone", setOf("c"))) // deleted folder: unchanged
+    }
+
+    @Test
     fun importKeepsParentsOfCreatedFoldersAndMapsFileIds() {
         val p = ImportJson.parse(
             """{"folders":[

@@ -322,7 +322,7 @@ private class PickerAdapter(
                 frame.setPadding(Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f))
                 frame.background = rounded(item == selected)
                 val bitmap = previewCache[item] ?: try {
-                    val folder = Store.folders().firstOrNull()?.id ?: Store.ANYTIME
+                    val folder = Store.readableFolders().firstOrNull()?.id ?: Store.ANYTIME
                     val family = item.family
                     (if (family != null) {
                         val (dw, dh) = AzkarWidgetSizes.design(family)

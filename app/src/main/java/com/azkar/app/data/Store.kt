@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 25
+    private const val DEFAULTS_VERSION = 27
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -221,6 +221,7 @@ object Store {
         if (!fresh && from < 22) removeUnsourcedDuas()
         if (!fresh && from < 23) { tashkeelFolderNames(p); removeUnsourcedDuas("removed_v23.json"); arabicGrades() }
         if (!fresh && from < 25) cleanZikrTexts()   // 25: matched ignoring tashkeel and spacing
+        if (!fresh && from < 27) fullChains(p)   // 26: texts with no chain; 27: also chains cut short
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -524,6 +525,26 @@ object Store {
         if (list != zCache) saveZikrs(list)
     }
 
+    /**
+     * Versions 26–27: hadith texts whose chain was cut short get the book's full text, so the whole isnad is drawn. Only
+     * where the zikr still has the default reference and the default text gives a longer chain than its own.
+     */
+    @Synchronized
+    private fun fullChains(p: ImportJson.Parsed.Ok) {
+        val byText = HashMap<String, ZikrSource>()
+        p.folders.forEach { f -> f.items.forEach { if (it.source.detail.isNotBlank()) byText.putIfAbsent(it.text, it.source) } }
+        var changed = false
+        val next = zCache.map { z ->
+            val d = byText[z.arabic] ?: return@map z
+            if (d.detail == z.source.detail || d.reference != z.source.reference) return@map z
+            val mine = if (z.source.detail.isBlank()) 0 else NarratorChain.parse(z.source.detail, z.source.reference)?.size ?: 0
+            if ((NarratorChain.parse(d.detail, d.reference)?.size ?: 0) <= mine) return@map z
+            changed = true
+            z.copy(source = z.source.copy(detail = d.detail))
+        }
+        if (changed) saveZikrs(next)
+    }
+
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
         val before = fCache.map { it.id }.toSet()
         val (ns, _) = ImportMerge.apply(ImportMerge.State(fCache, zCache, sCache), p) { UUID.randomUUID().toString() }
@@ -674,6 +695,26 @@ object Store {
 
     /** Folders directly inside [parent] (null = the Library's top level). */
     fun childFolders(parent: String?): List<Folder> = FolderTree.children(fCache, parent)
+
+    /** Ids of the folders that have something to read: at least one zikr of their own that isn't hidden. */
+    private fun foldersWithAzkar(): Set<String> {
+        val hidden = hzCache
+        return zCache.mapNotNullTo(HashSet()) { z -> z.folderId?.takeIf { z.id !in hidden } }
+    }
+
+    /** Folders a widget can show, in Library order. Parent folders that only hold other folders are left out. */
+    fun readableFolders(): List<Folder> = FolderTree.readable(fCache, foldersWithAzkar())
+
+    /**
+     * The folder a widget set to [key] actually reads: [key] itself, or, when it is a parent folder with no azkar of its
+     * own, the first folder inside it that has some. A deleted folder's azkar were moved to "Anytime", so that is read.
+     */
+    fun readableFolder(key: String): String {
+        if (key == ANYTIME || key == Tracking.ALL || key.startsWith("zikr:")) return key
+        // Only once the content is loaded: before that every folder looks deleted.
+        if (folder(key) == null) return if (initResult?.isCompleted == true) ANYTIME else key
+        return FolderTree.firstReadable(fCache, key, foldersWithAzkar())
+    }
 
     /** Where [id] may be moved: null (top level) and every folder that isn't [id] itself or inside it. */
     fun moveTargets(id: String): List<Pair<Folder, Int>> {

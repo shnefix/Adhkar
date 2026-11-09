@@ -42,7 +42,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun chooseFolder(id: Int, kind: WidgetKind, style: WidgetStyle) {
         val ids = ArrayList<String>()
         val names = ArrayList<String>()
-        Store.folders().forEach { f -> ids.add(f.id); names.add((f.icon?.let { "$it " } ?: "") + f.name) }
+        Store.readableFolders().forEach { f -> ids.add(f.id); names.add((f.icon?.let { "$it " } ?: "") + f.name) }
         if (Store.zikrs().any { it.folderId == null }) { ids.add(Store.ANYTIME); names.add(getString(R.string.anytime)) }
         if (ids.isEmpty()) { save(id, kind, style, Store.ANYTIME); return }
         dialog = AlertDialog.Builder(this)

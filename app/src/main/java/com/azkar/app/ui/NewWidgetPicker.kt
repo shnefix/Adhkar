@@ -88,7 +88,7 @@ fun showNewWidgetPicker(context: Context) {
         setTextColor(context.getColor(R.color.widget_editor_muted))
     })
 
-    val folder = Store.folders().firstOrNull()?.id ?: Store.ANYTIME
+    val folder = Store.readableFolders().firstOrNull()?.id ?: Store.ANYTIME
     val model = try {
         WidgetModel.load(context, AppWidgetManager.INVALID_APPWIDGET_ID, folder)
     } catch (e: Exception) {
