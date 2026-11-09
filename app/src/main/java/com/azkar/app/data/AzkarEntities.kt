@@ -10,7 +10,8 @@ data class FolderEntity(
     val name: String,
     val icon: String?,
     val remember: Boolean,
-    val position: Int
+    val position: Int,
+    val parentId: String? = null
 )
 
 @Entity(tableName = "zikrs")

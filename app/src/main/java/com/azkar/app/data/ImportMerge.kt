@@ -15,6 +15,7 @@ object ImportMerge {
         val sl = s.schedules.toMutableList()
         val idMap = HashMap<String, String>()          // folder id in the file -> folder id in the app
         val remMap = HashMap<String, String>()
+        val newParents = LinkedHashMap<String, String>()   // created folder -> parent ref from the file
         var created = 0; var merged = 0; var added = 0; var skipped = 0; var rem = 0
 
         fun addItems(folderId: String?, items: List<ImportJson.Item>) {
@@ -33,8 +34,16 @@ object ImportMerge {
             }
             if (existing != null) merged++
             f.id?.let { idMap[it] = folder.id }
+            if (existing == null && f.parent != null) newParents[folder.id] = f.parent
             addItems(folder.id, f.items)
         }
+        // Folders the import created keep the folder they sat in (a file id, or one already in the app).
+        newParents.forEach { (id, ref) ->
+            val target = idMap[ref] ?: fl.firstOrNull { it.id == ref }?.id
+            val i = fl.indexOfFirst { it.id == id }
+            if (target != null && i >= 0) fl[i] = fl[i].copy(parent = target)
+        }
+        fl.replaceAll { f -> if (FolderTree.cycles(fl, f.id)) f.copy(parent = null) else f }
         addItems(null, p.unfiled)
         p.reminders.forEach { r ->
             val id = r.id.ifBlank { newId() }

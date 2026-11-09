@@ -45,8 +45,8 @@ data class Zikr(
     val titleBelow: String = ""
 )
 
-/** A folder the user created or one loaded from the default asset. */
-data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false)
+/** A folder the user created or one loaded from the default asset. [parent] is the folder it sits in (null = top level). */
+data class Folder(val id: String, val name: String, val icon: String? = null, val remember: Boolean = false, val parent: String? = null)
 
 /**
  * One recitation inside the reader. [note] is the zikr's note (blank = none), shown under the text;

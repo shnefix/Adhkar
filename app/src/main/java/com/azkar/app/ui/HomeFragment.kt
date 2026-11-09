@@ -34,6 +34,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
 
             fun open(f: Folder) {
                 when {
+                    Store.zikrsIn(f.id).isEmpty() && Store.childFolders(f.id).isNotEmpty() -> nav().push(LibraryFragment.of(f.id))
                     Store.zikrsIn(f.id).isEmpty() -> nav().push(EditFolderFragment.of(f.id))
                     Store.readerItems(f.id).isEmpty() -> {
                         Toast.makeText(ctx, R.string.all_hidden_toast, Toast.LENGTH_SHORT).show()

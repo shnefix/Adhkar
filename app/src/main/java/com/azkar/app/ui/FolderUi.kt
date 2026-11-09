@@ -40,8 +40,8 @@ fun Fragment.pickEmoji(current: String?, onPicked: (String?) -> Unit) {
     dlg.show()
 }
 
-/** "New folder" dialog with a name and an optional icon. */
-fun Fragment.promptNewFolder(onCreated: (Folder) -> Unit) {
+/** "New folder" dialog with a name and an optional icon; the folder is made inside [parent] (null = top level). */
+fun Fragment.promptNewFolder(parent: String? = null, onCreated: (Folder) -> Unit) {
     val ctx = requireContext()
     var icon: String? = null
     val input = EditText(ctx).apply {
@@ -97,7 +97,7 @@ fun Fragment.promptNewFolder(onCreated: (Folder) -> Unit) {
             when {
                 name.isEmpty() -> input.error = ctx.getString(R.string.enter_name)
                 Store.folders().any { it.name.equals(name, ignoreCase = true) } -> input.error = ctx.getString(R.string.folder_exists)
-                else -> { val f = Store.addFolder(name, icon); dlg.dismiss(); onCreated(f) }
+                else -> { val f = Store.addFolder(name, icon, parent); dlg.dismiss(); onCreated(f) }
             }
         }
     }

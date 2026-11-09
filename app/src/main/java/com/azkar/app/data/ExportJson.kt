@@ -24,6 +24,7 @@ object ExportJson {
         val o = JSONObject().put("id", f.id).put("name", f.name)
         f.icon?.let { o.put("icon", it) }
         if (f.remember) o.put("remember", true)
+        f.parent?.let { o.put("parent", it) }
         return o.put("azkar", az)
     }
 

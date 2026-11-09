@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 15
+    private const val DEFAULTS_VERSION = 19
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -214,6 +214,9 @@ object Store {
         if (!fresh && from < 12) addShortAzkarAndPraised(p)
         if (!fresh && from < 13) addBookDuas(p)
         if (!fresh && from < 15) fillMissingDetails(p)   // 15: the fire hadith (and any detail added since)
+        if (from < 16) mergeTwinFolders()
+        if (!fresh && from < 19) fillMissingSources(p)   // 17, 19: sources found for azkar that had none
+        if (from < 18) createGroupFolders()
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -346,6 +349,58 @@ object Store {
                 changed = true
                 z.copy(source = z.source.copy(detail = src.detail, grade = z.source.grade.ifBlank { src.grade }))
             } else z
+        }
+        if (changed) saveZikrs(next)
+    }
+
+    /**
+     * Version 16: twin built-in folders become one ([FolderGroups.MERGES]). Azkar move to the kept folder (a text it
+     * already has is dropped); reminders, Home and tracking that pointed at the absorbed folder now use the kept one.
+     * Skipped for a pair whose kept folder the user deleted.
+     */
+    @Synchronized
+    private fun mergeTwinFolders() {
+        val into = HashMap<String, String>()
+        FolderGroups.MERGES.forEach { (keep, absorbed) ->
+            if (folder(keep) != null) absorbed.filter { folder(it) != null }.forEach { into[it] = keep }
+        }
+        if (into.isEmpty()) return
+        val texts = HashMap<String, MutableSet<String>>()
+        zCache.forEach { z -> z.folderId?.let { texts.getOrPut(it) { HashSet() } += z.arabic.trim() } }
+        val dropped = HashSet<String>()
+        val nextZikrs = zCache.mapNotNull { z ->
+            val keep = into[z.folderId] ?: return@mapNotNull z
+            if (!texts.getOrPut(keep) { HashSet() }.add(z.arabic.trim())) { dropped += z.id; null }
+            else z.copy(folderId = keep)
+        }
+        val nextSchedules = sCache.map { s -> into[s.open]?.let { s.copy(open = it) } ?: s }
+        saveContent(fCache.filter { it.id !in into }, nextZikrs, nextSchedules)
+        setHomeOrder(homeOrder().filter { it !in into })
+        setHidden(hidden() - into.keys)
+        setZikrsHidden(dropped, false)
+        into.keys.forEach { AppPrefs.clearPosition(it); AppPrefs.clearResetRule(it); Tracking.setTracked(it, false) }
+    }
+
+    /**
+     * Version 17: built-in azkar that had no source get the one added to the defaults. Matched by text (twin folders
+     * were merged in 16, so a zikr may now sit in another folder), and only where the user's zikr still has no source
+     * at all, so nothing the user wrote is replaced.
+     */
+    private fun fillMissingSources(p: ImportJson.Parsed.Ok) {
+        val byFolder = HashMap<Pair<String?, String>, ZikrSource>()
+        val byText = HashMap<String, ZikrSource>()
+        p.folders.forEach { f ->
+            f.items.forEach {
+                if (it.source.isEmpty) return@forEach
+                byFolder[f.id to it.text.trim()] = it.source
+                byText.putIfAbsent(it.text.trim(), it.source)
+            }
+        }
+        var changed = false
+        val next = zCache.map { z ->
+            val text = z.arabic.trim()
+            val src = byFolder[z.folderId to text] ?: byText[text]
+            if (src != null && z.source.isEmpty) { changed = true; z.copy(source = src) } else z
         }
         if (changed) saveZikrs(next)
     }
@@ -491,10 +546,49 @@ object Store {
     fun folder(id: String): Folder? = fCache.firstOrNull { it.id == id }
 
     @Synchronized
-    fun addFolder(name: String, icon: String? = null): Folder {
-        val f = Folder(UUID.randomUUID().toString(), name, icon?.takeUnless { EmojiRules.isRestricted(it) })
+    fun addFolder(name: String, icon: String? = null, parent: String? = null): Folder {
+        val f = Folder(UUID.randomUUID().toString(), name, icon?.takeUnless { EmojiRules.isRestricted(it) },
+            parent = parent?.takeIf { p -> fCache.any { it.id == p } })
         saveFolders(fCache + f)
         return f
+    }
+
+    /** Folders directly inside [parent] (null = the Library's top level). */
+    fun childFolders(parent: String?): List<Folder> = FolderTree.children(fCache, parent)
+
+    /** Where [id] may be moved: null (top level) and every folder that isn't [id] itself or inside it. */
+    fun moveTargets(id: String): List<Pair<Folder, Int>> {
+        val blocked = FolderTree.subtree(fCache, id)
+        return FolderTree.flatten(fCache).filter { it.first.id !in blocked }
+    }
+
+    /** Puts folder [id] inside [parent] (null = top level). Refused when that would put a folder inside itself. */
+    @Synchronized
+    fun moveFolderTo(id: String, parent: String?): Boolean {
+        if (parent != null && (parent in FolderTree.subtree(fCache, id) || fCache.none { it.id == parent })) return false
+        saveFolders(fCache.map { if (it.id == id) it.copy(parent = parent) else it })
+        return true
+    }
+
+    /**
+     * Version 18: the Library's ten parent folders ([FolderGroups.ALL]) become real folders the user can rename, move or
+     * delete. Each takes the built-in folders listed for it that are still at the top level; a group with none of its
+     * folders left isn't created. They are left off Home, since they hold folders rather than azkar.
+     */
+    @Synchronized
+    private fun createGroupFolders() {
+        val present = fCache.associateBy { it.id }
+        val groups = ArrayList<Folder>()
+        val parentOf = HashMap<String, String>()
+        FolderGroups.ALL.forEach { g ->
+            val kids = g.folders.filter { present[it]?.parent == null && it in present }
+            if (kids.isEmpty() || g.id in present) return@forEach
+            groups += Folder(g.id, g.name)
+            kids.forEach { parentOf[it] = g.id }
+        }
+        if (groups.isEmpty()) return
+        saveFolders(groups + fCache.map { f -> parentOf[f.id]?.let { f.copy(parent = it) } ?: f })
+        setHidden(hidden() + groups.map { it.id })
     }
 
     @Synchronized
@@ -535,7 +629,8 @@ object Store {
     /** Deletes the folder; its azkar stay saved as "Anytime" and reminders pointing at it just open the app. */
     @Synchronized
     fun deleteFolder(id: String) {
-        val nextFolders = fCache.filter { it.id != id }
+        val up = folder(id)?.parent        // folders inside it move up to where it was
+        val nextFolders = fCache.filter { it.id != id }.map { if (it.parent == id) it.copy(parent = up) else it }
         val nextZikrs = zCache.map { if (it.folderId == id) it.copy(folderId = null) else it }
         val nextSchedules = sCache.map { if (it.open == id) it.copy(open = null) else it }
         saveContent(nextFolders, nextZikrs, nextSchedules)

@@ -42,4 +42,11 @@ object AzkarRoomMigrations {
             db.execSQL("ALTER TABLE zikrs ADD COLUMN titleBottom TEXT NOT NULL DEFAULT ''")
         }
     }
+
+    /** Folders inside folders: the folder each one sits in (NULL = top level). */
+    val V6_TO_V7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE folders ADD COLUMN parentId TEXT DEFAULT NULL")
+        }
+    }
 }

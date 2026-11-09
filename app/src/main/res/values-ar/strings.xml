@@ -556,4 +556,13 @@
     <string name="search_in_source">في المصدر</string>
     <string name="search_none">لا شيء يطابق «%1$s»</string>
     <string name="search_more">عرض %1$d أخرى</string>
+    <string name="this_folder_azkar">أذكار هذا المجلد</string>
+    <string name="folders_and_azkar">%1$s · %2$s</string>
+    <string name="folder_open">فتح</string>
+    <string name="new_folder_inside">مجلد جديد بداخله</string>
+    <string name="move_to">نقل إلى…</string>
+    <string name="top_level">المستوى الأعلى (المكتبة)</string>
+    <string name="move_folder_title">نقل «%1$s» إلى</string>
+    <string name="moved_to">نُقل إلى %1$s</string>
+    <string name="delete_folder_subfolders">ستنتقل %1$s التي بداخله مستوى واحدًا للأعلى.</string>
 </resources>

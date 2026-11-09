@@ -526,4 +526,13 @@
     <string name="search_in_source">in source</string>
     <string name="search_none">Nothing matches “%1$s”</string>
     <string name="search_more">Show %1$d more</string>
+    <string name="this_folder_azkar">Azkar in this folder</string>
+    <string name="folders_and_azkar">%1$s · %2$s</string>
+    <string name="folder_open">Open</string>
+    <string name="new_folder_inside">New folder inside</string>
+    <string name="move_to">Move to…</string>
+    <string name="top_level">Top level (Library)</string>
+    <string name="move_folder_title">Move “%1$s” to</string>
+    <string name="moved_to">Moved to %1$s</string>
+    <string name="delete_folder_subfolders">The %1$s inside it will move up one level.</string>
 </resources>

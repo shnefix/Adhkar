@@ -12,7 +12,7 @@ import org.json.JSONObject
  */
 object ImportJson {
     data class Item(val text: String, val count: Int, val note: String = "", val title: String = "", val titlePos: TitlePos = TitlePos.ABOVE, val source: ZikrSource = ZikrSource(), val titleBelow: String = "")
-    data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null)
+    data class FolderIn(val name: String, val items: List<Item>, val id: String? = null, val icon: String? = null, val remember: Boolean = false, val home: Boolean? = null, val parent: String? = null)
     data class ReminderIn(val id: String, val title: String, val message: String, val hour: Int, val minute: Int, val enabled: Boolean, val folder: String?)
     data class SettingsIn(
         val arabicSize: Int?, val notificationsOn: Boolean?, val arabicSp: Int? = null,
@@ -96,7 +96,8 @@ object ImportJson {
             if (id != null && folders.any { it.id == id }) {
                 return Parsed.Error(R.string.import_err_duplicate_id, listOf(named, id))
             }
-            folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false), if (f.opt("home") is Boolean) f.getBoolean("home") else null))
+            folders.add(FolderIn(name, r as List<Item>, id, icon, f.optBoolean("remember", false), if (f.opt("home") is Boolean) f.getBoolean("home") else null,
+                (f.opt("parent") as? String)?.trim()?.ifEmpty { null }))
         }
         var unfiled: List<Item> = emptyList()
         root.optJSONArray("unfiled")?.let {

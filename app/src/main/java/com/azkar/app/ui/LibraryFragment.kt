@@ -20,6 +20,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azkar.app.R
 import com.azkar.app.data.AzkarContent
+import com.azkar.app.data.Folder
+import com.azkar.app.data.FolderTree
 import com.azkar.app.data.ImportJson
 import com.azkar.app.data.Store
 import com.azkar.app.reminders.ReminderScheduler
@@ -32,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val K_EXPORT_FOLDER = "export_folder_id"
+private const val ARG_PARENT = "parent"
 
 @AndroidEntryPoint
 class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
@@ -46,6 +49,8 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     private var searchFilter = SearchResults.Filter.ALL
     private var searchShown = SearchResults.pageSize
     private val cards = CardAdapter()
+    /** The folder whose folders are shown, or null for the Library's top level. */
+    private val parentId: String? get() = arguments?.getString(ARG_PARENT)
 
     private val importPicker =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -71,6 +76,11 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         bindNav(view, Tab.LIBRARY)
+        parentId?.let { id ->
+            view.findViewById<TextView>(R.id.title).apply { text = Store.folderName(id); textSize = 22f }
+            view.findViewById<View>(R.id.btn_back).apply { visibility = View.VISIBLE; setOnClickListener { nav().pop() } }
+            listOf(R.id.btn_add, R.id.btn_import, R.id.btn_export).forEach { view.findViewById<View>(it).visibility = View.GONE }
+        }
 
         view.findViewById<View>(R.id.btn_add).setOnClickListener {
             nav().push(AddZikrFragment.of(null))
@@ -133,25 +143,40 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
         showSearch(current, counts, query)
         if (query.isNotEmpty()) return
 
-        current.folders.forEach { f ->
-            val isDefault = Store.isDefaultFolder(f.id)
+        val parent = parentId
+        val shown = FolderTree.children(current.folders, parent)
+        val kids = current.folders.groupingBy { it.parent }.eachCount()
+        view?.findViewById<TextView>(R.id.title)?.let { t -> parent?.let { t.text = Store.folderName(it) } }
 
+        // Inside a folder that also has azkar of its own: one card for them, first.
+        val own = parent?.let { counts[it] } ?: 0
+        if (parent != null && own > 0) list.add(
+            Card("own:$parent", getString(R.string.this_folder_azkar), azkarCount(ctx, own), null,
+                R.drawable.ic_book_1p75, teal, false) { nav().push(FolderFragment.of(parent)) }
+        )
+
+        shown.forEach { f ->
+            val isDefault = Store.isDefaultFolder(f.id)
+            val sub = kids[f.id] ?: 0
+            val n = counts[f.id] ?: 0
+            val countText = when {
+                sub == 0 -> azkarCount(ctx, n)
+                n == 0 -> resources.getQuantityString(R.plurals.folder_count, sub, sub)
+                else -> getString(R.string.folders_and_azkar, resources.getQuantityString(R.plurals.folder_count, sub, sub), azkarCount(ctx, n))
+            }
+            val book = isDefault && sub == 0
             list.add(
                 Card(
-                    f.id,
-                    f.name,
-                    azkarCount(ctx, counts[f.id] ?: 0),
-                    f.icon,
-                    if (isDefault) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
-                    if (isDefault) teal else gold,
-                    false
-                ) {
-                    nav().push(FolderFragment.of(f.id))
-                }
+                    f.id, f.name, countText, f.icon,
+                    if (book) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75,
+                    if (book) teal else gold,
+                    false,
+                    onMenu = { folderMenu(f) }
+                ) { openFolder(f.id) }
             )
         }
 
-        val anytime = counts[null] ?: 0
+        val anytime = if (parent == null) counts[null] ?: 0 else 0
 
         if (anytime > 0) {
             list.add(
@@ -179,13 +204,13 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
                 gold,
                 true
             ) {
-                promptNewFolder { latestContent?.let(::refresh) }
+                promptNewFolder(parent) { latestContent?.let(::refresh) }
             }
         )
 
         cards.submitList(list)
 
-        val n = current.folders.size
+        val n = if (parent == null) current.folders.size else shown.size
         view?.findViewById<TextView>(R.id.folder_count)?.text =
             resources.getQuantityString(R.plurals.folder_count, n, n)
     }
@@ -215,7 +240,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
                 ctx, v.findViewById(R.id.results_body), query, result, searchFilter, searchShown, counts,
                 onFilter = { searchFilter = it; searchShown = SearchResults.pageSize; results.scrollTo(0, 0); refresh() },
                 onMore = { searchShown += SearchResults.pageSize; refresh() },
-                onFolder = { nav().push(FolderFragment.of(it.id)) },
+                onFolder = { openFolder(it.id) },
                 onZikr = { z -> nav().push(ReaderFragment.of(Store.readerKey(z), Store.readerIndex(z))) }
             )
         }
@@ -419,4 +444,48 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     }
 
     private fun count(plural: Int, n: Int) = resources.getQuantityString(plural, n, n)
+
+    /** A folder holding other folders opens as a grid of them; any other folder opens its azkar. */
+    private fun openFolder(id: String) {
+        if (Store.childFolders(id).isNotEmpty()) nav().push(of(id)) else nav().push(FolderFragment.of(id))
+    }
+
+    /** The ⋮ on a folder card: open it, make a folder inside it, move it, or edit it (rename, icon, delete). */
+    private fun folderMenu(f: Folder) {
+        val actions = listOf<Pair<Int, () -> Unit>>(
+            R.string.folder_open to { openFolder(f.id) },
+            R.string.new_folder_inside to { promptNewFolder(f.id) { nav().push(of(f.id)) } },
+            R.string.move_to to { pickMoveTarget(f) },
+            R.string.edit_folder to { nav().push(EditFolderFragment.of(f.id)) },
+        )
+        AlertDialog.Builder(requireContext())
+            .setTitle(f.name)
+            .setItems(actions.map { getString(it.first) }.toTypedArray()) { _, i -> actions[i].second() }
+            .show()
+    }
+
+    /** Where to move [f]: the top level, or any folder that isn't [f] or inside it (indented to show the tree). */
+    private fun pickMoveTarget(f: Folder) {
+        val ctx = requireContext()
+        val tree = Store.moveTargets(f.id)
+        val targets: List<String?> = listOf<String?>(null) + tree.map { it.first.id }
+        val names = listOf(getString(R.string.top_level)) + tree.map { it.first.name }
+        // The LRM keeps the indent on the left even for Arabic names (an RTL line would put leading spaces on the right).
+        val labels = listOf(names[0]) + tree.map { (t, depth) -> if (depth == 0) t.name else "\u200e" + "\u2003\u2003".repeat(depth) + "\u2067" + t.name + "\u2069" }
+        val current = targets.indexOf(f.parent).coerceAtLeast(0)
+        AlertDialog.Builder(ctx)
+            .setTitle(getString(R.string.move_folder_title, f.name))
+            .setSingleChoiceItems(labels.toTypedArray(), current) { d, i ->
+                d.dismiss()
+                if (targets[i] != f.parent && Store.moveFolderTo(f.id, targets[i])) {
+                    android.widget.Toast.makeText(ctx, getString(R.string.moved_to, names[i]), android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    companion object {
+        fun of(parentId: String) = LibraryFragment().apply { arguments = Bundle().apply { putString(ARG_PARENT, parentId) } }
+    }
 }

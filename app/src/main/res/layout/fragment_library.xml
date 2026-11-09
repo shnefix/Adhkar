@@ -3,7 +3,10 @@
 <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
 <LinearLayout android:orientation="vertical" android:paddingTop="60dp" android:paddingStart="24dp" android:paddingEnd="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
-<TextView style="@style/TB" android:text="@string/library" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+<FrameLayout android:id="@+id/btn_back" android:visibility="gone" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="12dp" android:background="@drawable/bg_card22" android:contentDescription="@string/back" android:clickable="true" android:focusable="true">
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_l_2" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/text" android:layout_gravity="center"/>
+</FrameLayout>
+<TextView android:id="@+id/title" style="@style/TB" android:text="@string/library" android:textSize="28sp" android:textColor="@color/text" android:lineHeight="36sp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
 <FrameLayout android:id="@+id/btn_add" android:layout_width="44dp" android:layout_height="44dp" android:layout_marginEnd="8dp" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:contentDescription="@string/add_zikr">
 <ImageView android:importantForAccessibility="no" android:src="@drawable/ic_plus_2p25" android:layout_gravity="center" android:layout_width="20dp" android:layout_height="20dp" app:tint="@color/bg"/>
 </FrameLayout>

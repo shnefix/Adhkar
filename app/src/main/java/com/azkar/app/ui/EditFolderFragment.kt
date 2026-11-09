@@ -186,10 +186,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         view.findViewById<View>(R.id.btn_delete).setOnClickListener {
             val n = current?.zikrs?.size ?: Store.zikrsIn(viewModel.id).size
             val doDelete = { viewModel.delete(); nav().pop() }
-            if (n == 0) doDelete()
+            val subs = Store.childFolders(viewModel.id).size
+            val message = listOfNotNull(
+                getString(R.string.delete_folder_message, azkarCount(ctx, n)).takeIf { n > 0 },
+                getString(R.string.delete_folder_subfolders, resources.getQuantityString(R.plurals.folder_count, subs, subs)).takeIf { subs > 0 }
+            ).joinToString("\n\n")
+            if (n == 0 && subs == 0) doDelete()
             else AlertDialog.Builder(ctx)
                 .setTitle(getString(R.string.delete_folder_title, Store.folderName(viewModel.id)))
-                .setMessage(getString(R.string.delete_folder_message, azkarCount(ctx, n)))
+                .setMessage(message)
                 .setPositiveButton(R.string.delete) { _, _ -> doDelete() }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
