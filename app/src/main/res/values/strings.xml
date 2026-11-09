@@ -494,12 +494,6 @@
     <string name="source_tab_sources">Sources</string>
     <string name="source_show_chain">Show full chain</string>
     <string name="source_chain_title">Chain of narrators</string>
-    <string name="source_chain_full">Show all</string>
-    <string name="source_chain_less">Show less</string>
-    <string name="source_role_prophet">Said the hadith</string>
-    <string name="source_role_companion">Companion</string>
-    <string name="source_role_narrator">Narrator</string>
-    <string name="source_role_author">Recorded it in his book</string>
     <string name="source_narrator">Narrator</string>
     <string name="source_grade">Grade</string>
     <string name="source_copy">Copy hadith</string>
@@ -509,4 +503,5 @@
     <string name="source_style">Source page</string>
     <string name="source_style_tabs">Tabs on the card</string>
     <string name="source_style_sheet">Sheet over the reader</string>
+    <string name="source_chain_span">From the Prophet ﷺ to %1$s</string>
 </resources>

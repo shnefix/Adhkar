@@ -524,12 +524,6 @@
     <string name="source_tab_sources">المصادر</string>
     <string name="source_show_chain">عرض السند كاملًا</string>
     <string name="source_chain_title">سند الحديث</string>
-    <string name="source_chain_full">عرض كامل</string>
-    <string name="source_chain_less">تصغير</string>
-    <string name="source_role_prophet">قائل الحديث</string>
-    <string name="source_role_companion">الصحابي</string>
-    <string name="source_role_narrator">راوٍ</string>
-    <string name="source_role_author">صاحب الكتاب</string>
     <string name="source_narrator">الراوي</string>
     <string name="source_grade">الدرجة</string>
     <string name="source_copy">نسخ الحديث</string>
@@ -539,4 +533,5 @@
     <string name="source_style">صفحة المصدر</string>
     <string name="source_style_tabs">تبويبات على البطاقة</string>
     <string name="source_style_sheet">نافذة فوق القارئ</string>
+    <string name="source_chain_span">من النبي ﷺ إلى %1$s</string>
 </resources>
