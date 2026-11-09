@@ -93,7 +93,7 @@ object ReminderScheduler {
         if (items.isEmpty() || done >= items.size) return              // finished (or nothing to read): stay quiet
         val end = PrayerSessions.endAfter(s, now) ?: return
         val morning = s == PrayerSessions.Session.MORNING
-        val nid = NUDGE_NOTIFICATION_BASE + s.ordinal   // outside the 100..65635 range used by reminders, so they never replace each other
+        val nid = NUDGE_NOTIFICATION_BASE + s.ordinal   // outside the 100..69999 range used by reminders, so they never replace each other
         val open = PendingIntent.getActivity(
             ctx, nid,
             Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -142,7 +142,7 @@ object ReminderScheduler {
         // A morning / evening reminder only lives until Dhuhr / Maghrib; one arriving after that is dropped.
         val now = System.currentTimeMillis()
         val endsAt = PrayerSessions.forSchedule(s.id)?.let { PrayerSessions.endAfter(it, now) }
-        val nid = 100 + (s.id.hashCode() and 0xFFFF)
+        val nid = AppPrefs.notificationId(s.id)
         // A deleted folder just opens the app; a before-sleep reminder without a folder opens the sleep azkar.
         val folder = s.open?.takeIf { Store.folder(it) != null }
             ?: PrayerSessions.SLEEP_FOLDER.takeIf { s.id == PrayerSessions.SLEEP_SCHEDULE && Store.folder(it) != null }

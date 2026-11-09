@@ -17,6 +17,8 @@ object AppPrefs {
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
     private const val K_FOCUS = "reader_focus"
+    private const val K_NOTIF_ID = "notif_id_"
+    private const val K_NOTIF_NEXT = "notif_id_next"
     private const val K_SOURCE_STYLE = "source_style"
     private const val K_COMPLETE = "completion_screen"
     private const val K_SOURCES = "sources_on"
@@ -207,7 +209,24 @@ object AppPrefs {
 
     /** A reminder that comes before / after a prayer instead of at a clock time; null = at its clock time. */
     fun reminderRule(scheduleId: String): com.azkar.app.reminders.TimeRule? =
-        if (::sp.isInitialized) com.azkar.app.reminders.TimeRule.decode(sp.getString(K_REM_RULE + scheduleId, null)) else null
+        // Morning / evening / before sleep always follow Fajr / Asr / Isha: a rule for them (only a hand-edited
+        // backup can hold one) would move them outside their session, where they are dropped as late.
+        if (!::sp.isInitialized || scheduleId in FIXED_PRAYER_REMINDERS) null
+        else com.azkar.app.reminders.TimeRule.decode(sp.getString(K_REM_RULE + scheduleId, null))
+    private val FIXED_PRAYER_REMINDERS = setOf("m", "e", "s")
+
+    /**
+     * Notification id for a reminder: given once and kept, so two reminders never share one (a hash could, and
+     * then one would replace the other). Stays within 100..69999, below the "not finished yet" ids.
+     */
+    @Synchronized
+    fun notificationId(scheduleId: String): Int {
+        val key = K_NOTIF_ID + scheduleId
+        sp.getInt(key, 0).takeIf { it > 0 }?.let { return it }
+        val next = (sp.getInt(K_NOTIF_NEXT, 100)).let { if (it >= 70_000) 100 else it }
+        sp.edit().putInt(key, next).putInt(K_NOTIF_NEXT, next + 1).apply()
+        return next
+    }
 
     fun setReminderRule(scheduleId: String, rule: com.azkar.app.reminders.TimeRule?) {
         if (rule == null) sp.edit().remove(K_REM_RULE + scheduleId).apply()

@@ -521,7 +521,7 @@
     <string name="focus_mode_summary">أثناء القراءة، يظهر الذكر ودائرة العدّ فقط: بلا عنوان ولا زر رجوع ولا أرقام ولا مصدر ولا شريط (اضغط رجوع مرتين للخروج)</string>
     <string name="source_tab_hadith">الحديث</string>
     <string name="source_tab_chain">السند</string>
-    <string name="source_tab_sources">المصادر</string>
+    <string name="source_tab_sources">التخريج</string>
     <string name="source_show_chain">عرض السند كاملًا</string>
     <string name="source_chain_title">سند الحديث</string>
     <string name="source_narrator">الراوي</string>

@@ -177,6 +177,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             srcNote.text = it.note
             srcNote.visibility = if (it.note.isNotBlank()) View.VISIBLE else View.GONE
             srcCards.removeAllViews()
+            (srcAr.parent as View).background = SourceViews.framedCard(ctx)
             srcCards.addView(SourceViews.tabs(ctx, arRes, it, ::marked), LinearLayout.LayoutParams(-1, -2))
             srcChips.removeAllViews()
             srcChips.visibility = View.GONE

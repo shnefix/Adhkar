@@ -491,7 +491,7 @@
     <string name="focus_mode_summary">While reading, show only the zikr and the counting ring: no title, back button, numbers, source or slider (press back twice to leave)</string>
     <string name="source_tab_hadith">Hadith</string>
     <string name="source_tab_chain">Chain</string>
-    <string name="source_tab_sources">Sources</string>
+    <string name="source_tab_sources">Takhrij</string>
     <string name="source_show_chain">Show full chain</string>
     <string name="source_chain_title">Chain of narrators</string>
     <string name="source_narrator">Narrator</string>

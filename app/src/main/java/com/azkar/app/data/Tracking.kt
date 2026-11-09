@@ -47,6 +47,7 @@ object Tracking {
     fun isTracked(folderId: String) = folderId in readIds()
     fun anyTracked() = tracked().isNotEmpty()
 
+    @Synchronized   // read, change, write: two quick toggles must not lose one
     fun setTracked(folderId: String, on: Boolean) {
         val next = if (on) readIds() + folderId else readIds() - folderId
         sp.edit().putString(K_TRACKED, org.json.JSONArray(next.toList()).toString()).apply()

@@ -37,6 +37,15 @@ object SourceViews {
         setPadding(dp(ctx, 18f), dp(ctx, 16f), dp(ctx, 18f), dp(ctx, 16f))
     }
 
+    /** Design G's zikr frame: the card with a dashed line inset inside its border. */
+    fun framedCard(ctx: Context): android.graphics.drawable.Drawable {
+        val inset = dp(ctx, 5f)
+        return android.graphics.drawable.LayerDrawable(arrayOf(
+            Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border2), 28f),
+            Ui.shape(ctx, null, ctx.getColor(R.color.border2), 23f, dashed = true)
+        )).apply { setLayerInset(1, inset, inset, inset, inset) }
+    }
+
     /** Gold pill with the grade (صحيح …). */
     fun gradeBadge(ctx: Context, grade: String) = text(ctx, grade, 12f, R.color.bg, bold = true).apply {
         background = Ui.shape(ctx, ctx.getColor(R.color.gold), null, 999f)
