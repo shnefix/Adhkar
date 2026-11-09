@@ -1,0 +1,295 @@
+package com.azkar.app.ui
+
+import android.app.Dialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.res.Resources
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import com.azkar.app.R
+import com.azkar.app.data.NarratorChain
+import com.azkar.app.data.ReaderItem
+
+/**
+ * The two source-page styles chosen in Settings: tabs on the turned-over card (hadith / chain / sources), or a
+ * bottom sheet over the reader. Both always read in Arabic ([ar] is an Arabic-locale Resources).
+ */
+object SourceViews {
+    private fun dp(ctx: Context, v: Float) = Ui.pxi(ctx, v)
+
+    private fun text(ctx: Context, s: CharSequence, sp: Float, color: Int, bold: Boolean = false, style: Int = 0) =
+        TextView(ctx, null, 0, if (style != 0) style else if (bold) R.style.TB else R.style.T).apply {
+            text = s; textSize = sp; setTextColor(ctx.getColor(color))
+            textDirection = View.TEXT_DIRECTION_RTL
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        }
+
+    private fun card(ctx: Context, fill: Int = R.color.card) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        background = Ui.shape(ctx, ctx.getColor(fill), ctx.getColor(R.color.border), 20f)
+        setPadding(dp(ctx, 18f), dp(ctx, 16f), dp(ctx, 18f), dp(ctx, 16f))
+    }
+
+    /** Gold pill with the grade (صحيح …). */
+    fun gradeBadge(ctx: Context, grade: String) = text(ctx, grade, 12f, R.color.bg, bold = true).apply {
+        background = Ui.shape(ctx, ctx.getColor(R.color.gold), null, 999f)
+        setPadding(dp(ctx, 12f), dp(ctx, 4f), dp(ctx, 12f), dp(ctx, 4f))
+    }
+
+    /** The hadith in the Arabic font, the zikr's words in gold. */
+    private fun hadith(ctx: Context, body: CharSequence) = text(ctx, body, 19f, R.color.text, style = R.style.Ar).apply {
+        setLineSpacing(0f, 1.55f)
+    }
+
+    /** Vertical timeline: the Prophet ﷺ (gold dot) down to the book's author (cream square). */
+    fun chainTimeline(ctx: Context, ar: Resources, links: List<NarratorChain.Link>): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        links.forEachIndexed { i, link ->
+            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; layoutDirection = View.LAYOUT_DIRECTION_RTL }
+            val rail = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
+            val gold = ctx.getColor(R.color.gold)
+            val dot = View(ctx).apply {
+                background = when (link.role) {
+                    NarratorChain.Role.PROPHET -> Ui.shape(ctx, gold, null, 7f)
+                    NarratorChain.Role.AUTHOR -> Ui.shape(ctx, ctx.getColor(R.color.arabic), null, 4f)
+                    NarratorChain.Role.COMPANION -> Ui.shape(ctx, null, gold, 7f)
+                    NarratorChain.Role.NARRATOR -> Ui.shape(ctx, null, ctx.getColor(R.color.hint), 7f)
+                }
+            }
+            rail.addView(dot, LinearLayout.LayoutParams(dp(ctx, 14f), dp(ctx, 14f)).apply { topMargin = dp(ctx, 4f) })
+            if (i < links.size - 1) rail.addView(View(ctx).apply { setBackgroundColor(ctx.getColor(R.color.track)) },
+                LinearLayout.LayoutParams(dp(ctx, 2f), 0, 1f))
+            row.addView(rail, LinearLayout.LayoutParams(dp(ctx, 16f), LinearLayout.LayoutParams.MATCH_PARENT))
+            val labels = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(ctx, 14f), 0, 0, if (i < links.size - 1) dp(ctx, 12f) else 0)
+                val nameColor = when (link.role) {
+                    NarratorChain.Role.PROPHET -> R.color.gold
+                    NarratorChain.Role.AUTHOR -> R.color.arabic
+                    else -> R.color.text
+                }
+                addView(text(ctx, link.name, 15f, nameColor, bold = link.role != NarratorChain.Role.NARRATOR))
+                addView(text(ctx, ar.getString(when (link.role) {
+                    NarratorChain.Role.PROPHET -> R.string.source_role_prophet
+                    NarratorChain.Role.COMPANION -> R.string.source_role_companion
+                    NarratorChain.Role.NARRATOR -> R.string.source_role_narrator
+                    NarratorChain.Role.AUTHOR -> R.string.source_role_author
+                }), 12f, R.color.muted))
+            }
+            row.addView(labels, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(row, LinearLayout.LayoutParams(-1, -2))
+        }
+    }
+
+    /** Short form of the chain: name pills joined by arrows, wrapping from the right. */
+    private fun chainRow(ctx: Context, links: List<NarratorChain.Link>) = FlowLayout(ctx).apply {
+        fromRight = true
+        links.forEachIndexed { i, link ->
+            val first = link.role == NarratorChain.Role.PROPHET
+            val last = link.role == NarratorChain.Role.AUTHOR
+            addView(text(ctx, link.name, 12f, if (first || last) R.color.bg else R.color.light, bold = first || last).apply {
+                background = when {
+                    first -> Ui.shape(ctx, ctx.getColor(R.color.gold), null, 999f)
+                    last -> Ui.shape(ctx, ctx.getColor(R.color.arabic), null, 999f)
+                    else -> Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(
+                        if (link.role == NarratorChain.Role.COMPANION) R.color.gold else R.color.border2), 999f)
+                }
+                setPadding(dp(ctx, 10f), dp(ctx, 4f), dp(ctx, 10f), dp(ctx, 4f))
+            })
+            if (i < links.size - 1) addView(text(ctx, "←", 12f, R.color.hint))
+        }
+    }
+
+    /** One label / value pair of the sources list. */
+    private fun fact(ctx: Context, label: String, value: CharSequence, valueColor: Int = R.color.text) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        addView(text(ctx, label, 12f, R.color.muted))
+        addView(text(ctx, value, 16f, valueColor, bold = true).apply { setPadding(0, dp(ctx, 2f), 0, 0) })
+    }
+
+    private fun sourcesList(ctx: Context, ar: Resources, item: ReaderItem) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        val s = item.source
+        fun add(v: View) = addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (childCount > 0) topMargin = dp(ctx, 16f) })
+        if (s.reference.isNotBlank()) add(fact(ctx, ar.getString(R.string.source_reference), s.reference))
+        if (s.narrator.isNotBlank()) add(fact(ctx, ar.getString(R.string.source_narrator), s.narrator))
+        if (s.grade.isNotBlank()) add(fact(ctx, ar.getString(R.string.source_grade), s.grade, R.color.gold))
+        if (s.whenToSay.isNotBlank()) add(fact(ctx, ar.getString(R.string.source_when), s.whenToSay))
+    }
+
+    /**
+     * Style G, on the turned-over card: grade and reference, then tabs for the hadith, its chain and its sources.
+     * A tab with nothing in it is left out; with a single tab the bar is not shown.
+     */
+    fun tabs(ctx: Context, ar: Resources, item: ReaderItem, marked: (String, String) -> CharSequence): View {
+        val s = item.source
+        val chain = s.detail.takeIf { it.isNotBlank() }?.let { NarratorChain.parse(it, s.reference) }
+        val hasSources = s.reference.isNotBlank() || s.narrator.isNotBlank() || s.grade.isNotBlank() || s.whenToSay.isNotBlank()
+        val pages = buildList {
+            if (s.detail.isNotBlank()) add(R.string.source_tab_hadith)
+            if (chain != null) add(R.string.source_tab_chain)
+            if (hasSources) add(R.string.source_tab_sources)
+        }
+        val root = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_RTL }
+        if (s.reference.isNotBlank()) head.addView(text(ctx, s.reference, 13f, R.color.gold), LinearLayout.LayoutParams(0, -2, 1f))
+        if (s.grade.isNotBlank()) head.addView(gradeBadge(ctx, s.grade))
+        if (head.childCount > 0) root.addView(head, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(ctx, 12f) })
+        if (pages.isEmpty()) return root
+
+        val content = card(ctx)
+        val bar = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 999f)
+            setPadding(dp(ctx, 4f), dp(ctx, 4f), dp(ctx, 4f), dp(ctx, 4f))
+        }
+        val tabViews = ArrayList<TextView>()
+        lateinit var select: (Int) -> Unit
+        select = { page ->
+            tabViews.forEachIndexed { i, tv ->
+                val on = pages[i] == page
+                tv.background = if (on) Ui.shape(ctx, ctx.getColor(R.color.gold), null, 999f) else null
+                tv.setTextColor(ctx.getColor(if (on) R.color.bg else R.color.light))
+                tv.isSelected = on
+            }
+            content.removeAllViews()
+            when (page) {
+                R.string.source_tab_hadith -> {
+                    content.addView(hadith(ctx, marked(s.detail, item.arabic)))
+                    if (chain != null) content.addView(text(ctx, ar.getString(R.string.source_show_chain), 13f, R.color.gold).apply {
+                        background = Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(R.color.border2), 999f)
+                        setPadding(dp(ctx, 14f), dp(ctx, 8f), dp(ctx, 14f), dp(ctx, 8f))
+                        isClickable = true; isFocusable = true
+                        setOnClickListener { select(R.string.source_tab_chain) }
+                    }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(ctx, 14f); gravity = Gravity.END })
+                }
+                R.string.source_tab_chain -> content.addView(chainTimeline(ctx, ar, chain.orEmpty()))
+                else -> content.addView(sourcesList(ctx, ar, item))
+            }
+        }
+        pages.forEach { page ->
+            val tv = text(ctx, ar.getString(page), 14f, R.color.light, bold = true).apply {
+                gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER
+                minHeight = dp(ctx, 40f)
+                isClickable = true; isFocusable = true
+                setOnClickListener { select(page) }
+            }
+            tabViews += tv
+            bar.addView(tv, LinearLayout.LayoutParams(0, dp(ctx, 40f), 1f))
+        }
+        if (pages.size > 1) root.addView(bar, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(ctx, 12f) })
+        root.addView(content, LinearLayout.LayoutParams(-1, -2))
+        select(pages.first())
+        return root
+    }
+
+    /** Style H: a bottom sheet over the reader, with the chain as a short row that opens into the full timeline. */
+    fun showSheet(ctx: Context, ar: Resources, item: ReaderItem, marked: (String, String) -> CharSequence) {
+        val s = item.source
+        val dialog = Dialog(ctx)
+        val chain = s.detail.takeIf { it.isNotBlank() }?.let { NarratorChain.parse(it, s.reference) }
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            setBackgroundResource(R.drawable.bg_sheet_top)
+            setPadding(dp(ctx, 18f), dp(ctx, 10f), dp(ctx, 18f), dp(ctx, 18f))
+        }
+        root.addView(View(ctx).apply { background = Ui.shape(ctx, ctx.getColor(R.color.border2), null, 2f) },
+            LinearLayout.LayoutParams(dp(ctx, 40f), dp(ctx, 4f)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(ctx, 12f) })
+
+        val head = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        head.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(text(ctx, ar.getString(R.string.source_title), 18f, R.color.text, bold = true))
+            if (s.reference.isNotBlank()) addView(text(ctx, s.reference, 12f, R.color.muted))
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        if (s.grade.isNotBlank()) head.addView(gradeBadge(ctx, s.grade), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(ctx, 10f) })
+        head.addView(FrameLayout(ctx).apply {
+            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 22f)
+            contentDescription = ar.getString(R.string.source_close)
+            isClickable = true; isFocusable = true
+            setOnClickListener { dialog.dismiss() }
+            addView(text(ctx, "✕", 15f, R.color.light), FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        }, LinearLayout.LayoutParams(dp(ctx, 44f), dp(ctx, 44f)))
+        root.addView(head, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(ctx, 12f) })
+
+        val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(ctx).apply { isVerticalScrollBarEnabled = false; overScrollMode = View.OVER_SCROLL_NEVER; addView(body) }
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        fun add(v: View) = body.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (body.childCount > 0) topMargin = dp(ctx, 12f) })
+
+        if (s.detail.isNotBlank()) add(card(ctx, R.color.bg).apply { addView(hadith(ctx, marked(s.detail, item.arabic))) })
+        if (chain != null) {
+            val chainCard = card(ctx, R.color.bg)
+            val title = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            title.addView(text(ctx, ar.getString(R.string.source_chain_title), 14f, R.color.text, bold = true), LinearLayout.LayoutParams(0, -2, 1f))
+            val toggle = text(ctx, ar.getString(R.string.source_chain_full), 12f, R.color.gold).apply {
+                background = Ui.shape(ctx, ctx.getColor(R.color.card2), ctx.getColor(R.color.border2), 999f)
+                setPadding(dp(ctx, 12f), dp(ctx, 6f), dp(ctx, 12f), dp(ctx, 6f))
+                isClickable = true; isFocusable = true
+            }
+            title.addView(toggle)
+            chainCard.addView(title)
+            val holder = FrameLayout(ctx)
+            chainCard.addView(holder, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 10f) })
+            var open = false
+            fun showChain() {
+                holder.removeAllViews()
+                holder.addView(if (open) chainTimeline(ctx, ar, chain) else chainRow(ctx, chain))
+                toggle.text = ar.getString(if (open) R.string.source_chain_less else R.string.source_chain_full)
+            }
+            toggle.setOnClickListener {
+                open = !open; showChain()
+                dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, sheetHeight(ctx, open))
+            }
+            showChain()
+            add(chainCard)
+        }
+        if (s.narrator.isNotBlank() || s.whenToSay.isNotBlank()) add(card(ctx, R.color.bg).apply {
+            if (s.narrator.isNotBlank()) addView(fact(ctx, ar.getString(R.string.source_narrator), s.narrator))
+            if (s.whenToSay.isNotBlank()) addView(fact(ctx, ar.getString(R.string.source_when), s.whenToSay).apply {
+                if (childCount > 0 && s.narrator.isNotBlank()) setPadding(0, dp(ctx, 12f), 0, 0)
+            })
+        })
+
+        val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        if (s.detail.isNotBlank()) buttons.addView(text(ctx, ar.getString(R.string.source_copy), 14f, R.color.text, bold = true).apply {
+            gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER
+            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border2), 24f)
+            isClickable = true; isFocusable = true
+            setOnClickListener {
+                val clip = ctx.getSystemService(ClipboardManager::class.java)
+                clip?.setPrimaryClip(ClipData.newPlainText(ar.getString(R.string.source_title), listOf(s.detail, s.reference).filter { it.isNotBlank() }.joinToString("\n\n")))
+                Toast.makeText(ctx, ar.getString(R.string.source_copied), Toast.LENGTH_SHORT).show()
+            }
+        }, LinearLayout.LayoutParams(0, dp(ctx, 48f), 1f).apply { marginEnd = dp(ctx, 10f) })
+        buttons.addView(text(ctx, ar.getString(R.string.source_back_to_zikr), 14f, R.color.bg, bold = true).apply {
+            gravity = Gravity.CENTER; textAlignment = View.TEXT_ALIGNMENT_CENTER
+            background = Ui.shape(ctx, ctx.getColor(R.color.gold), null, 24f)
+            isClickable = true; isFocusable = true
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(0, dp(ctx, 48f), 1f))
+        root.addView(buttons, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(ctx, 14f) })
+
+        dialog.setContentView(root)
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setGravity(Gravity.BOTTOM)
+            setLayout(WindowManager.LayoutParams.MATCH_PARENT, sheetHeight(ctx, false))
+            setWindowAnimations(android.R.style.Animation_InputMethod)
+            setDimAmount(0.65f)
+        }
+        dialog.show()
+    }
+
+    private fun sheetHeight(ctx: Context, tall: Boolean) =
+        (ctx.resources.displayMetrics.heightPixels * if (tall) 0.92f else 0.68f).toInt()
+}

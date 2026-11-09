@@ -489,4 +489,24 @@
     <string name="zikr_source_grade_hint">Grade, e.g. Sahih</string>
     <string name="focus_mode">Focus mode</string>
     <string name="focus_mode_summary">While reading, show only the zikr and the counting ring: no title, back button, numbers, source or slider (press back twice to leave)</string>
+    <string name="source_tab_hadith">Hadith</string>
+    <string name="source_tab_chain">Chain</string>
+    <string name="source_tab_sources">Sources</string>
+    <string name="source_show_chain">Show full chain</string>
+    <string name="source_chain_title">Chain of narrators</string>
+    <string name="source_chain_full">Show all</string>
+    <string name="source_chain_less">Show less</string>
+    <string name="source_role_prophet">Said the hadith</string>
+    <string name="source_role_companion">Companion</string>
+    <string name="source_role_narrator">Narrator</string>
+    <string name="source_role_author">Recorded it in his book</string>
+    <string name="source_narrator">Narrator</string>
+    <string name="source_grade">Grade</string>
+    <string name="source_copy">Copy hadith</string>
+    <string name="source_copied">Hadith copied</string>
+    <string name="source_back_to_zikr">Back to zikr</string>
+    <string name="source_close">Close</string>
+    <string name="source_style">Source page</string>
+    <string name="source_style_tabs">Tabs on the card</string>
+    <string name="source_style_sheet">Sheet over the reader</string>
 </resources>

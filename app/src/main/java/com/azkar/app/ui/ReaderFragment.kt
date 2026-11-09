@@ -177,19 +177,9 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             srcNote.text = it.note
             srcNote.visibility = if (it.note.isNotBlank()) View.VISIBLE else View.GONE
             srcCards.removeAllViews()
-            val gap = Ui.pxi(ctx, 12f)
-            fun add(v: View) = srcCards.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (srcCards.childCount > 0) topMargin = gap })
-            if (s.reference.isNotBlank() || s.detail.isNotBlank())
-                add(infoCard(
-                    R.string.source_reference,
-                    if (s.reference.isNotBlank()) s.reference else marked(s.detail, it.arabic),
-                    if (s.reference.isNotBlank()) marked(s.detail, it.arabic) else ""
-                ))
-            if (s.whenToSay.isNotBlank()) add(infoCard(R.string.source_when, s.whenToSay))
+            srcCards.addView(SourceViews.tabs(ctx, arRes, it, ::marked), LinearLayout.LayoutParams(-1, -2))
             srcChips.removeAllViews()
-            if (s.grade.isNotBlank()) srcChips.addView(chip(s.grade, true))
-            srcChips.visibility = if (srcChips.childCount > 0) View.VISIBLE else View.GONE
-            (srcChips.layoutParams as LinearLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (srcCards.childCount > 0) 16f else 0f)
+            srcChips.visibility = View.GONE
         }
 
         /** Reader (front) or source page (back), without animation; the header follows. */
@@ -220,7 +210,10 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                         .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
                 }.start()
         }
-        sourceBtn.setOnClickListener { flip() }
+        sourceBtn.setOnClickListener {
+            if (AppPrefs.sourceStyle() == AppPrefs.SOURCE_SHEET) SourceViews.showSheet(ctx, arRes, items[rn.index], ::marked)
+            else flip()
+        }
         view.findViewById<View>(R.id.src_back).setOnClickListener { if (showingSource) flip() }
         closeSource = { if (showingSource) { flip(); true } else false }
 

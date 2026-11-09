@@ -17,6 +17,7 @@ object AppPrefs {
     private const val K_AWAKE = "keep_awake"
     private const val K_SLIDER = "reader_slider"
     private const val K_FOCUS = "reader_focus"
+    private const val K_SOURCE_STYLE = "source_style"
     private const val K_COMPLETE = "completion_screen"
     private const val K_SOURCES = "sources_on"
     private const val K_SRC_OFF_FOLDERS = "sources_off_folders"   // folder ids whose sources are hidden
@@ -76,6 +77,11 @@ object AppPrefs {
     /** Focus mode: the reader shows only the card and the counting ring (no numbers, source or slider). */
     fun focusMode() = sp.getBoolean(K_FOCUS, false)
     fun setFocusMode(v: Boolean) = sp.edit().putBoolean(K_FOCUS, v).apply()
+    /** How a zikr's source opens: "tabs" on the turned-over card (default) or "sheet", a bottom sheet over the reader. */
+    fun sourceStyle(): String = sp.getString(K_SOURCE_STYLE, SOURCE_TABS) ?: SOURCE_TABS
+    fun setSourceStyle(v: String) = sp.edit().putString(K_SOURCE_STYLE, v).apply()
+    const val SOURCE_TABS = "tabs"
+    const val SOURCE_SHEET = "sheet"
     /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
     fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
     fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()

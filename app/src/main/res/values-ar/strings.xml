@@ -519,4 +519,24 @@
     <string name="zikr_source_grade_hint">الدرجة، مثل صحيح</string>
     <string name="focus_mode">وضع التركيز</string>
     <string name="focus_mode_summary">أثناء القراءة، يظهر الذكر ودائرة العدّ فقط: بلا عنوان ولا زر رجوع ولا أرقام ولا مصدر ولا شريط (اضغط رجوع مرتين للخروج)</string>
+    <string name="source_tab_hadith">الحديث</string>
+    <string name="source_tab_chain">السند</string>
+    <string name="source_tab_sources">المصادر</string>
+    <string name="source_show_chain">عرض السند كاملًا</string>
+    <string name="source_chain_title">سند الحديث</string>
+    <string name="source_chain_full">عرض كامل</string>
+    <string name="source_chain_less">تصغير</string>
+    <string name="source_role_prophet">قائل الحديث</string>
+    <string name="source_role_companion">الصحابي</string>
+    <string name="source_role_narrator">راوٍ</string>
+    <string name="source_role_author">صاحب الكتاب</string>
+    <string name="source_narrator">الراوي</string>
+    <string name="source_grade">الدرجة</string>
+    <string name="source_copy">نسخ الحديث</string>
+    <string name="source_copied">تم نسخ الحديث</string>
+    <string name="source_back_to_zikr">العودة للذكر</string>
+    <string name="source_close">إغلاق</string>
+    <string name="source_style">صفحة المصدر</string>
+    <string name="source_style_tabs">تبويبات على البطاقة</string>
+    <string name="source_style_sheet">نافذة فوق القارئ</string>
 </resources>

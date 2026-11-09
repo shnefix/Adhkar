@@ -56,6 +56,22 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         view.findViewById<ToggleSwitch>(R.id.sw_tap_back).apply { on = AppPrefs.tapLeftBack(); onToggle = { AppPrefs.setTapLeftBack(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_slider).apply { on = AppPrefs.readerSlider(); onToggle = { AppPrefs.setReaderSlider(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_focus).apply { on = AppPrefs.focusMode(); onToggle = { AppPrefs.setFocusMode(it) } }
+        // Source page: tabs on the turned-over card, or a sheet over the reader.
+        val sourceStyles = listOf(AppPrefs.SOURCE_TABS to R.string.source_style_tabs, AppPrefs.SOURCE_SHEET to R.string.source_style_sheet)
+        val sourceValue = view.findViewById<TextView>(R.id.source_style_value)
+        fun showSourceStyle() { sourceValue.setText(sourceStyles.firstOrNull { it.first == AppPrefs.sourceStyle() }?.second ?: R.string.source_style_tabs) }
+        showSourceStyle()
+        view.findViewById<View>(R.id.source_style_row).setOnClickListener {
+            val current = sourceStyles.indexOfFirst { it.first == AppPrefs.sourceStyle() }.coerceAtLeast(0)
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.source_style)
+                .setSingleChoiceItems(sourceStyles.map { getString(it.second) }.toTypedArray(), current) { d, which ->
+                    AppPrefs.setSourceStyle(sourceStyles[which].first)
+                    showSourceStyle()
+                    d.dismiss()
+                }
+                .show()
+        }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
 
         // Arabic text size slider (the preview updates while you drag; the reader uses it on its next open)
