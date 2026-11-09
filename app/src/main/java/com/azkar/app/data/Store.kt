@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 14
+    private const val DEFAULTS_VERSION = 15
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -213,7 +213,7 @@ object Store {
         if (!fresh && from < 11) clearPlaceholderSources()
         if (!fresh && from < 12) addShortAzkarAndPraised(p)
         if (!fresh && from < 13) addBookDuas(p)
-        if (!fresh && from < 14) fillMissingDetails(p)
+        if (!fresh && from < 15) fillMissingDetails(p)   // 15: the fire hadith (and any detail added since)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -343,7 +343,8 @@ object Store {
         val next = zCache.map { z ->
             val src = byText[z.folderId]?.get(z.arabic) ?: return@map z
             if (z.source.detail.isBlank() && src.detail.isNotBlank() && z.source.reference == src.reference) {
-                changed = true; z.copy(source = z.source.copy(detail = src.detail))
+                changed = true
+                z.copy(source = z.source.copy(detail = src.detail, grade = z.source.grade.ifBlank { src.grade }))
             } else z
         }
         if (changed) saveZikrs(next)
