@@ -68,8 +68,13 @@ object SourceViews {
         links.lastOrNull { it.role == NarratorChain.Role.AUTHOR }?.let { author ->
             head.addView(text(ctx, ar.getString(R.string.source_chain_span, author.name), 12f, R.color.muted))
         }
-        addView(head, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(ctx, 14f) })
-        addView(chainTimeline(ctx, links))
+        addView(head, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(ctx, 12f); marginStart = dp(ctx, 4f); marginEnd = dp(ctx, 4f) })
+        addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 22f)
+            setPadding(dp(ctx, 20f), dp(ctx, 22f), dp(ctx, 20f), dp(ctx, 22f))
+            addView(chainTimeline(ctx, links))
+        }, LinearLayout.LayoutParams(-1, -2))
     }
 
     private fun chainTimeline(ctx: Context, links: List<NarratorChain.Link>): LinearLayout = LinearLayout(ctx).apply {
@@ -92,7 +97,7 @@ object SourceViews {
             row.addView(rail, LinearLayout.LayoutParams(dp(ctx, 16f), LinearLayout.LayoutParams.MATCH_PARENT))
             val labels = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(ctx, 14f), 0, 0, if (i < links.size - 1) dp(ctx, 16f) else 0)
+                setPaddingRelative(dp(ctx, 16f), 0, 0, if (i < links.size - 1) dp(ctx, 18f) else 0)
                 val nameColor = when (link.role) {
                     NarratorChain.Role.PROPHET -> R.color.gold
                     NarratorChain.Role.AUTHOR -> R.color.arabic
@@ -160,6 +165,9 @@ object SourceViews {
                 tv.isSelected = on
             }
             content.removeAllViews()
+            val plain = page == R.string.source_tab_chain    // the chain block brings its own card
+            content.background = if (plain) null else Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 20f)
+            if (plain) content.setPadding(0, 0, 0, 0) else content.setPadding(dp(ctx, 18f), dp(ctx, 16f), dp(ctx, 18f), dp(ctx, 16f))
             when (page) {
                 R.string.source_tab_hadith -> {
                     content.addView(hadith(ctx, marked(s.detail, item.arabic)))
@@ -226,7 +234,7 @@ object SourceViews {
         fun add(v: View) = body.addView(v, LinearLayout.LayoutParams(-1, -2).apply { if (body.childCount > 0) topMargin = dp(ctx, 12f) })
 
         if (s.detail.isNotBlank()) add(card(ctx, R.color.bg).apply { addView(hadith(ctx, marked(s.detail, item.arabic))) })
-        if (chain != null) add(card(ctx, R.color.bg).apply { addView(chainBlock(ctx, ar, chain)) })
+        if (chain != null) add(chainBlock(ctx, ar, chain))
         if (s.narrator.isNotBlank() || s.whenToSay.isNotBlank()) add(card(ctx, R.color.bg).apply {
             if (s.narrator.isNotBlank()) addView(fact(ctx, ar.getString(R.string.source_narrator), s.narrator))
             if (s.whenToSay.isNotBlank()) addView(fact(ctx, ar.getString(R.string.source_when), s.whenToSay).apply {

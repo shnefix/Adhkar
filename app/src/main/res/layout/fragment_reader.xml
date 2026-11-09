@@ -27,7 +27,7 @@
 <View android:layout_width="36dp" android:layout_height="2dp" android:background="@color/gold" android:layout_gravity="center" android:layout_marginTop="18dp"/>
 </LinearLayout>
 </ScrollView>
-<com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="96dp" android:layout_height="96dp" android:layout_gravity="bottom|right" android:layout_marginRight="-8dp" android:layout_marginBottom="-8dp" android:clickable="true" android:focusable="true" android:contentDescription="@string/widget_action_count">
+<com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="96dp" android:layout_height="96dp" android:layout_gravity="bottom|right" android:clickable="true" android:focusable="true" android:contentDescription="@string/widget_action_count">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="match_parent" android:layout_height="match_parent">
 <TextView style="@style/TB" android:text="0" android:textSize="28sp" android:textColor="@color/gold" android:lineHeight="32sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:text="" android:textSize="11sp" android:textColor="@color/muted" android:id="@+id/sub" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
