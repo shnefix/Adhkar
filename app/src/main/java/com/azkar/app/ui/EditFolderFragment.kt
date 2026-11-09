@@ -25,6 +25,15 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
     private val viewModel: FolderViewModel by viewModels()
+    private val renameHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pendingName: String? = null
+    private val saveName = Runnable { pendingName?.let { viewModel.rename(it) }; pendingName = null }
+
+    override fun onPause() {
+        renameHandler.removeCallbacks(saveName)
+        saveName.run()
+        super.onPause()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
@@ -38,12 +47,15 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
         // Name (saved as you type; an empty name is ignored)
         val name = view.findViewById<EditText>(R.id.fname)
         name.setText(folder.name)
+        // Saved after a short pause in typing (each save redraws every widget), and at once when the screen goes.
         name.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val t = s?.toString()?.trim().orEmpty()
-                if (t.isNotEmpty()) viewModel.rename(t)
+                renameHandler.removeCallbacks(saveName)
+                pendingName = t.takeIf { it.isNotEmpty() }
+                if (pendingName != null) renameHandler.postDelayed(saveName, RENAME_DELAY_MS)
             }
         })
 
@@ -214,6 +226,7 @@ class EditFolderFragment : Fragment(R.layout.fragment_edit_folder) {
     companion object {
         /** Rows inflated per frame while the list is first built. */
         private const val ROW_BATCH = 6
+        private const val RENAME_DELAY_MS = 400L
 
         fun of(id: String) = EditFolderFragment().apply { arguments = Bundle().apply { putString("id", id) } }
     }

@@ -32,16 +32,22 @@ object Tracking {
     /** Called by [Store.init]. */
     internal fun attach(prefs: SharedPreferences) {
         sp = prefs
+        // Older builds recorded single-zikr reading ("zikr:<id>") as if it were a folder; drop those entries.
+        val junk = prefs.all.keys.filter { it.startsWith(K_TODAY + "zikr:") || it.startsWith(K_DAYS + "zikr:") }
+        if (junk.isNotEmpty()) prefs.edit().apply { junk.forEach { remove(it) } }.apply()
     }
 
     fun dayKey(at: Calendar): String = SimpleDateFormat("yyyyMMdd", Locale.US).format(at.time)
     private fun dayKey(at: Long) = dayKey(Calendar.getInstance().apply { timeInMillis = at })
 
     // ---------- Which folders ----------
-    /** Tracked folder ids that still exist, in folder order. */
+    /**
+     * Tracked folder ids that still exist and have something to read, in folder order. A folder with no azkar
+     * (e.g. a parent folder) can never be finished, so it would hold every streak at 0.
+     */
     fun tracked(): List<String> {
         val saved = readIds()
-        return Store.folders().map { it.id }.filter { it in saved }
+        return Store.folders().map { it.id }.filter { it in saved && Store.readerItems(it).isNotEmpty() }
     }
 
     fun isTracked(folderId: String) = folderId in readIds()

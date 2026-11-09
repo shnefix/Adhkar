@@ -30,8 +30,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     ACTION_STEP -> WidgetLogic.step(context, id, kind)
                 }
             }
-            if (family != null) NewWidgetUpdater.updateAll(context)
-            else WidgetUpdater.update(context, AppWidgetManager.getInstance(context), id, kind)
+            // Every widget on the same folder moved with this tap (classic and new designs alike), so redraw them all.
+            WidgetUpdater.updateAll(context)
         }
     }
 

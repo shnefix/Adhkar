@@ -25,6 +25,8 @@ import com.azkar.app.widgets.WidgetStore
 class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
     private lateinit var rn: ReaderNav
     private var lastBack = 0L
+    /** How many azkar from the start were read in order; jumping ahead (slider, opening one zikr) never adds to it. */
+    private var reached = 0
 
     /**
      * Swipes, the slider and the source flip finish on animation callbacks, which can fire after the reader
@@ -34,7 +36,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        if (::rn.isInitialized) { outState.putInt("i", rn.index); outState.putInt("count", rn.count) }
+        if (::rn.isInitialized) { outState.putInt("i", rn.index); outState.putInt("count", rn.count); outState.putInt("reached", reached) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -60,6 +62,14 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             else -> 0 to 0
         }
         rn = ReaderNav(items.map { it.target }, startIdx, startCount)
+        // A resumed position was reached by reading; a zikr opened directly was not.
+        reached = when {
+            savedInstanceState != null -> savedInstanceState.getInt("reached")
+            explicit >= 0 -> 0
+            else -> startIdx
+        }
+        // A single zikr opened on its own ("zikr:<id>") is no folder: nothing to track or share with widgets.
+        val isFolder = !key.startsWith("zikr:")
         val folderTitle = Store.folderName(key)
         val sizeSp = AppPrefs.arabicSp()
         val gold = ctx.getColor(R.color.gold)
@@ -187,11 +197,13 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
             if (moved && remember && items[rn.index].id.isNotEmpty()) AppPrefs.savePosition(key, items[rn.index].id, rn.count)
             // Azkar behind the current one are read; the current one counts once its repeats are done.
+            // Only counted while reading in order: a zikr reached by jumping past others doesn't mark them read.
             val finished = i + if (cur.target > 1 && rn.count >= cur.target) 1 else 0
-            Tracking.record(key, finished, items.size)
+            if (i <= reached) reached = maxOf(reached, finished)
+            if (isFolder) Tracking.record(key, reached, items.size)
             // Widgets on this folder follow along (redrawn when the app goes to the background). Only after the
             // user acts: merely opening a folder at its first zikr must not wipe a widget's count for today.
-            if (moved) WidgetStore.syncFolderProgress(ctx, key, finished, if (finished == i) rn.count else 0)
+            if (moved && isFolder) WidgetStore.syncFolderProgress(ctx, key, reached, if (reached == i) rn.count else 0)
         }
 
         ring.setOnClickListener {
@@ -226,9 +238,13 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             canFinish = { rn.canFinish() }
             onFinish = finish@{
                 if (!alive) return@finish
-                Tracking.record(key, items.size, items.size)
+                // The last zikr is done: the folder counts as finished only if everything before it was read in order.
+                if (reached >= items.size - 1) reached = items.size
                 AppPrefs.clearPosition(key)
-                WidgetStore.syncFolderProgress(ctx, key, items.size, 0)
+                if (isFolder) {
+                    Tracking.record(key, reached, items.size)
+                    WidgetStore.syncFolderProgress(ctx, key, reached, 0)
+                }
                 // finishReading() removes this fragment at once, so keep the activity before calling it.
                 val main = nav()
                 main.finishReading()
