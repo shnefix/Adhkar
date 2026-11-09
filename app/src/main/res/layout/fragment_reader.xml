@@ -16,8 +16,9 @@
 
 <LinearLayout android:id="@+id/front" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
 <com.azkar.app.ui.ReaderScrubber android:id="@+id/segs" android:layout_marginTop="4dp" android:layout_marginStart="-10dp" android:layout_marginEnd="-10dp" android:layout_width="match_parent" android:layout_height="32dp"/>
-<LinearLayout android:id="@+id/card" android:orientation="vertical" android:layout_weight="1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_marginTop="4dp" android:padding="22dp" android:background="@drawable/bg_card28" android:gravity="center">
-<ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:scrollbars="none" android:overScrollMode="never" android:id="@+id/ar_scroll">
+<!-- The card; the counting ring sits in its bottom-right corner. -->
+<FrameLayout android:id="@+id/card" android:layout_weight="1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_marginTop="4dp" android:padding="22dp" android:background="@drawable/bg_card28">
+<ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:paddingBottom="72dp" android:clipToPadding="false" android:fillViewport="true" android:scrollbars="none" android:overScrollMode="never" android:id="@+id/ar_scroll">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:padding="0dp" android:minHeight="0dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:id="@+id/title_above" android:visibility="gone" android:textSize="15sp" android:textColor="@color/gold" android:lineHeight="22sp" android:gravity="center" android:textDirection="firstStrong" android:layout_marginBottom="14dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/Ar" android:text="" android:textSize="26sp" android:textColor="@color/arabic" android:lineHeight="48.1sp" android:gravity="center" android:textDirection="rtl" android:id="@+id/ar" android:layout_width="match_parent" android:layout_height="wrap_content"/>
@@ -26,21 +27,22 @@
 <View android:layout_width="36dp" android:layout_height="2dp" android:background="@color/gold" android:layout_gravity="center" android:layout_marginTop="18dp"/>
 </LinearLayout>
 </ScrollView>
-</LinearLayout>
-<FrameLayout android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="vertical" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-<com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="140dp" android:layout_height="140dp" android:clickable="true" android:focusable="true" android:contentDescription="@string/widget_action_count">
+<com.azkar.app.ui.RingView android:id="@+id/ring" android:layout_width="96dp" android:layout_height="96dp" android:layout_gravity="bottom|right" android:layout_marginRight="-8dp" android:layout_marginBottom="-8dp" android:clickable="true" android:focusable="true" android:contentDescription="@string/widget_action_count">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="match_parent" android:layout_height="match_parent">
-<TextView style="@style/TB" android:text="0" android:textSize="44sp" android:textColor="@color/gold" android:lineHeight="48sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-<TextView style="@style/T" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:id="@+id/sub" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/TB" android:text="0" android:textSize="28sp" android:textColor="@color/gold" android:lineHeight="32sp" android:id="@+id/count" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="" android:textSize="11sp" android:textColor="@color/muted" android:id="@+id/sub" android:gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </com.azkar.app.ui.RingView>
-<LinearLayout android:orientation="horizontal" android:layout_height="24dp" android:gravity="center" android:layout_marginTop="14dp" android:layout_width="match_parent">
+</FrameLayout>
+<FrameLayout android:layout_marginTop="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+
+<LinearLayout android:orientation="horizontal" android:layout_height="56dp" android:gravity="center" android:layout_width="match_parent">
 <TextView style="@style/T" android:text="" android:textSize="13sp" android:textColor="@color/muted" android:id="@+id/hint" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 </LinearLayout>
-<!-- Source button: beside the counting ring, on the right; only when the zikr has a source. -->
-<FrameLayout android:id="@+id/btn_source" android:visibility="gone" android:layout_width="56dp" android:layout_height="56dp" android:layout_gravity="right|top" android:layout_marginTop="42dp" android:layout_marginRight="6dp" android:background="@drawable/bg_source_btn" android:contentDescription="@string/source_show" android:clickable="true" android:focusable="true">
+<!-- Source button: under the card, on the right; only when the zikr has a source. -->
+<FrameLayout android:id="@+id/btn_source" android:visibility="gone" android:layout_width="56dp" android:layout_height="56dp" android:layout_gravity="right|center_vertical" android:background="@drawable/bg_source_btn" android:contentDescription="@string/source_show" android:clickable="true" android:focusable="true">
 <ImageView android:importantForAccessibility="no" android:src="@drawable/ic_open_book" android:layout_width="24dp" android:layout_height="24dp" app:tint="@color/gold" android:layout_gravity="center"/>
 </FrameLayout>
 </FrameLayout>

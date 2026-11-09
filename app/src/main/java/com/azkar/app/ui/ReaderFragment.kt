@@ -245,8 +245,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
             sub.text = if (done) getString(R.string.done) else getString(R.string.reader_of, cur.target)
             ring.setProgress(Math.round(rn.count.toFloat() / cur.target * 360f).toFloat(), if (done) teal else gold)
             ring.visibility = if (cur.target <= 1) View.GONE else View.VISIBLE
-            // Level with the ring's centre; with no ring, it sits on its own at the right.
-            (sourceBtn.layoutParams as android.widget.FrameLayout.LayoutParams).topMargin = Ui.pxi(ctx, if (cur.target <= 1) 0f else 42f)
             hint.text = if (focus) "" else if (rn.isLast && cur.target > 1)
                 getString(if (done) R.string.reader_finished else R.string.reader_tap_ring) else ""
             // Saved only after the user acts, so just opening the reader doesn't move the "saved at" time forward.
@@ -278,6 +276,7 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
 
         swipe.apply {
             card = view.findViewById(R.id.card)
+            noTapViews = listOf(ring)   // the ring is inside the card: tapping it counts, it never moves on
             tapEnabled = AppPrefs.tapAdvance()
             tapLeftBack = AppPrefs.tapLeftBack()
             // Focus mode: tapping the card counts, swiping moves to another zikr.
