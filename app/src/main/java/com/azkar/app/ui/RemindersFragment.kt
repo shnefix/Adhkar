@@ -229,15 +229,11 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         view.findViewById<View>(R.id.nudge_text).setOnClickListener {
             val current = AppPrefs.nudgeLeadMinutes()
             val choices = (NUDGE_LEADS + current).distinct().sorted()
-            AlertDialog.Builder(ctx)
-                .setTitle(R.string.nudge_lead_title)
-                .setSingleChoiceItems(choices.map { getString(R.string.nudge_lead_option, it) }.toTypedArray(), choices.indexOf(current)) { d, which ->
-                    AppPrefs.setNudgeLeadMinutes(choices[which])
-                    ReminderScheduler.scheduleNudges(ctx)
-                    renderTracking()
-                    d.dismiss()
-                }
-                .show()
+            ChoiceSheet.showNudgeLead(ctx, choices) { m ->
+                AppPrefs.setNudgeLeadMinutes(m)
+                ReminderScheduler.scheduleNudges(ctx)
+                renderTracking()
+            }
         }
 
         renderList()

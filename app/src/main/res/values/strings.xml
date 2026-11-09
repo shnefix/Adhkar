@@ -503,6 +503,15 @@
     <string name="source_style">Source page</string>
     <string name="source_style_tabs">Tabs on the card</string>
     <string name="source_style_sheet">Sheet over the reader</string>
+    <string name="source_style_pick_sub">How each zikr’s hadith, chain and takhrij open when you tap the source button</string>
+    <string name="source_style_tabs_sub">The card turns over; switch between Hadith, Chain and Takhrij</string>
+    <string name="source_style_sheet_sub">A panel slides up while the zikr stays behind it</string>
+    <string name="nudge_lead_sub">If a tracked session isn’t done yet, you get a gentle reminder this long before the prayer</string>
+    <string name="nudge_lead_big">%1$d</string>
+    <string name="nudge_lead_unit">minutes before Dhuhr / Maghrib</string>
+    <string name="nudge_lead_chip">%1$d</string>
+    <string name="nudge_lead_prayer">Prayer</string>
+    <string name="nudge_lead_nudge">Nudge</string>
     <string name="source_chain_span">From the Prophet ﷺ to %1$s</string>
     <string name="search_all">All %1$d</string>
     <string name="search_azkar">Azkar %1$d</string>

@@ -62,15 +62,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         fun showSourceStyle() { sourceValue.setText(sourceStyles.firstOrNull { it.first == AppPrefs.sourceStyle() }?.second ?: R.string.source_style_tabs) }
         showSourceStyle()
         view.findViewById<View>(R.id.source_style_row).setOnClickListener {
-            val current = sourceStyles.indexOfFirst { it.first == AppPrefs.sourceStyle() }.coerceAtLeast(0)
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.source_style)
-                .setSingleChoiceItems(sourceStyles.map { getString(it.second) }.toTypedArray(), current) { d, which ->
-                    AppPrefs.setSourceStyle(sourceStyles[which].first)
-                    showSourceStyle()
-                    d.dismiss()
-                }
-                .show()
+            ChoiceSheet.showSourceStyle(requireContext()) { showSourceStyle() }
         }
         view.findViewById<ToggleSwitch>(R.id.sw_awake).apply { on = AppPrefs.keepScreenOn(); onToggle = { AppPrefs.setKeepScreenOn(it) } }
 

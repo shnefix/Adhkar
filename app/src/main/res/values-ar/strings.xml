@@ -533,6 +533,15 @@
     <string name="source_style">صفحة المصدر</string>
     <string name="source_style_tabs">تبويبات على البطاقة</string>
     <string name="source_style_sheet">نافذة فوق القارئ</string>
+    <string name="source_style_pick_sub">كيف يُفتح الحديث والسند والتخريج عند الضغط على زر المصدر</string>
+    <string name="source_style_tabs_sub">تنقلب البطاقة، وتتنقل بين الحديث والسند والتخريج</string>
+    <string name="source_style_sheet_sub">تنزلق لوحة للأعلى ويبقى الذكر خلفها</string>
+    <string name="nudge_lead_sub">إن لم تُكمل وردًا متابَعًا، يصلك تذكير لطيف قبل الصلاة بهذه المدة</string>
+    <string name="nudge_lead_big">%1$d</string>
+    <string name="nudge_lead_unit">دقيقة قبل الظهر / المغرب</string>
+    <string name="nudge_lead_chip">%1$d</string>
+    <string name="nudge_lead_prayer">الصلاة</string>
+    <string name="nudge_lead_nudge">التذكير</string>
     <string name="source_chain_span">من النبي ﷺ إلى %1$s</string>
     <string name="search_all">الكل %1$d</string>
     <string name="search_azkar">الأذكار %1$d</string>
