@@ -39,6 +39,12 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
     private var latestContent: AzkarContent? = null
 
     private var t0 = 0L
+    // Search over everything: the index is rebuilt off the main thread when the content changes.
+    private var searchIndex: com.azkar.app.data.LibrarySearch.Index? = null
+    private var indexedContent: AzkarContent? = null
+    private var searchJob: kotlinx.coroutines.Job? = null
+    private var searchFilter = SearchResults.Filter.ALL
+    private var searchShown = SearchResults.pageSize
     private val cards = CardAdapter()
 
     private val importPicker =
@@ -79,7 +85,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
         view.findViewById<EditText>(R.id.search).addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) { refresh() }
+            override fun afterTextChanged(s: Editable?) { searchShown = SearchResults.pageSize; refresh() }
         })
 
         view.findViewById<RecyclerView>(R.id.list).apply {
@@ -123,10 +129,11 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
         val teal = ctx.getColor(R.color.teal)
         val gold = ctx.getColor(R.color.gold)
         val list = ArrayList<Card>()
-        val query = view?.findViewById<EditText>(R.id.search)?.text?.toString()?.trim()?.lowercase().orEmpty()
+        val query = view?.findViewById<EditText>(R.id.search)?.text?.toString()?.trim().orEmpty()
+        showSearch(current, counts, query)
+        if (query.isNotEmpty()) return
 
         current.folders.forEach { f ->
-            if (query.isNotEmpty() && !f.name.lowercase().contains(query)) return@forEach
             val isDefault = Store.isDefaultFolder(f.id)
 
             list.add(
@@ -146,7 +153,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
 
         val anytime = counts[null] ?: 0
 
-        if (anytime > 0 && (query.isEmpty() || getString(R.string.anytime).lowercase().contains(query))) {
+        if (anytime > 0) {
             list.add(
                 Card(
                     Store.ANYTIME,
@@ -162,7 +169,7 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
             )
         }
 
-        if (query.isEmpty()) list.add(
+        list.add(
             Card(
                 "new",
                 getString(R.string.new_folder),
@@ -181,6 +188,37 @@ class LibraryFragment : Fragment(R.layout.fragment_library), HandlesOwnInsets {
         val n = current.folders.size
         view?.findViewById<TextView>(R.id.folder_count)?.text =
             resources.getQuantityString(R.plurals.folder_count, n, n)
+    }
+
+    /**
+     * With a query: hide the folder grid and show what matches it (folders, azkar by text, title, note, hadith or
+     * source), searched off the main thread. Without one: the grid as usual.
+     */
+    private fun showSearch(content: AzkarContent, counts: Map<String?, Int>, query: String) {
+        val v = view ?: return
+        val searching = query.isNotEmpty()
+        v.findViewById<View>(R.id.list).visibility = if (searching) View.GONE else View.VISIBLE
+        v.findViewById<View>(R.id.folders_header).visibility = if (searching) View.GONE else View.VISIBLE
+        val results = v.findViewById<android.widget.ScrollView>(R.id.results)
+        results.visibility = if (searching) View.VISIBLE else View.GONE
+        searchJob?.cancel()
+        if (!searching) { searchFilter = SearchResults.Filter.ALL; searchShown = SearchResults.pageSize; return }
+        searchJob = viewLifecycleOwner.lifecycleScope.launch {
+            kotlinx.coroutines.delay(120)   // typing fast: search once the user pauses
+            val result = withContext(Dispatchers.Default) {
+                val index = searchIndex.takeIf { indexedContent === content }
+                    ?: com.azkar.app.data.LibrarySearch.Index(content).also { searchIndex = it; indexedContent = content }
+                index.search(query)
+            }
+            val ctx = context ?: return@launch
+            SearchResults.render(
+                ctx, v.findViewById(R.id.results_body), query, result, searchFilter, searchShown, counts,
+                onFilter = { searchFilter = it; searchShown = SearchResults.pageSize; results.scrollTo(0, 0); refresh() },
+                onMore = { searchShown += SearchResults.pageSize; refresh() },
+                onFolder = { nav().push(FolderFragment.of(it.id)) },
+                onZikr = { z -> nav().push(ReaderFragment.of(Store.readerKey(z), Store.readerIndex(z))) }
+            )
+        }
     }
 
     /** null = everything (folders, reminders, settings); otherwise just that folder. */

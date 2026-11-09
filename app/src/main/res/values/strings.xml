@@ -237,7 +237,7 @@
     <string name="hide">Hide</string>
     <string name="show">Show</string>
     <string name="library">Library</string>
-    <string name="search_folders">Search folders</string>
+    <string name="search_folders">Search azkar, folders and sources</string>
     <string name="my_azkar">My azkar</string>
     <string name="folder_options">Folder options</string>
     <string name="import_label">Import</string>
@@ -504,4 +504,17 @@
     <string name="source_style_tabs">Tabs on the card</string>
     <string name="source_style_sheet">Sheet over the reader</string>
     <string name="source_chain_span">From the Prophet ﷺ to %1$s</string>
+    <string name="search_all">All %1$d</string>
+    <string name="search_azkar">Azkar %1$d</string>
+    <string name="search_folders_n">Folders %1$d</string>
+    <string name="search_sources">Sources %1$d</string>
+    <string name="search_section_folders">Folders</string>
+    <string name="search_section_azkar">Azkar</string>
+    <string name="search_best_first">%1$d · best match first</string>
+    <string name="search_in_title">in title</string>
+    <string name="search_in_note">in note</string>
+    <string name="search_in_hadith">in hadith</string>
+    <string name="search_in_source">in source</string>
+    <string name="search_none">Nothing matches “%1$s”</string>
+    <string name="search_more">Show %1$d more</string>
 </resources>

@@ -241,7 +241,7 @@
     <string name="hide">إخفاء</string>
     <string name="show">إظهار</string>
     <string name="library">المكتبة</string>
-    <string name="search_folders">البحث في المجلدات</string>
+    <string name="search_folders">ابحث في الأذكار والمجلدات والمصادر</string>
     <string name="my_azkar">أذكاري</string>
     <string name="folder_options">خيارات المجلد</string>
     <string name="import_label">استيراد</string>
@@ -534,4 +534,17 @@
     <string name="source_style_tabs">تبويبات على البطاقة</string>
     <string name="source_style_sheet">نافذة فوق القارئ</string>
     <string name="source_chain_span">من النبي ﷺ إلى %1$s</string>
+    <string name="search_all">الكل %1$d</string>
+    <string name="search_azkar">الأذكار %1$d</string>
+    <string name="search_folders_n">المجلدات %1$d</string>
+    <string name="search_sources">المصادر %1$d</string>
+    <string name="search_section_folders">المجلدات</string>
+    <string name="search_section_azkar">الأذكار</string>
+    <string name="search_best_first">%1$d · الأقرب أولًا</string>
+    <string name="search_in_title">في العنوان</string>
+    <string name="search_in_note">في الملاحظة</string>
+    <string name="search_in_hadith">في الحديث</string>
+    <string name="search_in_source">في المصدر</string>
+    <string name="search_none">لا شيء يطابق «%1$s»</string>
+    <string name="search_more">عرض %1$d أخرى</string>
 </resources>
