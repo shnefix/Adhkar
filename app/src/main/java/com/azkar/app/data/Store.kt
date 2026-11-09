@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 20
+    private const val DEFAULTS_VERSION = 23
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -213,11 +213,13 @@ object Store {
         if (!fresh && from < 11) clearPlaceholderSources()
         if (!fresh && from < 12) addShortAzkarAndPraised(p)
         if (!fresh && from < 13) addBookDuas(p)
-        if (!fresh && from < 15) fillMissingDetails(p)   // 15: the fire hadith (and any detail added since)
+        if (!fresh && from < 21) fillMissingDetails(p)   // 15: the fire hadith; 21: hadith text for reference-only sources
         if (from < 16) mergeTwinFolders()
         if (!fresh && from < 19) fillMissingSources(p)   // 17, 19: sources found for azkar that had none
         if (from < 18) createGroupFolders()
         if (from < 20) removeShortAzkar()
+        if (!fresh && from < 22) removeUnsourcedDuas()
+        if (!fresh && from < 23) { tashkeelFolderNames(p); removeUnsourcedDuas("removed_v23.json"); arabicGrades() }
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -343,9 +345,11 @@ object Store {
      */
     private fun fillMissingDetails(p: ImportJson.Parsed.Ok) {
         val byText = p.folders.filter { it.id != null }.associate { f -> f.id to f.items.associate { it.text to it.source } }
+        val anyFolder = HashMap<String, ZikrSource>()   // azkar moved by the folder merge (16) match on text alone
+        p.folders.forEach { f -> f.items.forEach { if (it.source.detail.isNotBlank()) anyFolder.putIfAbsent(it.text, it.source) } }
         var changed = false
         val next = zCache.map { z ->
-            val src = byText[z.folderId]?.get(z.arabic) ?: return@map z
+            val src = byText[z.folderId]?.get(z.arabic)?.takeIf { it.detail.isNotBlank() } ?: anyFolder[z.arabic] ?: return@map z
             if (z.source.detail.isBlank() && src.detail.isNotBlank() && z.source.reference == src.reference) {
                 changed = true
                 z.copy(source = z.source.copy(detail = src.detail, grade = z.source.grade.ifBlank { src.grade }))
@@ -422,6 +426,55 @@ object Store {
         setHomeOrder(homeOrder().filter { it != id })
         setHidden(hidden() - id)
         AppPrefs.clearPosition(id); AppPrefs.clearResetRule(id); Tracking.setTracked(id, false)
+    }
+
+    /**
+     * Version 22: the built-in azkar with no source in four folders (أدعية للميّت، جوامع الدعاء، أدعية طلب العلم،
+     * أذكار داخل الصلاة) are dropped. assets/removed_v22.json lists them by folder; one is removed only while it is
+     * still in that folder with its text unchanged and no source, so the user's own azkar and edits stay.
+     */
+    @Synchronized
+    private fun removeUnsourcedDuas(asset: String = "removed_v22.json") {
+        val listed = try {
+            val o = org.json.JSONObject(appCtx.assets.open(asset).bufferedReader(Charsets.UTF_8).use { it.readText() })
+            o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) }.toHashSet() } }
+        } catch (e: Exception) { android.util.Log.w("Azkar", "$asset unreadable", e); return }
+        val gone = zCache.filter { z -> z.source.isEmpty && listed[z.folderId]?.contains(z.arabic) == true }.map { it.id }.toHashSet()
+        if (gone.isEmpty()) return
+        saveZikrs(zCache.filter { it.id !in gone })
+        setZikrsHidden(gone, false)
+    }
+
+    /**
+     * Version 23: folder names gain their tashkeel. A built-in or parent folder is renamed only while its name, without
+     * tashkeel, is still the default one, so a name the user changed stays.
+     */
+    @Synchronized
+    private fun tashkeelFolderNames(p: ImportJson.Parsed.Ok) {
+        val bare = Regex("[\u064B-\u065F\u0670]")
+        fun plain(s: String) = bare.replace(s, "").replace('ٱ', 'ا').trim()
+        val wanted = p.folders.mapNotNull { f -> f.id?.let { it to f.name } }.toMap() + FolderGroups.ALL.associate { it.id to it.name }
+        var changed = false
+        val next = fCache.map { f ->
+            val name = wanted[f.id]
+            if (name != null && f.name != name && plain(f.name) == plain(name)) { changed = true; f.copy(name = name) } else f
+        }
+        if (changed) saveFolders(next)
+    }
+
+    /** Version 23: grades filled in English («Sahih Isnaad — الألباني») read in Arabic. */
+    @Synchronized
+    private fun arabicGrades() {
+        val en = mapOf("Sahih Isnaad" to "صحيح الإسناد", "Hasan Isnaad" to "حسن الإسناد", "Daif Isnaad" to "ضعيف الإسناد",
+            "Very Daif" to "ضعيف جدًا", "Hasan Sahih" to "حسن صحيح", "Sahih" to "صحيح", "Hasan" to "حسن", "Daif" to "ضعيف")
+        var changed = false
+        val next = zCache.map { z ->
+            val m = Regex("^([A-Za-z ]+?)\\s*—\\s*(.*)$").find(z.source.grade) ?: return@map z
+            val ar = en[m.groupValues[1].trim()] ?: return@map z
+            changed = true
+            z.copy(source = z.source.copy(grade = "$ar — ${m.groupValues[2]}"))
+        }
+        if (changed) saveZikrs(next)
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
