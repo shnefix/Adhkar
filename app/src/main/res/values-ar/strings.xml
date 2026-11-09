@@ -518,7 +518,7 @@
     <string name="zikr_source_when_hint">متى يُقال</string>
     <string name="zikr_source_grade_hint">الدرجة، مثل صحيح</string>
     <string name="focus_mode">وضع التركيز</string>
-    <string name="focus_mode_summary">أثناء القراءة، يظهر الذكر ودائرة العدّ فقط: بلا عنوان ولا زر رجوع ولا أرقام ولا مصدر ولا شريط (اضغط رجوع مرتين للخروج)</string>
+    <string name="focus_mode_summary">أثناء القراءة، يظهر الذكر ودائرة العدّ فقط: بلا عنوان ولا أرقام ولا مصدر ولا شريط، ويبقى زر الرجوع</string>
     <string name="source_tab_hadith">الحديث</string>
     <string name="source_tab_chain">السند</string>
     <string name="source_tab_sources">التخريج</string>

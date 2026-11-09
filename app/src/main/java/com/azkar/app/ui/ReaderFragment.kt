@@ -110,12 +110,8 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
         val bottomBar = view.findViewById<View>(R.id.bottom_bar)
         val pos = view.findViewById<TextView>(R.id.pos)
         val titleTv = view.findViewById<TextView>(R.id.title)
-        // Focus mode: no folder title and no back button either (the phone's back gesture still leaves).
-        // The source page can't be opened in focus mode, so they never need to come back while reading.
-        if (focus) {
-            titleTv.visibility = View.INVISIBLE
-            view.findViewById<View>(R.id.btn_back).visibility = View.INVISIBLE
-        }
+        // Focus mode: no folder title; the back button stays so the reader can always be left with one tap.
+        if (focus) titleTv.visibility = View.INVISIBLE
         val swipe = view as SwipeLayout
         val flipArea = view.findViewById<View>(R.id.flip_area).apply { cameraDistance = 8000 * d }
         val front = view.findViewById<View>(R.id.front)

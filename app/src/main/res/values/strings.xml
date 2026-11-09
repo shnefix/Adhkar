@@ -488,7 +488,7 @@
     <string name="zikr_source_when_hint">When to say it</string>
     <string name="zikr_source_grade_hint">Grade, e.g. Sahih</string>
     <string name="focus_mode">Focus mode</string>
-    <string name="focus_mode_summary">While reading, show only the zikr and the counting ring: no title, back button, numbers, source or slider (press back twice to leave)</string>
+    <string name="focus_mode_summary">While reading, show only the zikr and the counting ring: no title, numbers, source or slider; the back button stays</string>
     <string name="source_tab_hadith">Hadith</string>
     <string name="source_tab_chain">Chain</string>
     <string name="source_tab_sources">Takhrij</string>

@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 23
+    private const val DEFAULTS_VERSION = 25
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -220,6 +220,7 @@ object Store {
         if (from < 20) removeShortAzkar()
         if (!fresh && from < 22) removeUnsourcedDuas()
         if (!fresh && from < 23) { tashkeelFolderNames(p); removeUnsourcedDuas("removed_v23.json"); arabicGrades() }
+        if (!fresh && from < 25) cleanZikrTexts()   // 25: matched ignoring tashkeel and spacing
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -475,6 +476,52 @@ object Store {
             z.copy(source = z.source.copy(grade = "$ar — ${m.groupValues[2]}"))
         }
         if (changed) saveZikrs(next)
+    }
+
+    /**
+     * Version 24: seven built-in azkar whose text held the whole narration, a citation or several duas keep only the
+     * zikr itself, the rest moving to the note and source (assets/fixes_v24.json). A zikr is changed only while its text
+     * is still the old one; the «أعوذ بالله…» for animals' cries is added after the cock-crow dua.
+     */
+    @Synchronized
+    private fun cleanZikrTexts() {
+        val o = try {
+            org.json.JSONObject(appCtx.assets.open("fixes_v24.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
+        } catch (e: Exception) { android.util.Log.w("Azkar", "fixes_v24.json unreadable", e); return }
+        fun org.json.JSONObject.str(k: String): String? = if (has(k)) optString(k) else null
+        // Older installs may hold the same text with slightly different tashkeel or spacing.
+        val marks = Regex("[\\u064B-\\u065F\\u0670\\u0640\\s\\p{P}]")
+        fun plain(t: String) = marks.replace(t, "")
+        val list = zCache.toMutableList()
+        val fixes = o.getJSONArray("fix")
+        for (i in 0 until fixes.length()) {
+            val f = fixes.getJSONObject(i)
+            val old = f.getString("old"); val n = f.getJSONObject("new")
+            val at = list.indexOfFirst { plain(it.arabic) == plain(old) }
+            if (at < 0) continue
+            val z = list[at]
+            list[at] = z.copy(
+                arabic = n.str("text") ?: z.arabic,
+                note = n.str("note") ?: z.note,
+                title = n.str("title") ?: z.title,
+                source = z.source.copy(
+                    reference = n.str("source") ?: z.source.reference,
+                    narrator = n.str("narrator") ?: z.source.narrator,
+                    grade = n.str("grade") ?: z.source.grade
+                )
+            )
+        }
+        val add = o.getJSONObject("add")
+        val item = add.getJSONObject("item")
+        val after = list.indexOfFirst { plain(it.arabic) == plain(add.getString("after")) }
+        if (after >= 0 && list.none { it.folderId == list[after].folderId && plain(it.arabic) == plain(item.getString("text")) }) {
+            list.add(after + 1, Zikr(
+                UUID.randomUUID().toString(), item.getString("text"), item.optString("note"), item.optInt("count", 1),
+                list[after].folderId, item.optString("title"), TitlePos.ABOVE,
+                ZikrSource(item.optString("source"), "", item.optString("narrator"), "", item.optString("grade"))
+            ))
+        }
+        if (list != zCache) saveZikrs(list)
     }
 
     private fun mergeDefaults(p: ImportJson.Parsed.Ok) {
