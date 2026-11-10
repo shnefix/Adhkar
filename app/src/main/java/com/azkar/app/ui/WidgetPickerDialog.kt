@@ -384,3 +384,21 @@ private fun pickerSizeLabel(context: android.content.Context, kind: WidgetKind) 
     WidgetKind.MEDIUM -> context.getString(R.string.medium_grid)
     WidgetKind.LARGE -> context.getString(R.string.large_grid)
 }
+
+private fun <T> List<T>.swapped(a: T, b: T): List<T> {
+    val i = indexOf(a); val j = indexOf(b)
+    if (i < 0 || j < 0) return this
+    return toMutableList().also { it[i] = b; it[j] = a }
+}
+
+/** Styles of [kind] in picker order: among the small ones the calligraphy style comes before the tasbih. */
+internal fun pickerStyles(kind: WidgetKind): List<WidgetStyle> =
+    WidgetStyle.values().filter { kind in it.offered }.let {
+        if (kind == WidgetKind.SMALL) it.swapped(WidgetStyle.TASBIH, WidgetStyle.CALLIGRAPHY) else it
+    }
+
+/** Design and tracking families of [kind] in picker order: among the small ones the tap disc comes before the morning/evening rings. */
+internal fun pickerFamilies(kind: WidgetKind, offered: List<AzkarWidgetFamily> = offeredFamilies()): List<AzkarWidgetFamily> =
+    offered.filter { it.kind == kind }.let {
+        if (kind == WidgetKind.SMALL) it.swapped(AzkarWidgetFamily.D_SMALL, AzkarWidgetFamily.B_SMALL) else it
+    }

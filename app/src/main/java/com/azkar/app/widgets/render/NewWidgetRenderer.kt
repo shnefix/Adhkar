@@ -35,6 +35,31 @@ object WidgetRenderMath {
 
 /** Which of morning / evening is current: the prayer-time windows when a location is known, else the reminder times. */
 object AzkarSessionClock {
+    /** One session's window today: prayer times when a location is set, else the reminder time plus four hours. */
+    data class Window(val session: PrayerSessions.Session, val start: Long, val end: Long)
+
+    fun windows(now: Long = System.currentTimeMillis()): List<Window> =
+        listOf(PrayerSessions.Session.MORNING, PrayerSessions.Session.EVENING).mapNotNull { s ->
+            PrayerSessions.window(s, now)?.let { Window(s, it.first, it.second) } ?: Store.schedule(s.scheduleId)?.let { sch ->
+                val start = Calendar.getInstance().apply {
+                    timeInMillis = now; set(Calendar.HOUR_OF_DAY, sch.hour); set(Calendar.MINUTE, sch.minute)
+                    set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                Window(s, start, start + 4 * 3_600_000L)
+            }
+        }
+
+    /** The session whose window contains [now], or null between windows. */
+    fun pick(windows: List<Window>, now: Long): PrayerSessions.Session? =
+        windows.firstOrNull { now >= it.start && now < it.end }?.session
+
+    /** The next moment after [now] that a window opens or closes, or null when there is none. */
+    fun boundary(windows: List<Window>, now: Long): Long? =
+        windows.flatMap { listOf(it.start, it.end) }.filter { it > now }.minOrNull()
+
+    fun activeSession(now: Long = System.currentTimeMillis()): PrayerSessions.Session? = pick(windows(now), now)
+    fun nextBoundary(now: Long = System.currentTimeMillis()): Long? = boundary(windows(now), now)
+
     fun morningActive(now: Long = System.currentTimeMillis()): Boolean {
         val morning = PrayerSessions.Session.MORNING
         val evening = PrayerSessions.Session.EVENING
@@ -328,9 +353,7 @@ class NewWidgetRenderer(private val ctx: Context) {
     private fun stripDhikr(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         val cy = h / 2
         val d = min(46f, h - 20f)
-        val btn = RectF(w - 14f - d, cy - d / 2, w - 14f, cy + d / 2)
-        solid(c, btn, "+1")
-        val countR = btn.left - 12f
+        val countR = w - 20f
         caption(c, "${m.shown} / ${m.target}", countR, cy, Paint.Align.RIGHT, 12f)
         val tw = measure("${m.shown} / ${m.target}", 12f, dmReg)
         arabicBox(c, m.cur!!.arabic, 20f, cy - h * 0.42f, countR - tw - 12f, cy + h * 0.42f, min(25f, h * 0.36f), cream, Layout.Alignment.ALIGN_NORMAL)
@@ -577,7 +600,7 @@ class NewWidgetRenderer(private val ctx: Context) {
         val span = (t.dayEnd - t.dayStart).toFloat().coerceAtLeast(1f)
         fun xAt(ms: Long) = l + (r - l) * ((ms - t.dayStart) / span).coerceIn(0f, 1f)
         val barH = 8f
-        val barCy = top + 6f + (h - top - 6f) * 0.3f
+        val barCy = top + 6f + (h - top - 6f) * 0.42f
         val bt = barCy - barH / 2
         c.drawRoundRect(RectF(l, bt, r, bt + barH), barH / 2, barH / 2, fill(track))
         t.sessions.forEach { s -> s.end?.let { e -> c.drawRoundRect(RectF(xAt(s.start), bt, xAt(e), bt + barH), barH / 2, barH / 2, fill(haloC)) } }
@@ -594,10 +617,6 @@ class NewWidgetRenderer(private val ctx: Context) {
             caption(c, label, x, barCy + 7f + 16f, Paint.Align.LEFT, 12f)
             minX = x + lw + 12f
         }
-
-        // Footer: the zikr to read, across the whole width.
-        val footY = h - 18f - 14f
-        t.dhikr?.let { arabicLine(c, it, l, r, footY, 22f, cream, Layout.Alignment.ALIGN_CENTER) }
     }
 
     // ───────────────────────── shared pieces ─────────────────────────

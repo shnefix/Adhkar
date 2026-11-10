@@ -151,7 +151,7 @@ object SourceViews {
             orientation = LinearLayout.VERTICAL
             addView(text(ctx, ar.getString(R.string.source_title), 18f, R.color.text, bold = true))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(ctx, 10f) })
-        if (s.grade.isNotBlank()) head.addView(gradeBadge(ctx, s.grade), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(ctx, 10f) })
+        head.addView(gradeBadge(ctx, s.grade.ifBlank { ar.getString(R.string.grade_none) }), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(ctx, 10f) })
         head.addView(FrameLayout(ctx).apply {
             background = Ui.shape(ctx, ctx.getColor(R.color.card), ctx.getColor(R.color.border), 22f)
             contentDescription = ar.getString(R.string.source_close)

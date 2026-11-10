@@ -22,5 +22,4 @@ class Z6MorningSmallWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.Z
 class G5StarSmallWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.G5_STAR_SMALL)
 class GRosetteSmallWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.G_ROSETTE_SMALL)
 class M8SunriseWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.M8_SUNRISE)
-class M8MoonWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.M8_MOON)
 class M7TahlilFullWidgetProvider : BaseAzkarWidgetProvider(AzkarWidgetFamily.M7_TAHLIL_FULL)

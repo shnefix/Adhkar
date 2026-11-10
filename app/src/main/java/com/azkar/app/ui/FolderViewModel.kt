@@ -60,6 +60,8 @@ class FolderViewModel @Inject constructor(
 
     // Selection survives rotation.
     var selecting = false
+    /** False = the folder list leaves out the hidden azkar; the eye button next to Edit turns this on. */
+    var showHidden = false
     val selected = LinkedHashSet<String>()
 
     fun setHidden(ids: Collection<String>, hide: Boolean) = Store.setZikrsHidden(ids, hide)

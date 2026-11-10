@@ -560,10 +560,8 @@
     <string name="azkar_widget_g5_star_small_desc">An eight-pointed star</string>
     <string name="azkar_widget_g_rosette_small_label">Rosette small</string>
     <string name="azkar_widget_g_rosette_small_desc">A rosette with the name of Allah</string>
-    <string name="azkar_widget_m8_sunrise_label">Sunrise medium</string>
-    <string name="azkar_widget_m8_sunrise_desc">Opens the morning azkar</string>
-    <string name="azkar_widget_m8_moon_label">Moon medium</string>
-    <string name="azkar_widget_m8_moon_desc">Opens the evening azkar</string>
+    <string name="azkar_widget_m8_sunrise_label">Morning &amp; evening medium</string>
+    <string name="azkar_widget_m8_sunrise_desc">Morning azkar in the morning, evening azkar in the evening, tahlil otherwise</string>
     <string name="azkar_widget_m7_tahlil_full_label">Tahlil medium</string>
     <string name="azkar_widget_m7_tahlil_full_desc">The tahlil with a share button</string>
     <string name="widget_azkar_times">Azkar times</string>
@@ -579,4 +577,6 @@
     <string name="widget_kahf_read">Read this Friday</string>
     <string name="widget_tahlil">Tahlil</string>
     <string name="widget_share">Share</string>
+    <string name="grade_none">No grade</string>
+    <string name="show_hidden_cards">Show hidden azkar</string>
 </resources>

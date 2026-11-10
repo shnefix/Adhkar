@@ -14,7 +14,7 @@ import com.azkar.app.R
 import com.azkar.app.launchWhenReady
 
 /** What tapping a widget does. */
-enum class WidgetTap { COUNT, OPEN, COUNTERS, FRIDAY, SHARE }
+enum class WidgetTap { COUNT, OPEN, COUNTERS, FRIDAY, SHARE, SESSION }
 
 /**
  * [tracking] families draw [TrackingModel] and are only offered while a folder is tracked.
@@ -53,15 +53,18 @@ enum class AzkarWidgetFamily(
     N_TALL_STACK(R.layout.azkar_widget_tracking, R.xml.azkar_widget_n_tall_stack_info, WidgetKind.LARGE, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
     U_FRIDAY_MEDIUM(R.layout.azkar_widget_halves, R.xml.azkar_widget_u_friday_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.FRIDAY),
     Z6_MORNING_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_z6_morning_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.MORNING),
-    G5_STAR_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g5_star_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN),
-    G_ROSETTE_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_rosette_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN),
-    M8_SUNRISE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_m8_sunrise_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.MORNING),
-    M8_MOON(R.layout.azkar_widget_tracking, R.xml.azkar_widget_m8_moon_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.EVENING),
+    G5_STAR_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g5_star_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = WIDGET_FOLDER),
+    G_ROSETTE_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_rosette_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = WIDGET_FOLDER),
+    /** Morning azkar in the morning window, evening azkar in the evening window, the tahlil card otherwise. */
+    M8_SUNRISE(R.layout.azkar_widget_share, R.xml.azkar_widget_m8_sunrise_info, WidgetKind.MEDIUM, tap = WidgetTap.SESSION),
     M7_TAHLIL_FULL(R.layout.azkar_widget_share, R.xml.azkar_widget_m7_tahlil_full_info, WidgetKind.MEDIUM, tap = WidgetTap.SHARE),
 }
 
 /** [AzkarWidgetFamily.openFolder] value: whichever of the morning / evening folders is current. */
 const val SESSION_FOLDER = "@session"
+
+/** [AzkarWidgetFamily.openFolder] value: the folder this widget is set to show. */
+const val WIDGET_FOLDER = "@widget"
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -128,7 +131,6 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.G5_STAR_SMALL to G5StarSmallWidgetProvider::class.java,
         AzkarWidgetFamily.G_ROSETTE_SMALL to GRosetteSmallWidgetProvider::class.java,
         AzkarWidgetFamily.M8_SUNRISE to M8SunriseWidgetProvider::class.java,
-        AzkarWidgetFamily.M8_MOON to M8MoonWidgetProvider::class.java,
         AzkarWidgetFamily.M7_TAHLIL_FULL to M7TahlilFullWidgetProvider::class.java
     )
 
@@ -200,6 +202,21 @@ object NewWidgetUpdater {
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_KAHF))
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit_end, action(context, family, id, ACTION_COUNT))
                 }
+                WidgetTap.SESSION -> {
+                    val now = System.currentTimeMillis()
+                    val session = AzkarSessionClock.activeSession(now)
+                    if (session == null) {
+                        rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
+                        rv.setOnClickPendingIntent(R.id.azkar_widget_share, share(context, family, id))
+                    } else {
+                        rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id,
+                            session.folderId.takeIf { com.azkar.app.data.Store.folder(it) != null }))
+                    }
+                    AzkarSessionClock.nextBoundary(now)?.let {
+                        (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
+                            .set(android.app.AlarmManager.RTC, it + 1_000L, action(context, family, id, ACTION_BOUNDARY))
+                    }
+                }
                 WidgetTap.SHARE -> {
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
                     rv.setOnClickPendingIntent(R.id.azkar_widget_share, share(context, family, id))
@@ -207,6 +224,7 @@ object NewWidgetUpdater {
                 else -> {
                     val folder = when (family.openFolder) {
                         SESSION_FOLDER -> if (AzkarSessionClock.morningActive()) com.azkar.app.data.DefaultFolders.MORNING else com.azkar.app.data.DefaultFolders.EVENING
+                        WIDGET_FOLDER -> config.folder
                         else -> family.openFolder
                     }
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, folder?.takeIf { com.azkar.app.data.Store.folder(it) != null }))
@@ -253,7 +271,6 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.G5_STAR_SMALL to R.string.azkar_widget_g5_star_small_label,
         AzkarWidgetFamily.G_ROSETTE_SMALL to R.string.azkar_widget_g_rosette_small_label,
         AzkarWidgetFamily.M8_SUNRISE to R.string.azkar_widget_m8_sunrise_label,
-        AzkarWidgetFamily.M8_MOON to R.string.azkar_widget_m8_moon_label,
         AzkarWidgetFamily.M7_TAHLIL_FULL to R.string.azkar_widget_m7_tahlil_full_label,
     )
 

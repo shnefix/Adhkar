@@ -63,8 +63,11 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
             AzkarWidgetFamily.Z6_MORNING_SMALL -> morningSmall(c)
             AzkarWidgetFamily.G5_STAR_SMALL -> star(c)
             AzkarWidgetFamily.G_ROSETTE_SMALL -> rosette(c)
-            AzkarWidgetFamily.M8_SUNRISE -> sunrise(c)
-            AzkarWidgetFamily.M8_MOON -> moon(c)
+            AzkarWidgetFamily.M8_SUNRISE -> when (AzkarSessionClock.activeSession()) {
+                PrayerSessions.Session.MORNING -> sunrise(c)
+                PrayerSessions.Session.EVENING -> moon(c)
+                else -> tahlil(c)
+            }
             AzkarWidgetFamily.M7_TAHLIL_FULL -> tahlil(c)
             else -> {}
         }
@@ -278,11 +281,9 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
             if (isDone) { icon(c, CHECK, x + 6f, 83.4f, 12f, GOLD, 2.6f); tx += 17f }
             label(c, shortName(m, i), tx, 83.4f, 13f, if (isCur) CREAM else if (isDone) SOFT else MUTED, isCur, maxW = x + cw - tx)
         }
-        c.drawCircle(384f, 146f, 36f, fill(GOLD))
-        label(c, "+1", 384f, 146f, 24f, INK, true, Paint.Align.CENTER)
-        arabicBox(c, m.cur!!.arabic, 22f, 106f, 332f, 160f, 42f, CREAM)
+        arabicBox(c, m.cur!!.arabic, 22f, 106f, 420f, 160f, 42f, CREAM)
         label(c, if (m.finished) str(R.string.widget_completed) else str(R.string.widget_count_of, m.shown, m.target),
-            177f, 175.4f, 15.5f, SOFT, false, Paint.Align.CENTER, 300f)
+            221f, 175.4f, 15.5f, SOFT, false, Paint.Align.CENTER, 380f)
     }
 
     private fun afterLarge(c: Canvas, m: WidgetModel) {
@@ -674,7 +675,6 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
             AzkarWidgetFamily.G5_STAR_SMALL to (206f to 206f),
             AzkarWidgetFamily.G_ROSETTE_SMALL to (206f to 206f),
             AzkarWidgetFamily.M8_SUNRISE to (442f to 206f),
-            AzkarWidgetFamily.M8_MOON to (442f to 206f),
             AzkarWidgetFamily.M7_TAHLIL_FULL to (442f to 206f),
         )
 

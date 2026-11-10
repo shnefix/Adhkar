@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 33
+    private const val DEFAULTS_VERSION = 40
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -228,6 +228,12 @@ object Store {
         if (from < 31) trimLibraryV31()
         if (from < 32) sortMorningEvening()
         if (from < 33) removeUnsourcedDuas("removed_v33.json", requireNoSource = false)  // 33: the weak azkar (backup in WEAK_AZKAR_BACKUP.json)
+        if (from < 34) moveNonDuas()
+        if (from < 35) groupNonDuas()
+        if (from < 36) fillGrades("grades_v36.json")
+        if (from < 37) fillGrades("grades_v37.json")  // 37: grades copied from matching graded azkar, plus mismatch warnings
+        if (from < 40) istighfarFirstInTasabih()   // 31 tried this but missed the hamza in «أستغفر»
+        if (from < 39) hideWeakAndUngraded()   // 38: folders; 39: also the azkar with no folder
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -485,6 +491,147 @@ object Store {
             z = others.toMutableList().also { it.addAll(before, sorted) }
         }
         if (z != zCache) saveZikrs(z)
+    }
+
+    /**
+     * Version 34: cards that are advice, rulings, virtues, narrations or notes rather than a dua or dhikr move out of their
+     * folders into «فوائد وتنبيهات» (one subfolder per kind, hidden from Home); assets/non_dua_v34.json lists them by exact
+     * text. Each keeps a «من: <folder>» note so its origin is clear. A card the user edited keeps its place.
+     */
+    @Synchronized
+    private fun moveNonDuas() {
+        val spec = try {
+            org.json.JSONArray(appCtx.assets.open("non_dua_v34.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
+        } catch (e: Exception) { android.util.Log.w("Azkar", "non_dua_v34.json unreadable", e); return }
+        val kindOf = HashMap<String, String>()
+        val kinds = ArrayList<Pair<String, String>>()
+        for (i in 0 until spec.length()) {
+            val o = spec.getJSONObject(i); val id = o.getString("id")
+            kinds += id to o.getString("name")
+            o.getJSONArray("texts").let { a -> for (j in 0 until a.length()) kindOf.putIfAbsent(a.getString(j), id) }
+        }
+        val names = fCache.associate { it.id to it.name }
+        val moved = HashSet<String>()
+        val next = zCache.map { z ->
+            val kind = kindOf[z.arabic]
+            if (kind == null || z.folderId == null || z.folderId in kinds.map { it.first }) z else {
+                moved += kind
+                val from = names[z.folderId]?.let { "من: $it" }
+                z.copy(folderId = kind, note = listOfNotNull(from, z.note.takeIf { it.isNotBlank() }).joinToString(" — "))
+            }
+        }
+        if (moved.isEmpty()) return
+        val root = "g_notes"
+        val folders = ArrayList(fCache)
+        if (folders.none { it.id == root }) folders += Folder(root, "فوائد وتنبيهات")
+        val made = ArrayList<String>(listOf(root))
+        kinds.filter { it.first in moved }.forEach { (id, name) ->
+            if (folders.none { it.id == id }) { folders += Folder(id, name, parent = root); made += id }
+        }
+        saveContent(folders, next, sCache)
+        setHidden(hidden() + made)
+    }
+
+    /**
+     * Version 35: inside each «فوائد وتنبيهات» subfolder the cards are grouped into topic folders (الصلاة، النوم، المرض والموت…),
+     * and a card with no title gets a short one (assets/non_dua_v35.json, matched by exact text; an existing title stays).
+     */
+    @Synchronized
+    private fun groupNonDuas() {
+        val o = try {
+            org.json.JSONObject(appCtx.assets.open("non_dua_v35.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
+        } catch (e: Exception) { android.util.Log.w("Azkar", "non_dua_v35.json unreadable", e); return }
+        val themes = o.getJSONArray("themes").let { a -> (0 until a.length()).map { a.getString(it) } }
+        val items = o.getJSONArray("items")
+        class Spec(val kind: String, val theme: Int, val title: String)
+        val byText = HashMap<String, Spec>()
+        for (i in 0 until items.length()) items.getJSONObject(i).let {
+            byText.putIfAbsent(it.getString("text"), Spec(it.getString("kind"), if (it.isNull("theme")) -1 else it.getInt("theme"), it.optString("title")))
+        }
+        val kinds = byText.values.map { it.kind }.toSet()
+        val made = LinkedHashMap<String, Folder>()
+        var changed = false
+        val next = zCache.map { z ->
+            val sp = byText[z.arabic]
+            if (sp == null || z.folderId != sp.kind) z else {
+                changed = true
+                val title = if (z.title.isBlank() && sp.title.isNotBlank()) sp.title else z.title
+                if (sp.theme < 0 || sp.kind == "n_poem") z.copy(title = title) else {
+                    val id = "nt_${sp.kind}_${sp.theme}"
+                    made.getOrPut(id) { Folder(id, themes[sp.theme], parent = sp.kind) }
+                    z.copy(folderId = id, title = title)
+                }
+            }
+        }
+        if (!changed) return
+        val have = fCache.map { it.id }.toSet()
+        saveContent(fCache + made.values.filter { it.id !in have }, next, sCache)
+        setHidden(hidden() + made.keys)
+    }
+
+    /**
+     * Version 36: grades and research links for azkar that had no grade (assets/grades_v36.json, matched by exact text).
+     * Only a zikr whose grade is still blank changes; a link is added to the source page's text once.
+     */
+    @Synchronized
+    private fun fillGrades(asset: String) {
+        val rows = try {
+            org.json.JSONArray(appCtx.assets.open(asset).bufferedReader(Charsets.UTF_8).use { it.readText() })
+        } catch (e: Exception) { android.util.Log.w("Azkar", "$asset unreadable", e); return }
+        class Fill(val grade: String, val add: String)
+        val by = HashMap<String, Fill>()
+        for (i in 0 until rows.length()) rows.getJSONObject(i).let { by[it.getString("text")] = Fill(it.optString("grade"), it.optString("add")) }
+        var changed = false
+        val next = zCache.map { z ->
+            val f = by[z.arabic]
+            if (f == null || z.source.grade.isNotBlank()) z else {
+                val detail = if (f.add.isNotBlank() && !z.source.detail.contains(f.add)) listOf(z.source.detail, f.add).filter { it.isNotBlank() }.joinToString("\n\n") else z.source.detail
+                val grade = f.grade.ifBlank { z.source.grade }
+                if (detail == z.source.detail && grade == z.source.grade) z else { changed = true; z.copy(source = z.source.copy(grade = grade, detail = detail)) }
+            }
+        }
+        if (changed) saveZikrs(next)
+    }
+
+    /**
+     * Version 38: in every folder except مُخْتَارَاتٌ (d_16) and «فوائد وتنبيهات», the weak azkar and those with no grade go to the
+     * end of the folder and are hidden (the folder screen's eye button shows them). Only built-in azkar are touched: a card
+     * with no grade counts when it has a source or its text is one of the built-in texts, so cards the user wrote stay.
+     */
+    @Synchronized
+    private fun hideWeakAndUngraded() {
+        val builtIn = HashSet<String>()
+        defaults()?.let { p -> p.folders.forEach { f -> f.items.forEach { builtIn += it.text } }; p.unfiled.forEach { builtIn += it.text } }
+        val weak = Regex("ضعيف|موضوع|منكر|لا أصل")
+        fun skipFolder(id: String?) = id == "d_16" || id == "g_notes" || id?.startsWith("n_") == true || id?.startsWith("nt_") == true
+        fun flagged(z: Zikr): Boolean {
+            if (skipFolder(z.folderId)) return false
+            val g = z.source.grade.trim()
+            if (g.isNotEmpty()) return weak.containsMatchIn(g)
+            val ref = z.source.reference
+            if (ref.startsWith("سورة") || ref.startsWith("مقتبس من القرآن")) return false
+            return ref.isNotBlank() || z.arabic in builtIn
+        }
+        val flaggedIds = zCache.filter { flagged(it) }.map { it.id }.toHashSet()
+        if (flaggedIds.isEmpty()) return
+        val queues = HashMap<String, ArrayDeque<Zikr>>()
+        zCache.groupBy { it.folderId }.forEach { (fid, list) ->
+            if (fid != null && list.any { it.id in flaggedIds }) queues[fid] = ArrayDeque(list.filter { it.id !in flaggedIds } + list.filter { it.id in flaggedIds })
+        }
+        val next = zCache.map { z -> queues[z.folderId]?.removeFirst() ?: z }
+        saveZikrs(next)
+        setZikrsHidden(flaggedIds, true)
+    }
+
+    /** Version 40: «أستغفر الله» is the first card in تسابيح (the hamza had made version 31 miss it). */
+    @Synchronized
+    private fun istighfarFirstInTasabih() {
+        val marks = Regex("[\u064B-\u065F\u0670\u0640]")
+        val folder = DefaultFolders.TASABIH
+        val i = zCache.indexOfFirst { it.folderId == folder && marks.replace(it.arabic, "").replace('أ', 'ا').trim() == "استغفر الله" }
+        val j = zCache.indexOfFirst { it.folderId == folder }
+        if (i < 0 || j < 0 || i <= j) return
+        saveZikrs(zCache.toMutableList().also { it.add(j, it.removeAt(i)) })
     }
 
     /**

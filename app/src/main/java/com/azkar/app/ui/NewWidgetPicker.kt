@@ -57,7 +57,6 @@ internal val FAMILY_LABELS = linkedMapOf(
     AzkarWidgetFamily.G5_STAR_SMALL to R.string.azkar_widget_g5_star_small_label,
     AzkarWidgetFamily.G_ROSETTE_SMALL to R.string.azkar_widget_g_rosette_small_label,
     AzkarWidgetFamily.M8_SUNRISE to R.string.azkar_widget_m8_sunrise_label,
-    AzkarWidgetFamily.M8_MOON to R.string.azkar_widget_m8_moon_label,
     AzkarWidgetFamily.M7_TAHLIL_FULL to R.string.azkar_widget_m7_tahlil_full_label,
 )
 

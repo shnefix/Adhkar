@@ -2,7 +2,7 @@
 
 This file lists every home-screen widget in the app. Each widget has its own section, and every section uses the same fields. You can read it top to bottom, or search for a widget ID (e.g. `B_SMALL`) or a class name.
 
-- **Total:** 21 widgets: 3 classic, 12 design widgets and 6 tracking widgets.
+- **Total:** 35 widgets: 3 classic, 12 design widgets, 6 tracking widgets and 14 black & yellow widgets (section 6).
 - **Source of truth:** the code paths in [Where the code lives](#where-the-code-lives). If this file and the code disagree, the code is right.
 - **Units:** sizes are in dp, and grid cells are launcher cells (columns × rows).
 
@@ -177,7 +177,7 @@ They all use `BaseAzkarWidgetProvider` with an `AzkarWidgetFamily` value and are
 ### 4.9 `J_STRIP_DHIKR`: Azkar dhikr strip
 - **Provider:** `JStripDhikrWidgetProvider` · **Info:** `xml/azkar_widget_j_strip_dhikr_info.xml` · **Layout:** `azkar_widget_j_strip_dhikr`
 - **Cells:** 4×1 · **Design:** 338×74 dp
-- **Shows:** one row: the current zikr in Arabic, "count / target", and a round gold **+1** button on the right.
+- **Shows:** one row: the current zikr in Arabic and "count / target" on the right. There is no button: a tap anywhere sends +1.
 
 ### 4.10 `J_STRIP_PROGRESS`: Azkar progress strip
 - **Provider:** `JStripProgressWidgetProvider` · **Info:** `xml/azkar_widget_j_strip_progress_info.xml` · **Layout:** `azkar_widget_j_strip_progress`
@@ -245,11 +245,35 @@ The `TrackingModel` fields they use:
 ### 5.6 `T_TODAY_MEDIUM`: Azkar today medium
 - **Provider:** `TTodayMediumWidgetProvider` · **Info:** `xml/azkar_widget_t_today_medium_info.xml`
 - **Cells:** 4×2 · **Design:** 338×158 dp · **Refresh:** every 15 min
-- **Shows:** "Today" with "X left" or "<Session> starts in X" on the right. Under it, a bar running from midnight to midnight, with dim windows for each session, gold up to now, and a dot at the current time. Session labels with start times sit under the bar, and the zikr to read is shown in Arabic across the bottom.
+- **Shows:** "Today" with "X left" or "<Session> starts in X" on the right. Under it, a bar running from midnight to midnight, with dim windows for each session, gold up to now, and a dot at the current time. Session labels with start times sit under the bar. No zikr text is shown.
 
 ---
 
-## 6. Where the code lives
+## 6. Black & yellow widgets
+
+Drawn by `GoldWidgetRenderer` in a 206 px = 158 dp mock-up grid, scaled to the widget. `tap` and `openFolder` in `AzkarWidgetFamily` decide what a tap does.
+
+| ID | Size | Shows | Tap does |
+|----|------|-------|----------|
+| `K_RINGS_SMALL` / `K_RINGS_MEDIUM` | 2×2 / 4×2 | Rings for morning, evening and the widget's folder | Opens the current session's folder |
+| `A_DIAL_SMALL` / `A_DIAL_MEDIUM` | 2×2 / 4×2 | A 24-hour dial with the azkar times (medium: the times and time left) | Opens the current session's folder |
+| `P_AFTER_MEDIUM` | 4×2 | Folder name, "done / total" chip, three step bars, the current zikr and "X of N". No +1 button | +1 |
+| `P_AFTER_LARGE` | 4×4 | The previous, current and next steps | +1 |
+| `I_COUNTERS_LARGE` | 4×4 | Four counters for the first azkar of the folder | Each counter counts its own zikr |
+| `N_TALL_STACK` | 2×4 | Morning, evening and the widget's folder stacked | Opens the current session's folder |
+| `U_FRIDAY_MEDIUM` | 4×2 | Surat al-Kahf and a folder to count | One area opens al-Kahf, the other sends +1 |
+| `Z6_MORNING_SMALL` | 2×2 | Gold morning card | Opens the morning azkar |
+| `G5_STAR_SMALL` | 2×2 | Eight-point star | Opens the widget's folder (`WIDGET_FOLDER`) |
+| `G_ROSETTE_SMALL` | 2×2 | Rosette with «الله» | Opens the widget's folder (`WIDGET_FOLDER`) |
+| `M8_SUNRISE` ("Morning & evening medium") | 4×2 | During the morning window, the sunrise design. During the evening window, the moon design. Otherwise, the tahlil design | Morning or evening: opens that folder. Otherwise: opens the app, and the corner button shares |
+| `M7_TAHLIL_FULL` | 4×2 | «لا إله إلا الله وحده لا شريك له» | Opens the app, and the corner button shares |
+
+- **Morning & evening widget:** the windows come from `AzkarSessionClock.windows` (prayer times when a location is set, else the reminder time plus 4 hours). `AzkarSessionClock.pick` chooses the design, and the widget sets an alarm for `AzkarSessionClock.boundary` so it switches on time. It replaced the separate moon widget (`M8_MOON`, removed in this version).
+- **Picker order** (`WidgetPickerDialog`): small widgets list Classic, Calligraphy, Tasbih, then the families in enum order, except that the tap disc (`B_SMALL`) comes before morning and evening (`D_SMALL`). See `pickerStyles` and `pickerFamilies`.
+
+---
+
+## 7. Where the code lives
 
 All paths are relative to `app/src/main/`.
 
@@ -261,6 +285,8 @@ All paths are relative to `app/src/main/`.
 | Tracking providers (C, G, F, T) | `java/com/azkar/app/widgets/TrackingWidgetProviders.kt` |
 | Classic renderer (4 styles) | `java/com/azkar/app/widgets/WidgetRenderer.kt` |
 | Design and tracking renderer, `AzkarWidgetSizes`, `AzkarSessionClock` | `java/com/azkar/app/widgets/render/NewWidgetRenderer.kt` |
+| Black & yellow renderer | `java/com/azkar/app/widgets/render/GoldWidgetRenderer.kt` |
+| Tests | `src/test/.../widgets/WidgetChangesTest.kt`, `src/androidTest/.../widgets/WidgetFamiliesRenderTest.kt` |
 | `WidgetModel`, `WidgetKind`, `WidgetStyle` | `java/com/azkar/app/widgets/WidgetModels.kt` |
 | `TrackingModel` | `java/com/azkar/app/widgets/TrackingModel.kt` |
 | Config, appearance, progress storage, `WidgetLogic` (tap rules) | `java/com/azkar/app/widgets/WidgetStore.kt` |
