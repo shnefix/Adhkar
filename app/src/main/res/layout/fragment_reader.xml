@@ -17,7 +17,7 @@
 <LinearLayout android:id="@+id/front" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
 <com.azkar.app.ui.ReaderScrubber android:id="@+id/segs" android:layout_marginTop="4dp" android:layout_marginStart="-10dp" android:layout_marginEnd="-10dp" android:layout_width="match_parent" android:layout_height="32dp"/>
 <!-- The card; the counting ring sits in its bottom-right corner. -->
-<FrameLayout android:id="@+id/card" android:layout_weight="1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_marginTop="4dp" android:padding="22dp" android:background="@drawable/bg_card28">
+<FrameLayout android:id="@+id/card" android:layout_weight="1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_marginTop="4dp" android:padding="22dp" android:background="@drawable/bg_reader_card">
 <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:paddingBottom="72dp" android:clipToPadding="false" android:fillViewport="true" android:scrollbars="none" android:overScrollMode="never" android:id="@+id/ar_scroll">
 <LinearLayout android:orientation="vertical" android:gravity="center" android:padding="0dp" android:minHeight="0dp" android:layout_width="match_parent" android:layout_height="wrap_content">
 <TextView style="@style/TB" android:id="@+id/title_above" android:visibility="gone" android:textSize="15sp" android:textColor="@color/gold" android:lineHeight="22sp" android:gravity="center" android:textDirection="firstStrong" android:layout_marginBottom="14dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

@@ -14,4 +14,5 @@
     <color name="track">#2E2E2E</color>
     <color name="hint">#7A7A7A</color>
     <color name="dialog_bg">#121212</color>
+    <color name="arabic">#FFFBF0</color>
 </resources>

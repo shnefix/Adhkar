@@ -1,0 +1,83 @@
+<title>Reader OLED Card</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: two phone screens side by side, before and after, stacking on narrow widths. Dark-only by design: it previews the OLED theme. */
+:root{
+  color-scheme:dark;
+  --page:#050505; --ink:#EDEDED; --dim:#9A9A9A;
+  --old-card:#0B0B0B; --old-border:#1F1F1F; --old-arabic:#F6EFD9;
+  --new-card:#000000; --new-border:#232323; --new-arabic:#F7F3E8;
+  --bg:#000000; --gold:#E8B44A; --track:#2E2E2E; --card2:#141414;
+  --ar:'Amiri','Noto Naskh Arabic',serif; --ui:'Inter',system-ui,sans-serif;
+}
+body{background:var(--page);color:var(--ink);font-family:var(--ui);padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:22px;margin:0 0 4px;font-weight:600}
+.sub{color:var(--dim);margin:0 0 28px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:40px;justify-content:center}
+.col{display:flex;flex-direction:column;gap:12px;align-items:center;min-width:0}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.label b{color:var(--ink);font-weight:600}
+.phone{width:320px;max-width:100%;height:600px;background:var(--bg);border:1px solid #222;border-radius:36px;padding:14px 14px 16px;display:flex;flex-direction:column;box-sizing:border-box}
+.top{display:flex;align-items:center}
+.back{width:38px;height:38px;border-radius:50%;background:var(--card2);border:1px solid #2B2B2B;display:grid;place-items:center}
+.ttl{flex:1;text-align:center}
+.ttl div:first-child{font-weight:600;font-size:15px}
+.ttl div:last-child{font-size:12px;color:var(--dim);margin-top:2px}
+.spacer{width:38px}
+.segs{display:flex;gap:4px;margin:14px 0 6px}
+.segs i{flex:1;height:4px;border-radius:2px;background:var(--track)}
+.segs i.on{background:var(--gold)}
+.card{flex:1;position:relative;border-radius:28px;padding:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--b);background:var(--c)}
+.old{--c:var(--old-card);--b:var(--old-border);--a:var(--old-arabic)}
+.new{--c:var(--new-card);--b:var(--new-border);--a:var(--new-arabic)}
+.ar{font-family:var(--ar);font-size:27px;line-height:1.9;text-align:center;color:var(--a);direction:rtl;margin:0 0 54px}
+.rule{position:absolute;left:50%;transform:translateX(-50%);bottom:112px;width:36px;height:2px;background:var(--gold)}
+.ring{position:absolute;right:14px;bottom:14px;width:84px;height:84px}
+.ring .n{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .n b{font-size:24px;color:var(--gold);line-height:1}
+.ring .n span{font-size:10px;color:var(--dim);margin-top:2px}
+.hint{text-align:center;color:var(--dim);font-size:12px;height:44px;display:grid;place-items:center}
+.diff{margin:32px auto 0;max-width:720px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 24px;font-size:13px;color:var(--dim)}
+.diff div{display:flex;align-items:center;gap:10px}
+.sw{width:16px;height:16px;border-radius:4px;border:1px solid #444;flex:none}
+</style>
+
+<h1>Reader card in OLED mode</h1>
+<p class="sub">The same zikr, before and after. Only the card fill, its border and the Arabic text color change.</p>
+
+<div class="row">
+  <div class="col">
+    <div class="label"><b>Before</b> · card #0B0B0B</div>
+    <div class="phone">
+      <div class="top"><div class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EDEDED" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div><div class="ttl"><div>Morning</div><div>4 / 12</div></div><div class="spacer"></div></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="card old">
+        <p class="ar">سُبْحَانَ اللَّهِ وَبِحَمْدِهِ<br>سُبْحَانَ اللَّهِ الْعَظِيمِ</p>
+        <div class="rule"></div>
+        <div class="ring"><svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="37" fill="none" stroke="#2E2E2E" stroke-width="5"/><circle cx="42" cy="42" r="37" fill="none" stroke="#E8B44A" stroke-width="5" stroke-linecap="round" stroke-dasharray="232" stroke-dashoffset="90" transform="rotate(-90 42 42)"/></svg><div class="n"><b>20</b><span>of 33</span></div></div>
+      </div>
+      <div class="hint">Tap the ring to count</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="label"><b>After</b> · card #000000</div>
+    <div class="phone">
+      <div class="top"><div class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EDEDED" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div><div class="ttl"><div>Morning</div><div>4 / 12</div></div><div class="spacer"></div></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="card new">
+        <p class="ar">سُبْحَانَ اللَّهِ وَبِحَمْدِهِ<br>سُبْحَانَ اللَّهِ الْعَظِيمِ</p>
+        <div class="rule"></div>
+        <div class="ring"><svg viewBox="0 0 84 84" width="84" height="84"><circle cx="42" cy="42" r="37" fill="none" stroke="#2E2E2E" stroke-width="5"/><circle cx="42" cy="42" r="37" fill="none" stroke="#E8B44A" stroke-width="5" stroke-linecap="round" stroke-dasharray="232" stroke-dashoffset="90" transform="rotate(-90 42 42)"/></svg><div class="n"><b>20</b><span>of 33</span></div></div>
+      </div>
+      <div class="hint">Tap the ring to count</div>
+    </div>
+  </div>
+</div>
+
+<div class="diff">
+  <div><span class="sw" style="background:#0B0B0B"></span>Card fill #0B0B0B → #000000</div>
+  <div><span class="sw" style="background:#232323"></span>Border #1F1F1F → #232323</div>
+  <div><span class="sw" style="background:#F7F3E8"></span>Arabic #F6EFD9 → #F7F3E8</div>
+</div>
