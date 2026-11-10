@@ -25,8 +25,8 @@ your own: write any zikr or dua, choose how many times to repeat it, and organis
 | <img src="docs/images/home.png" width="250" alt="Home"> | <img src="docs/images/library.png" width="250" alt="Library"> | <img src="docs/images/reader.png" width="250" alt="Reader"> |
 | **Source of a zikr** | **Customize** | **Settings** |
 | <img src="docs/images/source.png" width="250" alt="Source page"> | <img src="docs/images/customize.png" width="250" alt="Customize"> | <img src="docs/images/settings.png" width="250" alt="Settings"> |
-| **Reminders** | | |
-| <img src="docs/images/reminders.png" width="250" alt="Reminders"> | | |
+| **Reminders** | **Widgets** | |
+| <img src="docs/images/reminders.png" width="250" alt="Reminders"> | <img src="docs/images/widgets.png" width="250" alt="Widgets"> | |
 
 ## Features
 
