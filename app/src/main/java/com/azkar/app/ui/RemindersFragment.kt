@@ -369,11 +369,9 @@ class RemindersFragment : Fragment(R.layout.fragment_reminders) {
         fun showFolder() { folderTv.text = Store.folder(folder ?: "")?.let { folderLabel(it) } ?: getString(R.string.just_open_app) }
         showFolder()
         folderTv.setOnClickListener {
-            val fs = Store.readableFolders()   // a parent folder has nothing to open
-            val names = arrayOf(getString(R.string.just_open_app)) + fs.map { folderLabel(it) }
-            AlertDialog.Builder(ctx).setTitle(R.string.open_folder)
-                .setItems(names) { _, which -> folder = if (which == 0) null else fs[which - 1].id; showFolder() }
-                .show()
+            // Only folders with azkar of their own: a parent folder has nothing to open.
+            FolderSheet.pick(ctx, getString(R.string.open_folder), listOf(null to getString(R.string.just_open_app)),
+                FolderSheet.readableOptions(), folder) { picked -> folder = picked; showFolder() }
         }
 
         val b = AlertDialog.Builder(ctx)

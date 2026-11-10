@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView
+        android:id="@+id/azkar_widget_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="fitXY" />
+    <FrameLayout
+        android:id="@+id/azkar_widget_hit"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <!-- Share button, bottom right of the bitmap. -->
+    <FrameLayout
+        android:id="@+id/azkar_widget_share"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom|right"
+        android:contentDescription="@string/widget_share" />
+</FrameLayout>

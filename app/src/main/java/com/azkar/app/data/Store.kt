@@ -27,7 +27,7 @@ object Store {
     private const val K_FOLDERS = "folders"
     private const val K_DEFAULT_FOLDERS_IMPORTED = "default_folders_imported"
     private const val K_DEFAULTS_VER = "defaults_version"
-    private const val DEFAULTS_VERSION = 27
+    private const val DEFAULTS_VERSION = 33
     private const val WAKE_FOLDER_NAME = "أذكار الاستيقاظ"
     /** Earlier names of the wake-up folder: an encoding bug saved "?????", and versions 4-6 misspelled it. */
     private val WAKE_OLD_NAMES = setOf("أذكار الإستيقاظ من النوم", "????? ????????", "أذكار الإستقاظ")
@@ -222,6 +222,12 @@ object Store {
         if (!fresh && from < 23) { tashkeelFolderNames(p); removeUnsourcedDuas("removed_v23.json"); arabicGrades() }
         if (!fresh && from < 25) cleanZikrTexts()   // 25: matched ignoring tashkeel and spacing
         if (!fresh && from < 27) fullChains(p)   // 26: texts with no chain; 27: also chains cut short
+        if (from < 28) putDhikrFirst()
+        if (!fresh && from < 29) mergeSharedSources()
+        if (!fresh && from < 30) fillMissingDetails(p)   // 30: Quran ayahs and checked hadith texts for more azkar
+        if (from < 31) trimLibraryV31()
+        if (from < 32) sortMorningEvening()
+        if (from < 33) removeUnsourcedDuas("removed_v33.json", requireNoSource = false)  // 33: the weak azkar (backup in WEAK_AZKAR_BACKUP.json)
         sp.edit().putInt(K_DEFAULTS_VER, DEFAULTS_VERSION).apply()
     }
 
@@ -431,17 +437,68 @@ object Store {
     }
 
     /**
+     * Version 31: the folders الاستغفار، أذكار خفيفة، الغسل and التشهد are gone with their azkar; دعاء القنوت keeps only
+     * its first card; and «أستغفر الله» is the first zikr in تسابيح.
+     */
+    @Synchronized
+    private fun trimLibraryV31() {
+        val gone = setOf("d_1", "d_4", "d_54", "d_69", "d_70")
+        val parentOf = fCache.associate { it.id to it.parent }
+        val qunutFirst = zCache.firstOrNull { it.folderId == "d_3" }?.id
+        var z = zCache.filter { it.folderId !in gone && !(it.folderId == "d_3" && it.id != qunutFirst) }
+        val bare = Regex("[ً-ٰٟ]")
+        val i = z.indexOfFirst { it.folderId == DefaultFolders.TASABIH && bare.replace(it.arabic, "").trim() == "استغفر الله" }
+        val j = z.indexOfFirst { it.folderId == DefaultFolders.TASABIH }
+        if (i > j && j >= 0) z = z.toMutableList().also { l -> l.add(j, l.removeAt(i)) }
+        saveContent(
+            fCache.filter { it.id !in gone }.map { f -> if (f.parent in gone) f.copy(parent = parentOf[f.parent]) else f },
+            z,
+            sCache.map { if (it.open in gone) it.copy(open = null) else it }
+        )
+        setHomeOrder(homeOrder().filter { it !in gone })
+        setHidden(hidden() - gone)
+        gone.forEach { AppPrefs.clearPosition(it); AppPrefs.clearResetRule(it); Tracking.setTracked(it, false) }
+    }
+
+    /**
+     * Version 32: in أذكار الصباح and أذكار المساء the sound azkar come first, then those that are sound but not specific to
+     * the time, then the weak ones; repeated azkar are dropped (assets/order_v32.json). Matched by exact text; a zikr the
+     * user added or edited keeps its place after the listed ones.
+     */
+    @Synchronized
+    private fun sortMorningEvening() {
+        val o = try {
+            org.json.JSONObject(appCtx.assets.open("order_v32.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
+        } catch (e: Exception) { android.util.Log.w("Azkar", "order_v32.json unreadable", e); return }
+        var z: List<Zikr> = zCache
+        for (fid in o.keys()) {
+            val spec = o.getJSONObject(fid)
+            val order = spec.getJSONArray("order").let { a -> (0 until a.length()).map { a.getString(it) } }
+            val remove = spec.getJSONArray("remove").let { a -> (0 until a.length()).map { a.getString(it) }.toHashSet() }
+            val at = z.indexOfFirst { it.folderId == fid }
+            if (at < 0) continue
+            val mine = z.filter { it.folderId == fid && it.arabic !in remove }
+            val rank = order.withIndex().associate { (i, t) -> t to i }
+            val sorted = mine.withIndex().sortedWith(compareBy({ rank[it.value.arabic] ?: Int.MAX_VALUE }, { it.index })).map { it.value }
+            val others = z.filter { it.folderId != fid }
+            val before = z.subList(0, at).count { it.folderId != fid }
+            z = others.toMutableList().also { it.addAll(before, sorted) }
+        }
+        if (z != zCache) saveZikrs(z)
+    }
+
+    /**
      * Version 22: the built-in azkar with no source in four folders (أدعية للميّت، جوامع الدعاء، أدعية طلب العلم،
      * أذكار داخل الصلاة) are dropped. assets/removed_v22.json lists them by folder; one is removed only while it is
      * still in that folder with its text unchanged and no source, so the user's own azkar and edits stay.
      */
     @Synchronized
-    private fun removeUnsourcedDuas(asset: String = "removed_v22.json") {
+    private fun removeUnsourcedDuas(asset: String = "removed_v22.json", requireNoSource: Boolean = true) {
         val listed = try {
             val o = org.json.JSONObject(appCtx.assets.open(asset).bufferedReader(Charsets.UTF_8).use { it.readText() })
             o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) }.toHashSet() } }
         } catch (e: Exception) { android.util.Log.w("Azkar", "$asset unreadable", e); return }
-        val gone = zCache.filter { z -> z.source.isEmpty && listed[z.folderId]?.contains(z.arabic) == true }.map { it.id }.toHashSet()
+        val gone = zCache.filter { z -> (!requireNoSource || z.source.isEmpty) && listed[z.folderId]?.contains(z.arabic) == true }.map { it.id }.toHashSet()
         if (gone.isEmpty()) return
         saveZikrs(zCache.filter { it.id !in gone })
         setZikrsHidden(gone, false)
@@ -742,6 +799,42 @@ object Store {
      * delete. Each takes the built-in folders listed for it that are still at the top level; a group with none of its
      * folders left isn't created. They are left off Home, since they hold folders rather than azkar.
      */
+    /** Version 28: the Library opens with الذكر المطلق first, and تسابيح is the first folder inside it. */
+    @Synchronized
+    private fun putDhikrFirst() {
+        val group = fCache.firstOrNull { it.id == FolderGroups.DHIKR } ?: return
+        val tasabih = fCache.firstOrNull { it.id == DefaultFolders.TASABIH && it.parent == group.id }
+        val rest = fCache.filter { it.id != group.id && it.id != tasabih?.id }
+        val next = listOfNotNull(group, tasabih) + rest
+        if (next != fCache) saveFolders(next)
+    }
+
+    /**
+     * Version 29: a zikr that sits in several folders cites every source it has in all of them (assets/merged_sources_v29.json).
+     * Only a zikr that still has the old default reference is changed; one the user edited is left alone.
+     */
+    @Synchronized
+    private fun mergeSharedSources() {
+        val rows = try {
+            val raw = appCtx.assets.open("merged_sources_v29.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
+            org.json.JSONArray(raw)
+        } catch (e: Exception) { return }
+        var changed = false
+        var next: List<Zikr> = zCache
+        for (i in 0 until rows.length()) {
+            val r = rows.getJSONObject(i)
+            val folder = r.getString("folder"); val text = r.getString("text"); val old = r.getString("old")
+            val ref = r.getString("source"); val detail = r.optString("detail", "")
+            next = next.map { z ->
+                if (z.folderId != folder || z.arabic != text || z.source.reference != old) z else {
+                    changed = true
+                    z.copy(source = z.source.copy(reference = ref, detail = z.source.detail.ifBlank { detail }))
+                }
+            }
+        }
+        if (changed) saveZikrs(next)
+    }
+
     @Synchronized
     private fun createGroupFolders() {
         val present = fCache.associateBy { it.id }

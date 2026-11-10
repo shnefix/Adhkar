@@ -13,8 +13,17 @@ import android.widget.RemoteViews
 import com.azkar.app.R
 import com.azkar.app.launchWhenReady
 
-/** [tracking] families draw [TrackingModel] and are only offered while a folder is tracked. */
-enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKind, val tracking: Boolean = false) {
+/** What tapping a widget does. */
+enum class WidgetTap { COUNT, OPEN, COUNTERS, FRIDAY, SHARE }
+
+/**
+ * [tracking] families draw [TrackingModel] and are only offered while a folder is tracked.
+ * [tap] = what a tap does; OPEN widgets open [openFolder] (the current morning / evening folder for [SESSION_FOLDER]).
+ */
+enum class AzkarWidgetFamily(
+    val layout: Int, val info: Int, val kind: WidgetKind, val tracking: Boolean = false,
+    val tap: WidgetTap = WidgetTap.COUNT, val openFolder: String? = null,
+) {
     H_SMALL(R.layout.azkar_widget_h_small, R.xml.azkar_widget_h_small_info, WidgetKind.SMALL),
     H_MEDIUM(R.layout.azkar_widget_h_medium, R.xml.azkar_widget_h_medium_info, WidgetKind.MEDIUM),
     H_LARGE(R.layout.azkar_widget_h_large, R.xml.azkar_widget_h_large_info, WidgetKind.LARGE),
@@ -32,8 +41,27 @@ enum class AzkarWidgetFamily(val layout: Int, val info: Int, val kind: WidgetKin
     C_STREAK_LARGE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_c_streak_large_info, WidgetKind.LARGE, true),
     G_COUNTDOWN_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_countdown_small_info, WidgetKind.SMALL, true),
     F_BENTO_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_f_bento_small_info, WidgetKind.SMALL, true),
-    T_TODAY_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_t_today_medium_info, WidgetKind.MEDIUM, true)
+    T_TODAY_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_t_today_medium_info, WidgetKind.MEDIUM, true),
+    // Black & yellow designs.
+    K_RINGS_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    K_RINGS_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    A_DIAL_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    A_DIAL_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    P_AFTER_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_medium_info, WidgetKind.MEDIUM),
+    P_AFTER_LARGE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_large_info, WidgetKind.LARGE),
+    I_COUNTERS_LARGE(R.layout.azkar_widget_counters, R.xml.azkar_widget_i_counters_large_info, WidgetKind.LARGE, tap = WidgetTap.COUNTERS),
+    N_TALL_STACK(R.layout.azkar_widget_tracking, R.xml.azkar_widget_n_tall_stack_info, WidgetKind.LARGE, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    U_FRIDAY_MEDIUM(R.layout.azkar_widget_halves, R.xml.azkar_widget_u_friday_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.FRIDAY),
+    Z6_MORNING_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_z6_morning_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.MORNING),
+    G5_STAR_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g5_star_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN),
+    G_ROSETTE_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_rosette_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN),
+    M8_SUNRISE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_m8_sunrise_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.MORNING),
+    M8_MOON(R.layout.azkar_widget_tracking, R.xml.azkar_widget_m8_moon_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.EVENING),
+    M7_TAHLIL_FULL(R.layout.azkar_widget_share, R.xml.azkar_widget_m7_tahlil_full_info, WidgetKind.MEDIUM, tap = WidgetTap.SHARE),
 }
+
+/** [AzkarWidgetFamily.openFolder] value: whichever of the morning / evening folders is current. */
+const val SESSION_FOLDER = "@session"
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -86,13 +114,32 @@ object NewWidgetUpdater {
         AzkarWidgetFamily.C_STREAK_LARGE to CStreakLargeWidgetProvider::class.java,
         AzkarWidgetFamily.G_COUNTDOWN_SMALL to GCountdownSmallWidgetProvider::class.java,
         AzkarWidgetFamily.F_BENTO_SMALL to FBentoSmallWidgetProvider::class.java,
-        AzkarWidgetFamily.T_TODAY_MEDIUM to TTodayMediumWidgetProvider::class.java
+        AzkarWidgetFamily.T_TODAY_MEDIUM to TTodayMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.K_RINGS_SMALL to KRingsSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.K_RINGS_MEDIUM to KRingsMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.A_DIAL_SMALL to ADialSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.A_DIAL_MEDIUM to ADialMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.P_AFTER_MEDIUM to PAfterMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.P_AFTER_LARGE to PAfterLargeWidgetProvider::class.java,
+        AzkarWidgetFamily.I_COUNTERS_LARGE to ICountersLargeWidgetProvider::class.java,
+        AzkarWidgetFamily.N_TALL_STACK to NTallStackWidgetProvider::class.java,
+        AzkarWidgetFamily.U_FRIDAY_MEDIUM to UFridayMediumWidgetProvider::class.java,
+        AzkarWidgetFamily.Z6_MORNING_SMALL to Z6MorningSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.G5_STAR_SMALL to G5StarSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.G_ROSETTE_SMALL to GRosetteSmallWidgetProvider::class.java,
+        AzkarWidgetFamily.M8_SUNRISE to M8SunriseWidgetProvider::class.java,
+        AzkarWidgetFamily.M8_MOON to M8MoonWidgetProvider::class.java,
+        AzkarWidgetFamily.M7_TAHLIL_FULL to M7TahlilFullWidgetProvider::class.java
     )
 
     fun providerClass(family: AzkarWidgetFamily): Class<*> = providers.getValue(family)
 
     /** Families showing time left; they start with [COUNTDOWN_REFRESH_MINUTES] instead of hourly. */
-    val COUNTDOWN_FAMILIES = setOf(AzkarWidgetFamily.G_COUNTDOWN_SMALL, AzkarWidgetFamily.F_BENTO_SMALL, AzkarWidgetFamily.T_TODAY_MEDIUM)
+    val COUNTDOWN_FAMILIES = setOf(
+        AzkarWidgetFamily.G_COUNTDOWN_SMALL, AzkarWidgetFamily.F_BENTO_SMALL, AzkarWidgetFamily.T_TODAY_MEDIUM,
+        AzkarWidgetFamily.A_DIAL_SMALL, AzkarWidgetFamily.A_DIAL_MEDIUM,
+        AzkarWidgetFamily.K_RINGS_SMALL, AzkarWidgetFamily.K_RINGS_MEDIUM, AzkarWidgetFamily.N_TALL_STACK
+    )
     const val COUNTDOWN_REFRESH_MINUTES = 15
 
     /**
@@ -144,8 +191,29 @@ object NewWidgetUpdater {
             // A tracking widget has nothing to count: a tap opens the session it shows (or the app).
             rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, t.primaryFolder))
             scheduleBoundary(context, family, id, t)
+        } else if (family.tap != WidgetTap.COUNT) {
+            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, widgetId = id))
+            rv.setContentDescription(R.id.azkar_widget_image, context.getString(FAMILY_LABEL_IDS.getValue(family)))
+            when (family.tap) {
+                WidgetTap.COUNTERS -> COUNTER_HITS.forEachIndexed { i, hit -> rv.setOnClickPendingIntent(hit, action(context, family, id, ACTION_COUNTERS[i])) }
+                WidgetTap.FRIDAY -> {
+                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_KAHF))
+                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit_end, action(context, family, id, ACTION_COUNT))
+                }
+                WidgetTap.SHARE -> {
+                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
+                    rv.setOnClickPendingIntent(R.id.azkar_widget_share, share(context, family, id))
+                }
+                else -> {
+                    val folder = when (family.openFolder) {
+                        SESSION_FOLDER -> if (AzkarSessionClock.morningActive()) com.azkar.app.data.DefaultFolders.MORNING else com.azkar.app.data.DefaultFolders.EVENING
+                        else -> family.openFolder
+                    }
+                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, folder?.takeIf { com.azkar.app.data.Store.folder(it) != null }))
+                }
+            }
         } else {
-            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height))
+            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, widgetId = id))
             rv.setContentDescription(
                 R.id.azkar_widget_image,
                 if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
@@ -168,6 +236,34 @@ object NewWidgetUpdater {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .apply { folder?.let { putExtra("open", it) } }
         return PendingIntent.getActivity(context, id * 1000 + family.ordinal * 10 + 9, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private val COUNTER_HITS = listOf(R.id.azkar_widget_hit_0, R.id.azkar_widget_hit_1, R.id.azkar_widget_hit_2, R.id.azkar_widget_hit_3)
+
+    private val FAMILY_LABEL_IDS = mapOf(
+        AzkarWidgetFamily.K_RINGS_SMALL to R.string.azkar_widget_k_rings_small_label,
+        AzkarWidgetFamily.K_RINGS_MEDIUM to R.string.azkar_widget_k_rings_medium_label,
+        AzkarWidgetFamily.A_DIAL_SMALL to R.string.azkar_widget_a_dial_small_label,
+        AzkarWidgetFamily.A_DIAL_MEDIUM to R.string.azkar_widget_a_dial_medium_label,
+        AzkarWidgetFamily.I_COUNTERS_LARGE to R.string.azkar_widget_i_counters_large_label,
+        AzkarWidgetFamily.N_TALL_STACK to R.string.azkar_widget_n_tall_stack_label,
+        AzkarWidgetFamily.U_FRIDAY_MEDIUM to R.string.azkar_widget_u_friday_medium_label,
+        AzkarWidgetFamily.Z6_MORNING_SMALL to R.string.azkar_widget_z6_morning_small_label,
+        AzkarWidgetFamily.G5_STAR_SMALL to R.string.azkar_widget_g5_star_small_label,
+        AzkarWidgetFamily.G_ROSETTE_SMALL to R.string.azkar_widget_g_rosette_small_label,
+        AzkarWidgetFamily.M8_SUNRISE to R.string.azkar_widget_m8_sunrise_label,
+        AzkarWidgetFamily.M8_MOON to R.string.azkar_widget_m8_moon_label,
+        AzkarWidgetFamily.M7_TAHLIL_FULL to R.string.azkar_widget_m7_tahlil_full_label,
+    )
+
+    /** The tahlil widget's share button: the system share sheet with the full tahlil. */
+    private fun share(context: Context, family: AzkarWidgetFamily, id: Int): PendingIntent {
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_TEXT, "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ")
+        val chooser = Intent.createChooser(send, context.getString(R.string.widget_share))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(context, id * 1000 + family.ordinal * 10 + 8, chooser,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 

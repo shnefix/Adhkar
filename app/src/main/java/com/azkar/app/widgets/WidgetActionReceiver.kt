@@ -28,6 +28,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     ACTION_NEXT -> WidgetLogic.next(context, id, kind)
                     ACTION_UNDO -> WidgetLogic.undo(context, id, kind)
                     ACTION_STEP -> WidgetLogic.step(context, id, kind)
+                    ACTION_KAHF -> WidgetStore.toggleKahf(context)
+                    in ACTION_COUNTERS -> WidgetStore.addCounter(context, id, ACTION_COUNTERS.indexOf(intent.action))
                 }
             }
             // Every widget on the same folder moved with this tap (classic and new designs alike), so redraw them all.
@@ -38,7 +40,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_FAMILY = "com.azkar.app.widget.FAMILY"
         const val EXTRA_KIND = "com.azkar.app.widget.KIND"
-        val ACTIONS = setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO, ACTION_STEP)
+        val ACTIONS = setOf(ACTION_COUNT, ACTION_RESET, ACTION_NEXT, ACTION_UNDO, ACTION_STEP, ACTION_KAHF) + ACTION_COUNTERS
         private val taps = Mutex()
     }
 }

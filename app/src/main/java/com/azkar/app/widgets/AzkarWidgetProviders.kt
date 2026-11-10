@@ -20,6 +20,8 @@ const val ACTION_NEXT = "com.azkar.app.widget.NEXT"
 const val ACTION_UNDO = "com.azkar.app.widget.UNDO"
 const val ACTION_STEP = "com.azkar.app.widget.STEP"   // finish the current zikr and show the next one
 const val ACTION_REFRESH = "com.azkar.app.widget.REFRESH"
+const val ACTION_KAHF = "com.azkar.app.widget.KAHF"   // Friday widget: Surat al-Kahf read / not read
+val ACTION_COUNTERS = List(4) { "com.azkar.app.widget.COUNTER_$it" }   // counters widget: +1 on cell N
 const val ACTION_BOUNDARY = "com.azkar.app.widget.BOUNDARY"   // tracking widgets: a session started or ended
 
 abstract class BaseWidgetProvider(private val kind: WidgetKind) : AppWidgetProvider() {

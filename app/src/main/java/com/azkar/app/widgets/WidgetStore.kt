@@ -141,12 +141,46 @@ object WidgetStore {
         e.apply()
     }
 
+    /** Counters widget: today's count on each of its four cells. */
+    fun counters(ctx: Context, id: Int): IntArray {
+        val sp = sp(ctx)
+        if (sp.getString("counters_day_$id", null) != today()) return IntArray(4)
+        return IntArray(4) { sp.getInt("counter_${id}_$it", 0) }
+    }
+
+    /** The cell tapped last today (drawn outlined), or -1. */
+    fun lastCounter(ctx: Context, id: Int): Int =
+        if (sp(ctx).getString("counters_day_$id", null) == today()) sp(ctx).getInt("counter_last_$id", -1) else -1
+
+    fun addCounter(ctx: Context, id: Int, cell: Int) {
+        val counts = counters(ctx, id)
+        val e = sp(ctx).edit().putString("counters_day_$id", today()).putInt("counter_last_$id", cell)
+        counts.forEachIndexed { i, n -> e.putInt("counter_${id}_$i", if (i == cell) n + 1 else n) }
+        e.apply()
+    }
+
+    /** Friday of the current week (Friday to Thursday), so "read" lasts until the next Friday. */
+    private fun fridayKey(): String {
+        val c = java.util.Calendar.getInstance()
+        while (c.get(java.util.Calendar.DAY_OF_WEEK) != java.util.Calendar.FRIDAY) c.add(java.util.Calendar.DAY_OF_MONTH, -1)
+        return SimpleDateFormat("yyyyMMdd", Locale.US).format(c.time)
+    }
+
+    fun kahfRead(ctx: Context): Boolean = sp(ctx).getString("kahf_read", null) == fridayKey()
+
+    fun toggleKahf(ctx: Context) {
+        sp(ctx).edit().putString("kahf_read", if (kahfRead(ctx)) "" else fridayKey()).apply()
+    }
+
     fun clear(ctx: Context, id: Int) {
         sp(ctx).edit().remove("style_$id").remove("folder_$id")
             .remove("font_size_$id").remove("line_height_$id").remove("alignment_$id")
             .remove("text_color_$id").remove("background_color_$id").remove("corner_$id")
             .remove("counter_$id").remove("tap_$id").remove("refresh_$id")
-            .remove("day_$id").remove("idx_$id").remove("cnt_$id").apply()
+            .remove("day_$id").remove("idx_$id").remove("cnt_$id")
+            .remove("counters_day_$id").remove("counter_last_$id")
+            .apply { (0 until 4).forEach { remove("counter_${id}_$it") } }
+            .apply()
     }
 }
 

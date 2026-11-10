@@ -44,6 +44,21 @@ internal val FAMILY_LABELS = linkedMapOf(
     AzkarWidgetFamily.G_COUNTDOWN_SMALL to R.string.azkar_widget_g_countdown_small_label,
     AzkarWidgetFamily.F_BENTO_SMALL to R.string.azkar_widget_f_bento_small_label,
     AzkarWidgetFamily.T_TODAY_MEDIUM to R.string.azkar_widget_t_today_medium_label,
+    AzkarWidgetFamily.K_RINGS_SMALL to R.string.azkar_widget_k_rings_small_label,
+    AzkarWidgetFamily.K_RINGS_MEDIUM to R.string.azkar_widget_k_rings_medium_label,
+    AzkarWidgetFamily.A_DIAL_SMALL to R.string.azkar_widget_a_dial_small_label,
+    AzkarWidgetFamily.A_DIAL_MEDIUM to R.string.azkar_widget_a_dial_medium_label,
+    AzkarWidgetFamily.P_AFTER_MEDIUM to R.string.azkar_widget_p_after_medium_label,
+    AzkarWidgetFamily.P_AFTER_LARGE to R.string.azkar_widget_p_after_large_label,
+    AzkarWidgetFamily.I_COUNTERS_LARGE to R.string.azkar_widget_i_counters_large_label,
+    AzkarWidgetFamily.N_TALL_STACK to R.string.azkar_widget_n_tall_stack_label,
+    AzkarWidgetFamily.U_FRIDAY_MEDIUM to R.string.azkar_widget_u_friday_medium_label,
+    AzkarWidgetFamily.Z6_MORNING_SMALL to R.string.azkar_widget_z6_morning_small_label,
+    AzkarWidgetFamily.G5_STAR_SMALL to R.string.azkar_widget_g5_star_small_label,
+    AzkarWidgetFamily.G_ROSETTE_SMALL to R.string.azkar_widget_g_rosette_small_label,
+    AzkarWidgetFamily.M8_SUNRISE to R.string.azkar_widget_m8_sunrise_label,
+    AzkarWidgetFamily.M8_MOON to R.string.azkar_widget_m8_moon_label,
+    AzkarWidgetFamily.M7_TAHLIL_FULL to R.string.azkar_widget_m7_tahlil_full_label,
 )
 
 /** Families the pickers offer: tracking widgets only while at least one folder is tracked. */

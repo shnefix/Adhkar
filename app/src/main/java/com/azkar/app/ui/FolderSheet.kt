@@ -23,7 +23,34 @@ import com.azkar.app.data.Store
  */
 object FolderSheet {
     fun show(ctx: Context, selected: String?, allowNew: Boolean, onPick: (String?) -> Unit) {
+        val folders = Store.folders()
+        open(
+            ctx, ctx.getString(R.string.save_to_folder), allowNew,
+            pinned = listOf(null to ctx.getString(R.string.anytime_no_folder)),
+            folders = folders.map { f -> f.id to (f.icon?.let { "$it " } ?: "") + f.name },
+            selected = selected, showCounts = true, onCancel = null, onPick = onPick,
+        )
+    }
+
+    /**
+     * The same sheet for any folder choice: [pinned] rows always come first (e.g. "Just open the app"),
+     * then recently used and all [folders] (id to label), searchable. [onCancel] runs when it is dismissed without a pick.
+     */
+    fun pick(
+        ctx: Context, title: String, pinned: List<Pair<String?, String>>, folders: List<Pair<String, String>>,
+        selected: String?, onCancel: (() -> Unit)? = null, onPick: (String?) -> Unit,
+    ) = open(ctx, title, false, pinned, folders, selected, false, onCancel, onPick)
+
+    /** Folders with azkar of their own, labelled with icon and full path, for pickers. */
+    fun readableOptions(): List<Pair<String, String>> =
+        Store.readableFolders().map { f -> f.id to (f.icon?.let { "$it " } ?: "") + Store.folderPath(f.id) }
+
+    private fun open(
+        ctx: Context, title: String, allowNew: Boolean, pinned: List<Pair<String?, String>>, folders: List<Pair<String, String>>,
+        selected: String?, showCounts: Boolean, onCancel: (() -> Unit)?, onPick: (String?) -> Unit,
+    ) {
         val dialog = Dialog(ctx)
+        var picked = false
         val gold = ctx.getColor(R.color.gold)
         val text = ctx.getColor(R.color.text)
         val muted = ctx.getColor(R.color.muted)
@@ -40,7 +67,7 @@ object FolderSheet {
 
         val header = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
         header.addView(TextView(ctx, null, 0, R.style.TB).apply {
-            setText(R.string.save_to_folder); textSize = 18f; setTextColor(text)
+            setText(title); textSize = 18f; setTextColor(text)
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         if (allowNew) header.addView(TextView(ctx, null, 0, R.style.TB).apply {
             setText(R.string.new_folder_chip); textSize = 13f; setTextColor(gold)
@@ -52,7 +79,6 @@ object FolderSheet {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40f)))
         root.addView(header)
 
-        val folders = Store.folders()
         val search = EditText(ctx, null, 0, R.style.T).apply {
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
             hint = ctx.getString(R.string.search_n_folders, folders.size)
@@ -89,7 +115,7 @@ object FolderSheet {
                 textDirection = View.TEXT_DIRECTION_ANY_RTL; textAlignment = View.TEXT_ALIGNMENT_TEXT_START
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(TextView(ctx, null, 0, R.style.T).apply {
+            if (showCounts) addView(TextView(ctx, null, 0, R.style.T).apply {
                 this.text = (counts[id] ?: 0).toString(); textSize = 12f; setTextColor(muted)
                 setPadding(dp(8f), 0, dp(8f), 0)
             })
@@ -101,29 +127,26 @@ object FolderSheet {
             }, LinearLayout.LayoutParams(dp(20f), dp(20f)))
             contentDescription = name
             isSelected = on
-            setOnClickListener { dialog.dismiss(); onPick(id) }
+            setOnClickListener { picked = true; dialog.dismiss(); onPick(id) }
         }
         fun divider() = View(ctx).apply { setBackgroundColor(border) }
 
         fun render(q: String) {
             list.removeAllViews()
             val query = q.trim().lowercase()
-            fun nameOf(f: com.azkar.app.data.Folder) = (f.icon?.let { "$it " } ?: "") + f.name
-            val matches = folders.filter { query.isEmpty() || it.name.lowercase().contains(query) }
-            val recentIds = if (query.isEmpty()) AppPrefs.recentFolders().filter { id -> folders.any { it.id == id } }.take(3) else emptyList()
-            fun section(title: Int, items: List<com.azkar.app.data.Folder>) {
+            val matches = folders.filter { query.isEmpty() || it.second.lowercase().contains(query) }
+            val recentIds = if (query.isEmpty()) AppPrefs.recentFolders().filter { id -> folders.any { it.first == id } }.take(3) else emptyList()
+            fun section(title: Int, items: List<Pair<String, String>>) {
                 if (items.isEmpty()) return
                 list.addView(label(title))
-                items.forEachIndexed { i, f ->
+                items.forEachIndexed { i, (id, name) ->
                     if (i > 0) list.addView(divider(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
-                    list.addView(row(f.id, nameOf(f)))
+                    list.addView(row(id, name))
                 }
             }
-            // No folder: always offered while not searching, so a zikr can be taken out of every folder.
-            if (query.isEmpty()) {
-                list.addView(row(null, ctx.getString(R.string.anytime_no_folder)))
-            }
-            section(R.string.recent, recentIds.mapNotNull { id -> folders.firstOrNull { it.id == id } })
+            // Pinned rows (no folder, just open the app, ...): always offered while not searching.
+            if (query.isEmpty()) pinned.forEach { (id, name) -> list.addView(row(id, name)) }
+            section(R.string.recent, recentIds.mapNotNull { id -> folders.firstOrNull { it.first == id } })
             section(R.string.all_folders, matches)
             if (matches.isEmpty()) list.addView(TextView(ctx, null, 0, R.style.T).apply {
                 setText(R.string.no_folders_match); textSize = 14f; setTextColor(muted); setPadding(0, dp(20f), 0, 0)
@@ -136,6 +159,7 @@ object FolderSheet {
             override fun afterTextChanged(s: Editable?) { render(s?.toString().orEmpty()) }
         })
 
+        dialog.setOnDismissListener { if (!picked) onCancel?.invoke() }
         dialog.setContentView(root)
         dialog.window?.apply {
             setBackgroundDrawableResource(android.R.color.transparent)

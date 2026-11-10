@@ -582,6 +582,13 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LinearLayout.LayoutParams(Ui.pxi(ctx, 18f), Ui.pxi(ctx, 18f)))
             setOnClickListener {
+                // Folder ids: the same searchable sheet as choosing a folder for a new zikr.
+                @Suppress("UNCHECKED_CAST")
+                if (options.all { it.first is String }) {
+                    val opts = options as List<Pair<String, String>>
+                    FolderSheet.pick(ctx, title, emptyList(), opts, selected as String?) { picked -> picked?.let { onSelect(it as T) } }
+                    return@setOnClickListener
+                }
                 val checked = options.indexOfFirst { it.first == selected }
                 AlertDialog.Builder(ctx)
                     .setTitle(title)
@@ -632,8 +639,11 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         // folder stays listed even when it is empty, so the row never names a folder the widget isn't on.
         val options = Store.readableFolders().map { it.id to Store.folderPath(it.id) }.toMutableList()
         if (Store.zikrs().any { it.folderId == null }) options += Store.ANYTIME to getString(R.string.anytime)
-        if (options.none { it.first == item.config.folder }) options.add(0, item.config.folder to Store.folderName(item.config.folder))
-        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), options, item.config.folder) { id ->
+        // Never list a parent folder, even one the widget was set to earlier: show the folder it actually reads.
+        val current = Store.readableFolder(item.config.folder)
+        if (options.none { it.first == current } && Store.childFolders(current).isEmpty())
+            options.add(0, current to Store.folderName(current))
+        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), options, current) { id ->
             updateConfig(view) { cfg -> cfg.copy(folder = id) }
         })
         column.addCard(folder)

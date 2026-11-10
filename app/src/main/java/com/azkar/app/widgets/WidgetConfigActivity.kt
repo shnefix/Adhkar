@@ -40,16 +40,13 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun chooseFolder(id: Int, kind: WidgetKind, style: WidgetStyle) {
-        val ids = ArrayList<String>()
-        val names = ArrayList<String>()
-        Store.readableFolders().forEach { f -> ids.add(f.id); names.add((f.icon?.let { "$it " } ?: "") + Store.folderPath(f.id)) }
-        if (Store.zikrs().any { it.folderId == null }) { ids.add(Store.ANYTIME); names.add(getString(R.string.anytime)) }
-        if (ids.isEmpty()) { save(id, kind, style, Store.ANYTIME); return }
-        dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.widget_folder_title)
-            .setItems(names.toTypedArray()) { _, i -> save(id, kind, style, ids[i]) }
-            .setOnCancelListener { finish() }
-            .show()
+        val options = com.azkar.app.ui.FolderSheet.readableOptions()
+        val pinned = if (Store.zikrs().any { it.folderId == null }) listOf<Pair<String?, String>>(Store.ANYTIME to getString(R.string.anytime)) else emptyList()
+        if (options.isEmpty() && pinned.isEmpty()) { save(id, kind, style, Store.ANYTIME); return }
+        dialog = null
+        com.azkar.app.ui.FolderSheet.pick(this, getString(R.string.widget_folder_title), pinned, options, null, onCancel = { finish() }) { picked ->
+            save(id, kind, style, picked ?: Store.ANYTIME)
+        }
     }
 
     private fun save(id: Int, kind: WidgetKind, style: WidgetStyle, folder: String) {

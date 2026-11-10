@@ -64,6 +64,8 @@ object AzkarWidgetSizes {
         // The strips are one row high and four cells wide (4×1), like their launcher info.
         AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS -> 338f to 74f
         AzkarWidgetFamily.J_TALL_RING, AzkarWidgetFamily.J_TALL_TIMELINE -> 158f to 354f
+        // Black & yellow designs: 206 mock-up px = 158 dp.
+        else -> GoldWidgetRenderer.DESIGN.getValue(f).let { (w, h) -> w * 158f / 206f to h * 158f / 206f }
     }
 }
 
@@ -105,7 +107,7 @@ class NewWidgetRenderer(private val ctx: Context) {
     // ───────────────────────── entry ─────────────────────────
 
     /** [tracking] feeds the tracking families; previews may leave it null to show every tracked folder. */
-    fun render(family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float, tracking: TrackingModel? = null): Bitmap {
+    fun render(family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float, tracking: TrackingModel? = null, widgetId: Int = 0): Bitmap {
         val w = widthDp.coerceAtLeast(1f)
         val h = heightDp.coerceAtLeast(1f)
         var s = ctx.resources.displayMetrics.density
@@ -128,6 +130,7 @@ class NewWidgetRenderer(private val ctx: Context) {
             }
             return bmp
         }
+        if (GoldWidgetRenderer(ctx).draw(c, family, w, h, m, widgetId)) return bmp
         if (m.n == 0) { empty(c, w, h); return bmp }
         when (family) {
             AzkarWidgetFamily.B_SMALL -> discSmall(c, w, h, m)
