@@ -61,6 +61,9 @@ your own: write any zikr or dua, choose how many times to repeat it, and organis
   calculation method (Egyptian, Umm al-Qura, MWL, ISNA and more) and the standard or Hanafi Asr time;
   your own reminders can come at a set time or before / after any prayer
 - Optional tracking of the days you finish your azkar, with streaks
+- **Prayer times are approximate.** The app is not a prayer-times app, so the exact time of salat it shows may not be
+  100% correct. It is only used to time reminders and widgets; for the exact time, follow your local mosque or a
+  dedicated prayer-times app
 
 ### Widgets and look
 - **Two looks for Home**: a bento layout with a big card, a wide card and small cards, in colour (one tint
