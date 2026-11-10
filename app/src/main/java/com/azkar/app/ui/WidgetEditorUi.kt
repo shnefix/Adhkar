@@ -301,7 +301,7 @@ private fun convertUnit(minutes: Int, toHours: Boolean): Int = when {
     else -> minutes.coerceAtLeast(MIN_INTERVAL_MINUTES)
 }
 
-private fun formatInterval(ctx: Context, minutes: Int): String {
+internal fun formatInterval(ctx: Context, minutes: Int): String {
     if (minutes < 60) return ctx.getString(R.string.interval_min, minutes)
     val h = minutes / 60
     val r = minutes % 60
@@ -412,3 +412,92 @@ internal fun customIntervalBox(
     box.addSpaced(editorText(ctx, caption, 13f, EditorColors.Muted).apply { gravity = Gravity.CENTER })
     return box
 }
+
+/**
+ * Behind the live preview: the launcher's cell dots and hairline edges, so the widget reads as sitting on a
+ * home screen. The widget picture itself is never changed.
+ */
+internal class HomeStripDrawable(ctx: Context) : android.graphics.drawable.Drawable() {
+    private val line = EditorColors.Border
+    private val dotR = Ui.px(ctx, 1.3f)
+    private val rowStep = Ui.px(ctx, 76f)
+    private val topOffset = Ui.px(ctx, 18f)
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    override fun draw(canvas: android.graphics.Canvas) {
+        val b = bounds
+        if (b.isEmpty) return
+        val w = b.width().toFloat()
+        paint.color = line
+        // Four launcher columns; a dot in the middle of each cell.
+        var y = b.top + topOffset
+        while (y < b.bottom) {
+            for (col in 0 until 4) canvas.drawCircle(b.left + w * (col + 0.5f) / 4f, y, dotR, paint)
+            y += rowStep
+        }
+        // Hairlines above and below, like the edges of a screen strip.
+        canvas.drawRect(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.top + 1f, paint)
+        canvas.drawRect(b.left.toFloat(), b.bottom - 1f, b.right.toFloat(), b.bottom.toFloat(), paint)
+    }
+
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+}
+
+/** A quiet note with a gold info mark, for settings a design decides for itself. */
+internal fun infoNote(ctx: Context, text: String): View =
+    LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        background = editorShape(EditorColors.Chip, 14f, ctx, EditorColors.Border)
+        val pad = Ui.pxi(ctx, 14f)
+        setPadding(pad, Ui.pxi(ctx, 12f), pad, Ui.pxi(ctx, 12f))
+        addView(editorText(ctx, "i", 11f, EditorColors.Bg, bold = true).apply {
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(EditorColors.Gold) }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(Ui.pxi(ctx, 16f), Ui.pxi(ctx, 16f)).also { it.topMargin = Ui.pxi(ctx, 2f) })
+        addView(editorText(ctx, text, 13f, EditorColors.Muted).apply { setLineSpacing(0f, 1.15f) },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = Ui.pxi(ctx, 10f) })
+    }
+
+/** One folder choice: a radio mark, the folder's name and path, and today's progress (null when unknown). */
+internal fun folderRow(ctx: Context, name: String, path: String?, done: Int?, total: Int?, selected: Boolean, onClick: () -> Unit): View =
+    LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = Ui.pxi(ctx, 56f)
+        isClickable = true
+        isFocusable = true
+        setPadding(0, Ui.pxi(ctx, 8f), 0, Ui.pxi(ctx, 8f))
+        contentDescription = name
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) stateDescription = if (selected) "✓" else null
+        addView(View(ctx).apply {
+            background = android.graphics.drawable.LayerDrawable(arrayOf(
+                GradientDrawable().apply { shape = GradientDrawable.OVAL; setStroke(Ui.pxi(ctx, 2f), if (selected) EditorColors.Gold else EditorColors.ChipBorder) },
+                GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (selected) EditorColors.Gold else 0) }
+            )).apply { val i = Ui.pxi(ctx, 5f); setLayerInset(1, i, i, i, i) }
+        }, LinearLayout.LayoutParams(Ui.pxi(ctx, 20f), Ui.pxi(ctx, 20f)))
+        addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(editorText(ctx, name, 15f, EditorColors.Text).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+            if (path != null && path != name) addView(editorText(ctx, path, 12f, EditorColors.Muted).apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.START
+            })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = Ui.pxi(ctx, 14f); it.marginEnd = Ui.pxi(ctx, 12f) })
+        if (done != null && total != null && total > 0) {
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.END
+                addView(editorText(ctx, "$done / $total", 12f, EditorColors.Muted).apply { gravity = Gravity.END })
+                addView(View(ctx).apply {
+                    val track = editorShape(EditorColors.ChipBorder, 2f, ctx)
+                    val fill = ClipDrawable(editorShape(EditorColors.Gold, 2f, ctx), Gravity.START, ClipDrawable.HORIZONTAL)
+                    background = LayerDrawable(arrayOf(track, fill))
+                    fill.level = (10000 * done.coerceAtMost(total) / total)
+                }, LinearLayout.LayoutParams(Ui.pxi(ctx, 64f), Ui.pxi(ctx, 4f)).also { it.topMargin = Ui.pxi(ctx, 6f) })
+            })
+        }
+        setOnClickListener { onClick() }
+    }

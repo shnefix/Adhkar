@@ -386,6 +386,13 @@
     <string name="import_failed">Import failed: %1$s</string>
     <string name="widget_counter">Counter</string>
     <string name="widget_design">Design</string>
+    <string name="editor_live_preview">Live preview · %1$s · Refresh: %2$s</string>
+    <string name="editor_add_tile">Add</string>
+    <string name="editor_sessions_note">This design always shows your Morning and Evening folders side by side, with today’s progress from the reader.</string>
+    <string name="editor_other_folder">Other folder</string>
+    <string name="editor_folder_hint">Only folders with azkar of their own are listed.</string>
+    <string name="editor_tap_title">When tapped</string>
+    <string name="editor_tap_note">Tapping the widget adds one to the current dhikr. When it reaches its count, the widget moves to the next one.</string>
     <string name="font_size_label">Font size</string>
     <string name="line_height_label">Line height</string>
     <string name="widget_colors">Colors</string>

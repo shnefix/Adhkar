@@ -54,10 +54,10 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         view.findViewById<View>(R.id.btn_back).visibility = View.GONE
         bindNav(view, Tab.WIDGETS)
         bindNavInsets(view, view.findViewById(R.id.editor_content))
-        view.findViewById<View>(R.id.btn_choose_widget).setOnClickListener {
-            picker?.release()
-            picker = WidgetPickerDialog(requireContext(), viewModel).also { it.show() }
-        }
+        view.findViewById<View>(R.id.home_strip).background = HomeStripDrawable(requireContext())
+        view.findViewById<View>(R.id.editor_widget_size).background =
+            editorShape(EditorColors.Chip, 10f, requireContext(), EditorColors.Border)
+        view.findViewById<View>(R.id.btn_choose_widget).setOnClickListener { openPicker() }
         selected = placed.firstOrNull { it.id == viewModel.selectedId() } ?: placed.firstOrNull()
         selected?.let { viewModel.setSelectedId(it.id) }
         activeTab = EditorTab.values().getOrElse(viewModel.activeTab()) { EditorTab.CONTENT }
@@ -65,6 +65,11 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         renderChips(view, placed)
         renderTabs(view)
         render(view)
+    }
+
+    private fun openPicker() {
+        picker?.release()
+        picker = WidgetPickerDialog(requireContext(), viewModel).also { it.show() }
     }
 
     /** Edits save themselves: each change is written to the home-screen widget shortly after it is made. */
@@ -121,7 +126,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         }
         val model = WidgetModel.load(ctx, item.id, item.config.folder)
         val appearance = item.config.appearance
-        view.findViewById<TextView>(R.id.preview_size).text = sizeLabel(item.kind)
+        view.findViewById<TextView>(R.id.preview_size).text =
+            getString(R.string.editor_live_preview, gridSize(item), refreshText(item.config.appearance.refreshMinutes))
         view.findViewById<TextView>(R.id.preview_arabic).apply {
             text = model.cur?.arabic ?: getString(R.string.widget_no_azkar)
             textSize = appearance.fontSizeSp
@@ -139,18 +145,125 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         prewarmPeeks(view)
     }
 
-    /** Page dots under the preview: the long gold one is the widget being edited. */
+    /** Name shown for a placed widget: its design label, or style · size for the classic widgets. */
+    private fun widgetName(it: PlacedWidget): String =
+        it.family?.let { f -> FAMILY_LABELS[f] }?.let { r -> getString(r) }
+            ?: "${getString(it.config.style.label)} · ${widgetSizeName(requireContext(), it.kind)}"
+
+    /** Launcher cells the widget takes, like "4×2" (from the design size for the OLED designs). */
+    private fun gridSize(item: PlacedWidget): String {
+        val family = item.family ?: return when (item.kind) {
+            WidgetKind.SMALL -> "2×2"
+            WidgetKind.MEDIUM -> "4×2"
+            WidgetKind.LARGE -> "4×4"
+        }
+        val (dw, dh) = AzkarWidgetSizes.design(family)
+        fun cells(dp: Float) = (dp / 85f).roundToInt().coerceAtLeast(1)
+        return "${cells(dw)}×${cells(dh)}"
+    }
+
+    private fun refreshText(minutes: Int): String =
+        if (minutes in REFRESH_PRESETS) presetLabel(minutes) else formatInterval(requireContext(), minutes)
+
+    /** The thumbnails row under the preview and the page dots in the mini bar; the gold one is being edited. */
     private fun renderChips(view: View, placed: List<PlacedWidget>) {
-        renderDots(view, view.findViewById(R.id.placed_widgets), placed)
+        renderThumbs(view, placed)
         renderDots(view, view.findViewById(R.id.mini_dots), placed)
         val item = selected
-        view.findViewById<TextView>(R.id.mini_title).text = item?.let {
-            it.family?.let { f -> FAMILY_LABELS[f] }?.let { r -> getString(r) }
-                ?: "${getString(it.config.style.label)} · ${widgetSizeName(requireContext(), it.kind)}"
-        } ?: ""
+        val name = item?.let { widgetName(it) } ?: ""
+        view.findViewById<TextView>(R.id.mini_title).text = name
+        view.findViewById<TextView>(R.id.editor_widget_name).text = name
+        view.findViewById<TextView>(R.id.editor_widget_size).apply {
+            text = item?.let { gridSize(it) } ?: ""
+            visibility = if (item == null) View.GONE else View.VISIBLE
+        }
         val i = placed.indexOfFirst { it.id == item?.id }
         view.findViewById<View>(R.id.mini_prev).alpha = if (i > 0) 1f else 0.3f
         view.findViewById<View>(R.id.mini_next).alpha = if (i in 0 until placed.lastIndex) 1f else 0.3f
+    }
+
+    /** Small real pictures of the placed widgets, cached per widget while its settings are unchanged. */
+    private val thumbCache = HashMap<Int, Pair<WidgetStore.Config, android.graphics.Bitmap?>>()
+
+    private fun thumbBitmap(item: PlacedWidget): android.graphics.Bitmap? {
+        thumbCache[item.id]?.let { (config, bmp) -> if (config == item.config) return bmp }
+        val bmp = (peekCache[item.id]?.takeIf { it.first == item.config }?.second) ?: widgetBitmap(item)
+        thumbCache[item.id] = item.config to bmp
+        return bmp
+    }
+
+    /** One tile per placed widget (tap to edit it), then a dashed tile that adds a widget. */
+    private fun renderThumbs(view: View, placed: List<PlacedWidget>) {
+        val ctx = requireContext()
+        val root = view.findViewById<LinearLayout>(R.id.placed_widgets)
+        root.removeAllViews()
+        thumbCache.keys.retainAll(placed.map { it.id }.toSet())
+        val gap = Ui.pxi(ctx, 10f)
+        var selectedTile: View? = null
+        fun tile(on: Boolean, dashed: Boolean = false) = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+            val pad = Ui.pxi(ctx, 8f)
+            setPadding(pad, pad, pad, pad)
+            background = GradientDrawable().apply {
+                setColor(EditorColors.Card)
+                cornerRadius = Ui.px(ctx, 16f)
+                val stroke = if (on) EditorColors.Gold else EditorColors.Border
+                if (dashed) setStroke(Ui.pxi(ctx, 1f), EditorColors.ChipBorder, Ui.px(ctx, 4f), Ui.px(ctx, 3f))
+                else setStroke(Ui.pxi(ctx, if (on) 2f else 1f), stroke)
+            }
+        }
+        val lp = { LinearLayout.LayoutParams(Ui.pxi(ctx, 96f), Ui.pxi(ctx, 82f)).also { it.marginEnd = gap } }
+        placed.forEachIndexed { index, item ->
+            val on = item.id == selected?.id
+            val name = widgetName(item)
+            val t = tile(on).apply {
+                contentDescription = "$name (${index + 1}/${placed.size})"
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+                    stateDescription = if (on) getString(R.string.active) else null
+                addView(ImageView(ctx).apply {
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    thumbBitmap(item)?.let { setImageBitmap(it) }
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                addView(editorText(ctx, name, 10f, if (on) EditorColors.Gold else EditorColors.Muted, bold = on).apply {
+                    gravity = Gravity.CENTER
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
+                    it.topMargin = Ui.pxi(ctx, 6f)
+                })
+                setOnClickListener { select(view, item.id) }
+            }
+            if (on) selectedTile = t
+            root.addView(t, lp())
+        }
+        root.addView(tile(false, dashed = true).apply {
+            contentDescription = getString(R.string.add_widget)
+            addView(ImageView(ctx).apply {
+                setImageResource(R.drawable.ic_plus_2)
+                imageTintList = android.content.res.ColorStateList.valueOf(EditorColors.Gold)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(Ui.pxi(ctx, 20f), Ui.pxi(ctx, 20f)))
+            addView(editorText(ctx, getString(R.string.editor_add_tile), 11f, EditorColors.Gold, bold = true).apply {
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
+                it.topMargin = Ui.pxi(ctx, 6f)
+            })
+            setOnClickListener { openPicker() }
+        }, lp().also { it.marginEnd = 0 })
+        // Keep the widget being edited in view.
+        selectedTile?.let { t ->
+            val scroller = view.findViewById<android.widget.HorizontalScrollView>(R.id.placed_scroll)
+            scroller.post {
+                val visible = scroller.width - scroller.paddingStart - scroller.paddingEnd
+                if (t.left < scroller.scrollX || t.right > scroller.scrollX + visible)
+                    scroller.smoothScrollTo((t.left - gap).coerceAtLeast(0), 0)
+            }
+        }
     }
 
     private fun renderDots(view: View, root: LinearLayout, placed: List<PlacedWidget>) {
@@ -233,7 +346,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         view.findViewById<View>(R.id.mini_next).setOnClickListener { step(view, 1) }
         // The mini bar slides in once the preview has scrolled out of sight.
         val mini = view.findViewById<View>(R.id.mini_bar)
-        val panelBottom = { view.findViewById<View>(R.id.placed_widgets).bottom }
+        val panelBottom = { view.findViewById<View>(R.id.placed_scroll).bottom }
         view.findViewById<android.widget.ScrollView>(R.id.editor_scroll).setOnScrollChangeListener { _, _, y, _, _ ->
             val show = y > panelBottom()
             if (show && mini.visibility != View.VISIBLE) {
@@ -326,8 +439,9 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 else -> true
             }
         }
-        // Swipes can start on the card (with its size label), anywhere in the pager frame, or on the dots row.
-        listOf(R.id.preview_card, R.id.preview_pager, R.id.placed_widgets).forEach {
+        // Swipes can start on the card (with its caption) or anywhere in the pager frame.
+        // The thumbnails row scrolls sideways itself, so it is not part of the swipe area.
+        listOf(R.id.preview_card, R.id.preview_pager).forEach {
             view.findViewById<View>(it).setOnTouchListener(swipeTouch)
         }
     }
@@ -356,7 +470,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             peekId = item.id
             fillPeek(peek, item)
             peek.layoutParams = peek.layoutParams.apply {
-                height = peekBitmap(item)?.let { faceHeight(it) }
+                height = peekBitmap(item)?.let { faceHeight(it, item) }
                     ?: view.findViewById<View>(R.id.preview_face).height.coerceAtLeast(Ui.pxi(requireContext(), 128f))
             }
         }
@@ -397,6 +511,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         peek.removeAllViews()
         val model = WidgetModel.load(ctx, item.id, item.config.folder)
         val bitmap = peekBitmap(item, model)
+        if (bitmap != null) peek.background = null else peek.setBackgroundResource(R.drawable.widget_editor_preview_face)
         if (bitmap != null) {
             peek.addView(ImageView(ctx).apply {
                 scaleType = ImageView.ScaleType.FIT_CENTER
@@ -421,7 +536,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val i = placed.indexOfFirst { it.id == selected?.id }
         val small = Ui.px(ctx, 6f)
         val big = Ui.px(ctx, 18f)
-        for (root in listOf(view.findViewById<LinearLayout>(R.id.placed_widgets), view.findViewById(R.id.mini_dots))) {
+        for (root in listOf(view.findViewById<LinearLayout>(R.id.mini_dots))) {
             for (k in 0 until root.childCount) {
                 val dot = (root.getChildAt(k) as? ViewGroup)?.getChildAt(0) ?: continue
                 val w = when {
@@ -467,7 +582,6 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 selected = target
                 viewModel.setSelectedId(target.id)
                 // The dots are already in their new place; stop renderChips from animating them again.
-                view.findViewById<View>(R.id.placed_widgets).tag = target.id
                 view.findViewById<View>(R.id.mini_dots).tag = target.id
                 renderChips(view, viewModel.load(requireContext()))
                 render(view)
@@ -518,32 +632,38 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val ctx = requireContext()
         val root = view.findViewById<LinearLayout>(R.id.editor_tabs)
         root.removeAllViews()
-        val gap = Ui.pxi(ctx, 8f)
         val shownTabs = visibleTabs()
-        tabs = shownTabs.mapIndexed { index, tab ->
+        tabs = shownTabs.mapIndexed { _, tab ->
             val on = tab == activeTab
             val color = if (on) EditorColors.Gold else EditorColors.Muted
+            // Icon and label side by side, with a gold underline under the open tab.
             LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
                 isClickable = true
                 isFocusable = true
                 contentDescription = getString(tab.titleRes)
-                background = if (on) editorShape(ctx.getColor(R.color.widget_editor_surface2), 16f, ctx, EditorColors.Gold)
-                    else editorShape(Color.TRANSPARENT, 16f, ctx, EditorColors.Border)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+                    stateDescription = if (on) getString(R.string.active) else null
+                background = android.graphics.drawable.LayerDrawable(arrayOf(
+                    GradientDrawable().apply { setColor(if (on) EditorColors.Gold else Color.TRANSPARENT) }
+                )).apply {
+                    setLayerGravity(0, Gravity.BOTTOM or Gravity.FILL_HORIZONTAL)
+                    setLayerHeight(0, Ui.pxi(ctx, 2f))
+                }
                 addView(ImageView(ctx).apply {
                     setImageResource(tab.icon)
                     imageTintList = android.content.res.ColorStateList.valueOf(color)
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                }, LinearLayout.LayoutParams(Ui.pxi(ctx, 20f), Ui.pxi(ctx, 20f)))
+                }, LinearLayout.LayoutParams(Ui.pxi(ctx, 18f), Ui.pxi(ctx, 18f)))
                 addView(TextView(ctx, null, 0, R.style.WidgetEditorMedium).apply {
                     text = getString(tab.titleRes)
-                    textSize = 12f
+                    textSize = 14f
                     setTextColor(color)
                     setTypeface(typeface, if (on) Typeface.BOLD else Typeface.NORMAL)
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
-                    it.topMargin = Ui.pxi(ctx, 4f)
+                    it.marginStart = Ui.pxi(ctx, 8f)
                 })
                 setOnClickListener {
                     activeTab = tab
@@ -551,9 +671,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                     renderTabs(view)
                     renderTabContent(view)
                 }
-                root.addView(this, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).also {
-                    if (index < shownTabs.lastIndex) it.marginEnd = gap
-                })
+                root.addView(this, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
             }
         }
     }
@@ -602,10 +720,24 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         }
     }
 
+    /**
+     * Adds a settings group as a flat section: no box, a small caps title, and a hairline between sections.
+     * [card] comes from [sectionCard], whose first child is the title.
+     */
     private fun LinearLayout.addCard(card: View) {
-        addView(card, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ).also { it.bottomMargin = Ui.pxi(context, 16f) })
+        val ctx = context
+        if (childCount > 0) addView(divider(ctx), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(ctx, 1f)))
+        if (card is LinearLayout) {
+            card.background = null
+            card.setPadding(0, Ui.pxi(ctx, 20f), 0, Ui.pxi(ctx, 20f))
+            (card.getChildAt(0) as? TextView)?.apply {
+                textSize = 11f
+                isAllCaps = true
+                letterSpacing = if (resources.configuration.locales[0].language == "ar") 0f else 0.14f
+                setTextColor(EditorColors.Muted)
+            }
+        }
+        addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
     private fun renderTabContent(view: View) {
@@ -634,7 +766,14 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
             column.addCard(card)
             return
         }
-        val folder = sectionCard(ctx, getString(R.string.folder))
+        // The morning & evening designs always read those two folders; their own folder is only a fallback.
+        val sessions = item.family?.name?.startsWith("D_") == true
+        if (sessions) {
+            val note = sectionCard(ctx, getString(R.string.folder))
+            note.addSpaced(infoNote(ctx, getString(R.string.editor_sessions_note)), 12f)
+            column.addCard(note)
+        }
+        val folder = sectionCard(ctx, getString(if (sessions) R.string.editor_other_folder else R.string.folder))
         // Only folders with azkar of their own: a parent folder would leave the widget empty. The widget's current
         // folder stays listed even when it is empty, so the row never names a folder the widget isn't on.
         val options = Store.readableFolders().map { it.id to Store.folderPath(it.id) }.toMutableList()
@@ -643,9 +782,24 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val current = Store.readableFolder(item.config.folder)
         if (options.none { it.first == current } && Store.childFolders(current).isEmpty())
             options.add(0, current to Store.folderName(current))
-        folder.addSpaced(folderPicker(ctx, getString(R.string.folder), options, current) { id ->
-            updateConfig(view) { cfg -> cfg.copy(folder = id) }
-        })
+        if (options.size <= MAX_FOLDER_ROWS) {
+            // A short list is shown in full: name, path and today's progress for each folder.
+            val list = vertical()
+            options.forEachIndexed { i, (id, path) ->
+                if (i > 0) list.addView(divider(ctx), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(ctx, 1f)))
+                val name = if (id == Store.ANYTIME) getString(R.string.anytime) else Store.folderName(id)
+                val today = try { WidgetModel.today(id) } catch (e: Exception) { null }
+                list.addView(folderRow(ctx, name, path, today?.done, today?.n, id == current) {
+                    if (id != current) updateConfig(view) { cfg -> cfg.copy(folder = id) }
+                })
+            }
+            folder.addSpaced(list, 6f)
+        } else {
+            folder.addSpaced(folderPicker(ctx, getString(R.string.folder), options, current) { id ->
+                updateConfig(view) { cfg -> cfg.copy(folder = id) }
+            })
+        }
+        folder.addSpaced(editorText(ctx, getString(R.string.editor_folder_hint), 12f, EditorColors.Muted), 8f)
         column.addCard(folder)
         // The OLED designs do not draw a counter toggle (NewWidgetRenderer ignores Appearance).
         if (item.family == null) {
@@ -715,9 +869,13 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
                 update(view) { it.copy(tapAction = action) }
             })
             column.addCard(tap)
+        } else {
+            val tap = sectionCard(ctx, getString(R.string.editor_tap_title))
+            tap.addSpaced(infoNote(ctx, getString(R.string.editor_tap_note)), 12f)
+            column.addCard(tap)
         }
 
-        val presets = listOf(0, 15, 30, 60, 360, 1440)
+        val presets = REFRESH_PRESETS
         val minutes = a.refreshMinutes
         val refresh = sectionCard(ctx, getString(R.string.refresh))
         refresh.addSpaced(chipGroup(ctx, presets.map { it to presetLabel(it) }, minutes.takeIf { it in presets }) { m ->
@@ -790,11 +948,21 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         }
     }
 
-    /** Height of the preview frame for [bmp]: same proportions as the real widget, within sensible limits. */
-    private fun faceHeight(bmp: android.graphics.Bitmap): Int {
+    /**
+     * Height of the preview frame for [bmp]. The OLED designs are drawn to scale against a four-cell-wide home
+     * screen (so a 2×2 looks half as wide as a 4×2, like on the phone); others keep their own proportions.
+     */
+    private fun faceHeight(bmp: android.graphics.Bitmap, item: PlacedWidget? = null): Int {
         val ctx = requireContext()
-        val innerWidth = ctx.resources.displayMetrics.widthPixels - Ui.pxi(ctx, 104f)
-        val wanted = (innerWidth.toFloat() * bmp.height / bmp.width.coerceAtLeast(1)).toInt() + Ui.pxi(ctx, 32f)
+        val innerWidth = ctx.resources.displayMetrics.widthPixels - Ui.pxi(ctx, 80f)
+        val pad = Ui.pxi(ctx, 32f)
+        if (item != null) {
+            // Classic widgets: their grid size gives the height (2 or 4 cells), the picture keeps its own shape.
+            val dh = item.family?.let { AzkarWidgetSizes.design(it).second }
+                ?: if (item.kind == WidgetKind.LARGE) 354f else 158f
+            return ((innerWidth * dh / FOUR_CELLS_DP).toInt() + pad).coerceIn(Ui.pxi(ctx, 88f), Ui.pxi(ctx, 460f))
+        }
+        val wanted = (innerWidth.toFloat() * bmp.height / bmp.width.coerceAtLeast(1)).toInt() + pad
         return wanted.coerceIn(Ui.pxi(ctx, 128f), Ui.pxi(ctx, 420f))
     }
 
@@ -808,7 +976,9 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         }
         peekCache[item.id] = item.config to bitmap
         val face = view.findViewById<LinearLayout>(R.id.preview_face)
-        face.layoutParams = face.layoutParams.apply { height = faceHeight(bitmap) }
+        face.layoutParams = face.layoutParams.apply { height = faceHeight(bitmap, item) }
+        // The picture already has the widget's own card and border; it sits straight on the home strip.
+        face.background = null
         val existing: ImageView? = face.findViewWithTag(FAMILY_PREVIEW_TAG)
         val image = existing ?: ImageView(ctx).apply {
             tag = FAMILY_PREVIEW_TAG
@@ -827,6 +997,7 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
         val face = view.findViewById<LinearLayout>(R.id.preview_face)
         val existing: ImageView? = face.findViewWithTag(FAMILY_PREVIEW_TAG)
         existing?.let { face.removeView(it) }
+        face.setBackgroundResource(R.drawable.widget_editor_preview_face)
         view.findViewById<View>(R.id.preview_arabic).visibility = View.VISIBLE
         view.findViewById<View>(R.id.preview_meta).visibility = View.VISIBLE
         face.layoutParams = face.layoutParams.apply {
@@ -874,3 +1045,8 @@ class WidgetEditorFragment : Fragment(R.layout.fragment_widget_editor), HandlesO
 
 private const val AUTO_SAVE_DELAY_MS = 350L
 private const val FAMILY_PREVIEW_TAG = "family_preview"
+private val REFRESH_PRESETS = listOf(0, 15, 30, 60, 360, 1440)
+/** Up to this many folders are listed as rows; more open the searchable folder sheet instead. */
+private const val MAX_FOLDER_ROWS = 7
+/** Width in dp of a four-cell home-screen widget, the scale the OLED previews are drawn against. */
+private const val FOUR_CELLS_DP = 338f

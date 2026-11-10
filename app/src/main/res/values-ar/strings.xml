@@ -232,6 +232,13 @@
     <string name="edit_zikr">تعديل الذكر</string>
     <string name="hide_from_reading">إخفاء أثناء القراءة</string>
     <string name="folder">المجلد</string>
+    <string name="editor_live_preview">معاينة مباشرة · %1$s · التحديث: %2$s</string>
+    <string name="editor_add_tile">إضافة</string>
+    <string name="editor_sessions_note">يعرض هذا التصميم دائمًا مجلدي الصباح والمساء جنبًا إلى جنب مع تقدّم اليوم من القارئ.</string>
+    <string name="editor_other_folder">مجلد آخر</string>
+    <string name="editor_folder_hint">تظهر فقط المجلدات التي تحتوي على أذكار خاصة بها.</string>
+    <string name="editor_tap_title">عند اللمس</string>
+    <string name="editor_tap_note">لمس الويدجت يضيف واحدًا إلى الذكر الحالي، وعند اكتمال عدده ينتقل إلى الذكر التالي.</string>
     <string name="add_widget">إضافة ويدجت</string>
     <string name="save_changes">حفظ التغييرات</string>
     <string name="delete_zikr">حذف الذكر</string>
