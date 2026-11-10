@@ -234,6 +234,11 @@
     <string name="folder">المجلد</string>
     <string name="editor_live_preview">معاينة مباشرة · %1$s · التحديث: %2$s</string>
     <string name="editor_add_tile">إضافة</string>
+    <string name="close">إغلاق</string>
+    <string name="picker_on_home">على الشاشة</string>
+    <string name="picker_on_home_count">على الشاشة: %1$d</string>
+    <string name="picker_selected">محدد</string>
+    <string name="picker_designs">التصاميم: %1$d</string>
     <string name="editor_sessions_note">يعرض هذا التصميم دائمًا مجلدي الصباح والمساء جنبًا إلى جنب مع تقدّم اليوم من القارئ.</string>
     <string name="editor_other_folder">مجلد آخر</string>
     <string name="editor_folder_hint">تظهر فقط المجلدات التي تحتوي على أذكار خاصة بها.</string>

@@ -60,71 +60,91 @@ internal class WidgetPickerDialog(
     }
 
     fun show() {
+        EditorColors.load(context)
         val dialog = Dialog(context)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        // A bottom sheet: rounded top corners, a grab handle, and the app's dimmed screen above it.
         val root = vertical().apply {
-            background = rounded(R.color.widget_editor_surface1, R.color.widget_editor_border, 28f)
-            setPadding(Ui.pxi(context, 20f), Ui.pxi(context, 18f), Ui.pxi(context, 20f), Ui.pxi(context, 12f))
+            background = GradientDrawable().apply {
+                setColor(context.getColor(R.color.widget_editor_surface1))
+                setStroke(Ui.pxi(context, 1f), context.getColor(R.color.widget_editor_border))
+                val r = Ui.px(context, 30f)
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+            }
+            isClickable = true
         }
         val container = FrameLayout(context)
         container.setBackgroundColor(Color.TRANSPARENT)
+        container.setOnClickListener { dialog.dismiss() }
         container.addView(root, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
-        ).also {
-            val margin = Ui.pxi(context, 12f)
-            it.setMargins(margin, margin, margin, margin)
-        })
+        ).also { it.topMargin = Ui.pxi(context, 46f) })
         val catalog = WidgetKind.values().flatMap { kind ->
             pickerStyles(kind).map { style -> PickerItem(kind, style) } +
                 pickerFamilies(kind).map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
         }
+        // How many of each design are already on the home screen, for the "On home" tags.
+        val placed = try { viewModel.load(context) } catch (e: Exception) { emptyList() }
+        val onHome: (PickerItem) -> Int = { item ->
+            placed.count { p -> if (item.family != null) p.family == item.family else p.family == null && p.kind == item.kind && p.config.style == item.style }
+        }
         var selectedItem = catalog.first()
-        val title = horizontal()
+        val side = Ui.pxi(context, 20f)
+        root.addView(View(context).apply {
+            background = rounded(R.color.widget_editor_border, 0, 2f)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(Ui.pxi(context, 40f), Ui.pxi(context, 4f)).also {
+            it.gravity = Gravity.CENTER_HORIZONTAL
+            it.topMargin = Ui.pxi(context, 10f)
+        })
+        val title = horizontal().apply { gravity = Gravity.CENTER_VERTICAL; setPadding(side, Ui.pxi(context, 10f), side, 0) }
         title.addView(TextView(context, null, 0, R.style.TB).apply {
-            text = context.getString(R.string.available_widgets)
-            textSize = 18f
+            text = context.getString(R.string.add_widget)
+            textSize = 22f
             setTextColor(context.getColor(R.color.widget_editor_text))
         }, LinearLayout.LayoutParams(0, -2, 1f))
         title.addView(TextView(context, null, 0, R.style.WidgetEditorButton).apply {
             text = "×"
-            textSize = 26f
+            textSize = 24f
             gravity = Gravity.CENTER
-            background = rounded(R.color.widget_editor_surface2, R.color.widget_editor_border, 22f)
+            contentDescription = context.getString(R.string.close)
+            setTextColor(context.getColor(R.color.widget_editor_text))
+            background = rounded(R.color.widget_editor_surface2, R.color.widget_editor_border, 20f)
             setOnClickListener { dialog.dismiss() }
-        }, LinearLayout.LayoutParams(Ui.pxi(context, 44f), Ui.pxi(context, 44f)))
+        }, LinearLayout.LayoutParams(Ui.pxi(context, 40f), Ui.pxi(context, 40f)))
         root.addView(title)
-        root.addView(TextView(context, null, 0, R.style.WidgetEditorBody).apply {
-            text = context.getString(R.string.pick_widget_subtitle)
-            textSize = 11f
-            setTextColor(context.getColor(R.color.widget_editor_muted))
-        })
         lateinit var pickerAdapter: PickerAdapter
-        lateinit var addButton: TextView
-        val filters = horizontal()
+        lateinit var updateBar: () -> Unit
+        val filters = horizontal().apply { setPadding(side, 0, side, 0) }
         val filterButtons = mutableListOf<TextView>()
-        listOf(
-            context.getString(R.string.all),
-            context.getString(R.string.small),
-            context.getString(R.string.medium),
-            context.getString(R.string.large)
-        ).forEachIndexed { index, text ->
+        listOf<WidgetKind?>(null, WidgetKind.SMALL, WidgetKind.MEDIUM, WidgetKind.LARGE).forEachIndexed { index, kind ->
+            val count = catalog.count { kind == null || it.kind == kind }
+            if (count == 0) return@forEachIndexed
+            val label = kind?.let { widgetSizeName(context, it) } ?: context.getString(R.string.all)
             filters.addView(TextView(context, null, 0, R.style.WidgetEditorButton).apply {
-                this.text = text
+                // The count sits after the name in a lighter tone.
+                text = android.text.SpannableStringBuilder(label).apply {
+                    append("  ")
+                    val start = length
+                    append(count.toString())
+                    setSpan(android.text.style.RelativeSizeSpan(0.8f), start, length, 0)
+                    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.NORMAL), start, length, 0)
+                }
                 gravity = Gravity.CENTER
+                setPadding(Ui.pxi(context, 16f), 0, Ui.pxi(context, 16f), 0)
+                contentDescription = "$label, $count"
                 filterButtons += this
                 updateFilterAppearance(this, index == 0)
                 setOnClickListener {
-                    val filter = WidgetKind.values().getOrNull(index - 1)
-                    viewModel.setPickerFilter(filter)
-                    catalog.firstOrNull { filter == null || it.kind == filter }?.let { selectedItem = it }
-                    pickerAdapter.setFilter(filter)
-                    addButton.text = addLabel(selectedItem)
-                    filterButtons.forEachIndexed { buttonIndex, button ->
-                        updateFilterAppearance(button, buttonIndex == index)
-                    }
+                    viewModel.setPickerFilter(kind)
+                    if (kind != null && selectedItem.kind != kind)
+                        catalog.firstOrNull { it.kind == kind }?.let { selectedItem = it; pickerAdapter.select(it) }
+                    pickerAdapter.setFilter(kind)
+                    updateBar()
+                    filterButtons.forEach { button -> updateFilterAppearance(button, button === this) }
                 }
-            }, LinearLayout.LayoutParams(Ui.pxi(context, 72f), Ui.pxi(context, 36f)).also {
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ui.pxi(context, 38f)).also {
                 it.marginEnd = Ui.pxi(context, 8f)
             })
         }
@@ -132,15 +152,15 @@ internal class WidgetPickerDialog(
             isHorizontalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             addView(filters)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(context, 36f)).also {
-            it.topMargin = Ui.pxi(context, 16f)
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(context, 38f)).also {
+            it.topMargin = Ui.pxi(context, 14f)
         })
         val recycler = RecyclerView(context).apply {
             setHasFixedSize(true)
             isNestedScrollingEnabled = true
             overScrollMode = View.OVER_SCROLL_NEVER
             clipToPadding = false
-            setPadding(0, 0, 0, Ui.pxi(context, 64f))
+            setPadding(side, 0, side, Ui.pxi(context, 16f))
             layoutManager = GridLayoutManager(context, 2).also { manager ->
                 manager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                     override fun getSpanSize(position: Int) =
@@ -151,23 +171,67 @@ internal class WidgetPickerDialog(
         }
         // Every open starts on "All" (Small → Medium → Large), matching the highlighted filter button.
         viewModel.setPickerFilter(null)
-        pickerAdapter = PickerAdapter(context, catalog, selectedItem, null) { item ->
+        pickerAdapter = PickerAdapter(context, catalog, selectedItem, null, onHome) { item ->
             selectedItem = item
-            addButton.text = addLabel(selectedItem)
+            updateBar()
         }
         adapter = pickerAdapter
         recycler.adapter = pickerAdapter
         root.addView(recycler, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        addButton = TextView(context, null, 0, R.style.WidgetEditorButton).apply {
-            text = addLabel(selectedItem)
+
+        // Confirm bar: a larger preview of the chosen design, its name and size, and the Add button.
+        val bar = vertical().apply {
+            background = GradientDrawable().apply {
+                setColor(context.getColor(R.color.widget_editor_black))
+                setStroke(Ui.pxi(context, 1f), context.getColor(R.color.widget_editor_border))
+                val r = Ui.px(context, 24f)
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+            }
+            elevation = Ui.px(context, 12f)
+            setPadding(side, Ui.pxi(context, 16f), side, Ui.pxi(context, 16f))
+        }
+        val barTop = horizontal().apply { gravity = Gravity.CENTER_VERTICAL }
+        val barThumb = android.widget.ImageView(context).apply {
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        barTop.addView(barThumb, LinearLayout.LayoutParams(Ui.pxi(context, 118f), Ui.pxi(context, 56f)))
+        val barText = vertical()
+        val barName = editorText(context, "", 16f, EditorColors.Text, bold = true).apply {
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val barTags = horizontal()
+        barText.addView(barName)
+        barText.addView(barTags, LinearLayout.LayoutParams(-2, -2).also { it.topMargin = Ui.pxi(context, 8f) })
+        barTop.addView(barText, LinearLayout.LayoutParams(0, -2, 1f).also { it.marginStart = Ui.pxi(context, 14f) })
+        bar.addView(barTop)
+        val addButton = TextView(context, null, 0, R.style.WidgetEditorButton).apply {
             gravity = Gravity.CENTER
             background = rounded(R.color.widget_editor_gold, 0, 16f)
             setTextColor(Color.BLACK)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(Ui.pxi(context, 12f), 0, Ui.pxi(context, 12f), 0)
             setOnClickListener { dialog.dismiss(); requestPin(selectedItem) }
         }
-        root.addView(addButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(context, 52f)).also {
-            it.topMargin = Ui.pxi(context, 12f)
+        bar.addView(addButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.pxi(context, 52f)).also {
+            it.topMargin = Ui.pxi(context, 14f)
         })
+        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, -2))
+        updateBar = {
+            val item = selectedItem
+            barThumb.setImageBitmap(pickerAdapter.preview(item))
+            barName.text = itemName(item)
+            barTags.removeAllViews()
+            barTags.addView(pickerTag(context, pickerSizeLabel(context, item.kind), gold = true))
+            onHome(item).takeIf { it > 0 }?.let {
+                barTags.addView(pickerTag(context, context.getString(R.string.picker_on_home_count, it), gold = false),
+                    LinearLayout.LayoutParams(-2, -2).also { lp -> lp.marginStart = Ui.pxi(context, 6f) })
+            }
+            addButton.text = addLabel(item)
+        }
+        updateBar()
         dialog.setContentView(container)
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -183,20 +247,21 @@ internal class WidgetPickerDialog(
         }
     }
 
-    private fun addLabel(item: PickerItem): String {
-        val name = item.family?.let { FAMILY_LABELS[it] }?.let { context.getString(it) } ?: context.getString(item.style.label)
-        return context.getString(R.string.add_style_to_home, name, widgetSizeName(context, item.kind))
-    }
+    private fun itemName(item: PickerItem): String =
+        item.family?.let { FAMILY_LABELS[it] }?.let { context.getString(it) } ?: context.getString(item.style.label)
+
+    private fun addLabel(item: PickerItem): String =
+        context.getString(R.string.add_style_to_home, itemName(item), widgetSizeName(context, item.kind))
 
     private fun updateFilterAppearance(button: TextView, selected: Boolean) {
-        button.setTextColor(context.getColor(
-            if (selected) R.color.widget_editor_black else R.color.widget_editor_muted
-        ))
+        button.setTextColor(if (selected) Color.BLACK else EditorColors.ChipText)
+        button.setTypeface(button.typeface, if (selected) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
         button.background = rounded(
             if (selected) R.color.widget_editor_gold else R.color.widget_editor_surface2,
             if (selected) R.color.widget_editor_gold else R.color.widget_editor_border,
-            18f
+            19f
         )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) button.stateDescription = if (selected) context.getString(R.string.active) else null
     }
 
     private fun requestPin(item: PickerItem) {
@@ -249,6 +314,7 @@ private class PickerAdapter(
         private val catalog: List<PickerItem>,
         private var selected: PickerItem,
         initialFilter: WidgetKind?,
+        private val onHome: (PickerItem) -> Int,
         private val onSelected: (PickerItem) -> Unit
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         companion object {
@@ -281,6 +347,31 @@ private class PickerAdapter(
             previewCache.clear()
         }
 
+        /** Marks [item] as chosen (when a filter moves the choice) and redraws the two tiles that changed. */
+        fun select(item: PickerItem) {
+            val previous = selected
+            selected = item
+            listOf(previous, item).forEach { s ->
+                rows.indexOfFirst { it is PickerRow.Card && it.item == s }.takeIf { it >= 0 }?.let { notifyItemChanged(it) }
+            }
+        }
+
+        /** The design's real picture with sample content, drawn once per open. */
+        fun preview(item: PickerItem): android.graphics.Bitmap? = previewCache[item] ?: try {
+            val folder = Store.readableFolders().firstOrNull()?.id ?: Store.ANYTIME
+            val family = item.family
+            (if (family != null) {
+                val (dw, dh) = AzkarWidgetSizes.design(family)
+                val model = WidgetModel.load(context, AppWidgetManager.INVALID_APPWIDGET_ID, folder)
+                NewWidgetRenderer(context).render(family, model, dw, dh)
+            } else {
+                WidgetUpdater.previewBitmap(context, item.kind, item.style, folder)
+            }).also { previewCache[item] = it }
+        } catch (error: Exception) {
+            Log.e("WidgetPicker", "Unable to render ${item.kind}/${item.style.label} preview", error)
+            null
+        }
+
         fun setFilter(value: WidgetKind?) {
             val old = rows
             filter = value
@@ -307,34 +398,30 @@ private class PickerAdapter(
 
         private class HeaderHolder(private val text: TextView) : RecyclerView.ViewHolder(text) {
             fun bind(row: PickerRow.Header) {
-                text.text = "${pickerSizeLabel(text.context, row.kind)}    ${row.count} ${text.context.getString(R.string.widgets)}"
-                text.setTextColor(text.context.getColor(R.color.widget_editor_muted))
+                val ctx = text.context
+                text.text = "${pickerSizeLabel(ctx, row.kind)}  ·  ${ctx.getString(R.string.picker_designs, row.count)}"
+                text.setTextColor(ctx.getColor(R.color.widget_editor_muted))
                 text.textSize = 11f
-                text.letterSpacing = 0f
-                text.setPadding(0, Ui.pxi(text.context, 16f), 0, Ui.pxi(text.context, 8f))
+                text.isAllCaps = true
+                text.letterSpacing = if (ctx.resources.configuration.locales[0].language == "ar") 0f else 0.12f
+                text.setPadding(0, Ui.pxi(ctx, 18f), 0, Ui.pxi(ctx, 10f))
             }
         }
 
         private inner class CardHolder(private val frame: FrameLayout) : RecyclerView.ViewHolder(frame) {
             fun bind(item: PickerItem) {
                 val height = if (item.kind == WidgetKind.SMALL) 132 else if (item.kind == WidgetKind.MEDIUM) 104 else 190
+                val on = item == selected
                 frame.removeAllViews()
-                frame.setPadding(Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f), Ui.pxi(context, 6f))
-                frame.background = rounded(item == selected)
-                val bitmap = previewCache[item] ?: try {
-                    val folder = Store.readableFolders().firstOrNull()?.id ?: Store.ANYTIME
-                    val family = item.family
-                    (if (family != null) {
-                        val (dw, dh) = AzkarWidgetSizes.design(family)
-                        val model = WidgetModel.load(context, AppWidgetManager.INVALID_APPWIDGET_ID, folder)
-                        NewWidgetRenderer(context).render(family, model, dw, dh)
-                    } else {
-                        WidgetUpdater.previewBitmap(context, item.kind, item.style, folder)
-                    }).also { previewCache[item] = it }
-                } catch (error: Exception) {
-                    Log.e("WidgetPicker", "Unable to render ${item.kind}/${item.style.label} preview", error)
-                    null
+                frame.setPadding(Ui.pxi(context, 8f), Ui.pxi(context, 8f), Ui.pxi(context, 8f), Ui.pxi(context, 8f))
+                frame.background = rounded(on)
+                (frame.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+                    val m = Ui.pxi(context, 5f); lp.setMargins(m, m, m, m); frame.layoutParams = lp
+                } ?: run {
+                    val m = Ui.pxi(context, 5f)
+                    frame.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.setMargins(m, m, m, m) }
                 }
+                val bitmap = preview(item)
                 val preview: View = if (bitmap != null) {
                     android.widget.ImageView(context).apply {
                         setImageBitmap(bitmap)
@@ -350,11 +437,33 @@ private class PickerAdapter(
                 }
                 // Medium previews share one width (a 4x2 widget's), so the 4x1 strips aren't drawn larger than the rest.
                 val box = height.toFloat() - 12f
-                frame.addView(preview, FrameLayout.LayoutParams(
+                val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+                column.addView(preview, LinearLayout.LayoutParams(
                     if (item.kind == WidgetKind.MEDIUM) Ui.pxi(context, box * 338f / 158f) else ViewGroup.LayoutParams.MATCH_PARENT,
-                    Ui.pxi(context, box),
-                    Gravity.CENTER
-                ))
+                    Ui.pxi(context, box)
+                ).also { it.gravity = Gravity.CENTER_HORIZONTAL })
+                // Name, then "On home" / "Selected" tags.
+                val name = item.family?.let { FAMILY_LABELS[it] }?.let { context.getString(it) } ?: context.getString(item.style.label)
+                column.addView(editorText(context, name, 13f, if (on) EditorColors.Gold else EditorColors.Text, bold = true).apply {
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, -2).also {
+                    it.topMargin = Ui.pxi(context, 8f)
+                    it.marginStart = Ui.pxi(context, 4f); it.marginEnd = Ui.pxi(context, 4f)
+                })
+                // Tags get their own line so they never squeeze the name.
+                val tags = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                if (on) tags.addView(pickerTag(context, context.getString(R.string.picker_selected), gold = true))
+                if (onHome(item) > 0) tags.addView(pickerTag(context, context.getString(R.string.picker_on_home), gold = false),
+                    LinearLayout.LayoutParams(-2, -2).also { if (on) it.marginStart = Ui.pxi(context, 6f) })
+                if (tags.childCount > 0) column.addView(tags, LinearLayout.LayoutParams(-2, -2).also {
+                    it.topMargin = Ui.pxi(context, 6f)
+                    it.marginStart = Ui.pxi(context, 4f)
+                })
+                frame.addView(column, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, -2))
+                frame.contentDescription = name
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                    frame.stateDescription = if (on) context.getString(R.string.picker_selected) else null
                 frame.setOnClickListener {
                     val previous = selected
                     selected = item
@@ -369,14 +478,22 @@ private class PickerAdapter(
             }
 
             private fun rounded(selected: Boolean) = GradientDrawable().apply {
-                setColor(context.getColor(R.color.widget_editor_surface2))
+                setColor(context.getColor(R.color.widget_editor_black))
                 setStroke(
-                    Ui.pxi(context, 1f),
+                    Ui.pxi(context, if (selected) 2f else 1f),
                     context.getColor(if (selected) R.color.widget_editor_gold else R.color.widget_editor_border)
                 )
                 cornerRadius = Ui.px(context, 20f)
             }
         }
+    }
+
+/** A small rounded label: gold for the size or "Selected", quiet for "On home". */
+private fun pickerTag(context: Context, text: String, gold: Boolean): TextView =
+    editorText(context, text, 10f, if (gold) EditorColors.Gold else EditorColors.Muted, bold = true).apply {
+        maxLines = 1
+        setPadding(Ui.pxi(context, 7f), Ui.pxi(context, 2f), Ui.pxi(context, 7f), Ui.pxi(context, 2f))
+        background = editorShape(EditorColors.Chip, 8f, context, EditorColors.Border)
     }
 
 private fun pickerSizeLabel(context: android.content.Context, kind: WidgetKind) = when (kind) {

@@ -388,6 +388,11 @@
     <string name="widget_design">Design</string>
     <string name="editor_live_preview">Live preview · %1$s · Refresh: %2$s</string>
     <string name="editor_add_tile">Add</string>
+    <string name="close">Close</string>
+    <string name="picker_on_home">On home</string>
+    <string name="picker_on_home_count">%1$d on home</string>
+    <string name="picker_selected">Selected</string>
+    <string name="picker_designs">%1$d designs</string>
     <string name="editor_sessions_note">This design always shows your Morning and Evening folders side by side, with today’s progress from the reader.</string>
     <string name="editor_other_folder">Other folder</string>
     <string name="editor_folder_hint">Only folders with azkar of their own are listed.</string>
