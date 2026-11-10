@@ -159,10 +159,12 @@ object NewWidgetUpdater {
     fun syncTrackingProviders(context: Context) {
         val state = if (com.azkar.app.data.Tracking.anyTracked()) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        AzkarWidgetFamily.values().filter { it.tracking && it !in AzkarWidgetFamily.RETIRED }.forEach { family ->
+        AzkarWidgetFamily.values().filter { it.tracking || it in AzkarWidgetFamily.RETIRED }.forEach { family ->
+            // A retired widget stays off even where an older version had switched it on (that setting outlives the manifest).
+            val want = if (family in AzkarWidgetFamily.RETIRED) PackageManager.COMPONENT_ENABLED_STATE_DISABLED else state
             val component = ComponentName(context, providers.getValue(family))
-            if (context.packageManager.getComponentEnabledSetting(component) != state) {
-                context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+            if (context.packageManager.getComponentEnabledSetting(component) != want) {
+                context.packageManager.setComponentEnabledSetting(component, want, PackageManager.DONT_KILL_APP)
             }
         }
     }
