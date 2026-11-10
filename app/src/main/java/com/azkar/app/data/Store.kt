@@ -1200,6 +1200,8 @@ object Store {
 
     fun homeOrder(): List<String> = home.order(defaultOrder)
     fun setHomeOrder(order: List<String>) = home.setOrder(order)
+    fun homeStyle(): String = home.style()
+    fun setHomeStyle(style: String) = home.setStyle(style)
     fun hidden(): Set<String> = home.hidden()
     fun setHidden(set: Set<String>) = home.setHidden(set)
     /** Resets the order; default folders that are not meant for Home (no "home": true) are hidden again. */

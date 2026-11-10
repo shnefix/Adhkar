@@ -32,13 +32,14 @@ your own: write any zikr or dua, choose how many times to repeat it, and organis
 
 ### Azkar
 - **40 built-in collections, more than 850 azkar**: morning, evening, waking up, before sleep, after prayer,
-  short azkar, the prayer itself, tasabih, comprehensive duas, Quranic duas, duas of the prophets, the 99
+  the prayer itself, tasabih, comprehensive duas, Quranic duas, duas of the prophets, the 99
   names of Allah, ruqyah, adhan, wudu, home, food, travel, hajj and umrah, completing the Quran, duas for
   the deceased, distress, istikhara, the sick, rain and wind, clothes, gatherings, anger, the market,
   when you are praised, and more
 - **Add your own azkar**: write any zikr or dua, set its repeat count, give it a title, and put it in
   your own folders; edit, reorder or hide any folder, including the built-in ones
-- Import and export your azkar as a JSON file
+- **Search** the Library for azkar, folders and sources; folders can sit inside other folders
+- Import and export your azkar as a JSON file; a backup also keeps your Home layout and hidden azkar
 
 ### Sources
 - **Where each zikr comes from, one tap away**: the book button on the reader card turns it over to show
@@ -62,8 +63,11 @@ your own: write any zikr or dua, choose how many times to repeat it, and organis
 - Optional tracking of the days you finish your azkar, with streaks
 
 ### Widgets and look
+- **Two looks for Home**: a bento layout with a big card, a wide card and small cards, in colour (one tint
+  per collection, the default) or plain; choose it in Customize
 - Home-screen widgets in many sizes and styles, including tap-to-count; widgets and the reader share
-  their progress
+  their progress; a redesigned Widgets screen and Add widget sheet show each widget to scale on a
+  home-screen strip
 - Full Arabic interface on Arabic phones (RTL), OLED black or teal theme, bundled Amiri and DM Sans fonts
 
 ## Install

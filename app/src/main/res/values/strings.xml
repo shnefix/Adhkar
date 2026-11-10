@@ -31,8 +31,6 @@
     <string name="appearance">Appearance</string>
     <string name="add_reminder">Add reminder</string>
     <string name="no_reminders">No reminders yet. Add your first one below.</string>
-    <string name="completion_screen">Completion screen</string>
-    <string name="completion_screen_summary">Show a summary when a collection is finished</string>
     <string name="tap_to_advance">Tap to advance</string>
     <string name="tap_to_advance_summary">Tapping the card moves to the next dhikr</string>
     <string name="keep_screen_on">Keep screen on</string>
@@ -179,7 +177,6 @@
     <string name="widget_best_lower">best streak</string>
     <string name="widget_time_left">%1$s left</string>
     <string name="widget_starts_in">%1$s in %2$s</string>
-    <string name="complete_streak">%1$d-day streak</string>
     <string name="reminder_at_isha">At Isha</string>
     <string name="reminder_after_isha">%1$d min after Isha</string>
     <string name="reminder_delay_title_isha">Remind after Isha</string>
@@ -211,7 +208,6 @@
     <string name="new_folder_hint">e.g. Travel, Ramadan, Exams</string>
     <string name="save_zikr">Save zikr</string>
     <string name="collection_complete">Collection complete</string>
-    <string name="collection_complete_message">You have finished this collection.</string>
     <string name="back_to_home">Back to Home</string>
     <string name="customize">Customize</string>
     <string name="done">Done</string>
@@ -566,8 +562,8 @@
     <string name="azkar_widget_n_tall_stack_desc">Morning, evening and your folder stacked</string>
     <string name="azkar_widget_u_friday_medium_label">Friday medium</string>
     <string name="azkar_widget_u_friday_medium_desc">Surat al-Kahf and a folder to count</string>
-    <string name="azkar_widget_z6_morning_small_label">Morning small</string>
-    <string name="azkar_widget_z6_morning_small_desc">Opens the morning azkar</string>
+    <string name="azkar_widget_z6_morning_small_label">Morning &amp; evening small</string>
+    <string name="azkar_widget_z6_morning_small_desc">Morning azkar in the morning, evening azkar in the evening, a star otherwise</string>
     <string name="azkar_widget_g5_star_small_label">Star small</string>
     <string name="azkar_widget_g5_star_small_desc">An eight-pointed star</string>
     <string name="azkar_widget_g_rosette_small_label">Rosette small</string>
@@ -591,4 +587,7 @@
     <string name="widget_share">Share</string>
     <string name="grade_none">No grade</string>
     <string name="show_hidden_cards">Show hidden azkar</string>
+    <string name="home_style_colorful">Colorful</string>
+    <string name="home_style_plain">Plain</string>
+    <string name="azkar_count">%d azkar</string>
 </resources>

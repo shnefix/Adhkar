@@ -52,7 +52,7 @@ enum class AzkarWidgetFamily(
     I_COUNTERS_LARGE(R.layout.azkar_widget_counters, R.xml.azkar_widget_i_counters_large_info, WidgetKind.LARGE, tap = WidgetTap.COUNTERS),
     N_TALL_STACK(R.layout.azkar_widget_tracking, R.xml.azkar_widget_n_tall_stack_info, WidgetKind.LARGE, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
     U_FRIDAY_MEDIUM(R.layout.azkar_widget_halves, R.xml.azkar_widget_u_friday_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.FRIDAY),
-    Z6_MORNING_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_z6_morning_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = com.azkar.app.data.DefaultFolders.MORNING),
+    Z6_MORNING_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_z6_morning_small_info, WidgetKind.SMALL, tap = WidgetTap.SESSION),
     G5_STAR_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g5_star_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = WIDGET_FOLDER),
     G_ROSETTE_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_rosette_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = WIDGET_FOLDER),
     /** Morning azkar in the morning window, evening azkar in the evening window, the tahlil card otherwise. */

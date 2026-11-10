@@ -248,7 +248,6 @@ class ReaderFragment : Fragment(R.layout.fragment_reader), HandlesOwnInsets {
                 // finishReading() removes this fragment at once, so keep the activity before calling it.
                 val main = nav()
                 main.finishReading()
-                if (AppPrefs.completionScreen()) main.push(CompleteFragment.of(folderTitle, key))
             }
             onPage = page@{ dir ->
                 if (!alive) return@page

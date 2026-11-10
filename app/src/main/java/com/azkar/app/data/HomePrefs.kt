@@ -59,6 +59,13 @@ class HomePrefs {
         sp.edit().putString(K_HIDDEN, JSONArray(set.toList()).toString()).apply()
     }
 
+    /** Home look: "tinted" (default, a colour per collection) or "plain". */
+    fun style(): String = sp.getString(K_STYLE, STYLE_TINTED) ?: STYLE_TINTED
+
+    fun setStyle(style: String) {
+        sp.edit().putString(K_STYLE, style).apply()
+    }
+
     /** Forgets the order; only [hideByDefault] stay hidden. */
     fun reset(hideByDefault: Set<String>) {
         sp.edit().remove(K_ORDER).remove(K_PLACE).apply()   // K_PLACE: the old Top / Mixed / Bottom choice
@@ -72,10 +79,13 @@ class HomePrefs {
         sp.edit().putString(K_HIDDEN_ZIKRS, JSONArray(hiddenZikrState.value.toList()).toString()).apply()
     }
 
-    private companion object {
-        const val K_ORDER = "home_order"
-        const val K_HIDDEN = "home_hidden"
-        const val K_PLACE = "home_place"   // no longer used; only cleared
-        const val K_HIDDEN_ZIKRS = "hidden_zikrs"
+    companion object {
+        const val STYLE_TINTED = "tinted"
+        const val STYLE_PLAIN = "plain"
+        private const val K_STYLE = "home_style"
+        private const val K_ORDER = "home_order"
+        private const val K_HIDDEN = "home_hidden"
+        private const val K_PLACE = "home_place"   // no longer used; only cleared
+        private const val K_HIDDEN_ZIKRS = "hidden_zikrs"
     }
 }

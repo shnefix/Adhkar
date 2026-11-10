@@ -56,6 +56,7 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
         ids.clear()
         ids += if (libraryTab) Store.folders().map { it.id } else Store.homeOrder()
         renderTabs(view)
+        renderStyle(view)
         view.findViewById<TextView>(R.id.hint).setText(if (libraryTab) R.string.customize_hint_library else R.string.customize_hint_home)
         view.findViewById<View>(R.id.btn_reset).visibility = if (libraryTab) View.GONE else View.VISIBLE
         adapter.notifyDataSetChanged()
@@ -92,6 +93,17 @@ class CustomizeHomeFragment : Fragment(R.layout.fragment_customize_home) {
     private fun renderTabs(view: View) = pills(
         view.findViewById(R.id.tabs), listOf(getString(R.string.home), getString(R.string.library)), if (libraryTab) 1 else 0
     ) { libraryTab = it == 1; load(view) }
+
+    /** Home look: a colour per collection, or plain. Only on the Home tab. */
+    private fun renderStyle(view: View) {
+        val row = view.findViewById<LinearLayout>(R.id.style_row)
+        row.visibility = if (libraryTab) View.GONE else View.VISIBLE
+        val plain = Store.homeStyle() == com.azkar.app.data.HomePrefs.STYLE_PLAIN
+        pills(row, listOf(getString(R.string.home_style_colorful), getString(R.string.home_style_plain)), if (plain) 1 else 0) {
+            Store.setHomeStyle(if (it == 1) com.azkar.app.data.HomePrefs.STYLE_PLAIN else com.azkar.app.data.HomePrefs.STYLE_TINTED)
+            renderStyle(view)
+        }
+    }
 
     // ---------- Live preview ----------
     /** A small copy of Home (shown folders) or of the Library, two per row like the real screens. */

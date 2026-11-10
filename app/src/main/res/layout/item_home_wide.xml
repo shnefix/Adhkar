@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/root" android:clickable="true" android:focusable="true" android:layout_width="match_parent" android:layout_height="wrap_content">
+<View android:id="@+id/mark" android:visibility="gone" android:layout_width="96dp" android:layout_height="96dp" android:layout_gravity="top|end" android:layout_marginTop="-22dp" android:layout_marginEnd="-22dp"/>
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:id="@+id/ic_wrap" android:orientation="vertical" android:gravity="center" android:layout_width="44dp" android:layout_height="44dp">
+<ImageView android:id="@+id/ic" android:importantForAccessibility="no" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" app:tint="@color/teal"/>
+<TextView android:id="@+id/emoji" android:visibility="gone" android:textSize="20sp" android:includeFontPadding="false" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginStart="14dp" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:id="@+id/title" android:textSize="17sp" android:textColor="@color/light" android:maxLines="2" android:ellipsize="end" android:textAlignment="textStart" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/sub" android:textSize="12sp" android:textColor="@color/hint" android:textAlignment="textStart" android:layout_marginTop="2dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+</LinearLayout>
+<ImageView android:importantForAccessibility="no" android:src="@drawable/ic_chev_r_2" android:layout_width="18dp" android:layout_height="18dp" app:tint="@color/muted" android:autoMirrored="true"/>
+</LinearLayout>
+</FrameLayout>

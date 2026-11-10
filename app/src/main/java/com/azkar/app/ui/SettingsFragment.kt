@@ -50,7 +50,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         view.findViewById<View>(R.id.btn_back).setOnClickListener { nav().pop() }
 
         // Reading switches
-        view.findViewById<ToggleSwitch>(R.id.sw_complete).apply { on = AppPrefs.completionScreen(); onToggle = { AppPrefs.setCompletionScreen(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_sources).apply { on = AppPrefs.sourcesOn(); onToggle = { AppPrefs.setSourcesOn(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap).apply { on = AppPrefs.tapAdvance(); onToggle = { AppPrefs.setTapAdvance(it) } }
         view.findViewById<ToggleSwitch>(R.id.sw_tap_back).apply { on = AppPrefs.tapLeftBack(); onToggle = { AppPrefs.setTapLeftBack(it) } }

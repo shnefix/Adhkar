@@ -10,6 +10,7 @@
 <TextView style="@style/TB" android:text="@string/done" android:textSize="15sp" android:textColor="@color/bg" android:id="@+id/btn_done" android:layout_height="44dp" android:paddingHorizontal="18dp" android:gravity="center" android:background="@drawable/bg_gold22" android:clickable="true" android:focusable="true" android:layout_width="wrap_content"/>
 </LinearLayout>
 <LinearLayout android:id="@+id/tabs" android:orientation="horizontal" android:layout_marginTop="16dp" android:padding="4dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="48dp"/>
+<LinearLayout android:id="@+id/style_row" android:orientation="horizontal" android:layout_marginTop="10dp" android:padding="4dp" android:background="@drawable/bg_card22" android:layout_width="match_parent" android:layout_height="48dp"/>
 <TextView style="@style/Caps" android:text="@string/preview" android:layout_marginTop="14dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 <LinearLayout android:id="@+id/preview" android:orientation="vertical" android:layout_marginTop="8dp" android:padding="8dp" android:background="@drawable/bg_prev18" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 <TextView style="@style/T" android:id="@+id/hint" android:textSize="13sp" android:textColor="@color/muted" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>

@@ -40,15 +40,15 @@ object Ui {
      * A folder's name the way the Library shows it: an Arabic name in Amiri 22sp, right to left, any other
      * in DM Sans bold at [latinSp]. [arabic] false always uses the Latin style. Sets every property, for recycled views.
      */
-    fun folderName(tv: TextView, name: String, latinSp: Float = 17f, arabic: Boolean = true) {
+    fun folderName(tv: TextView, name: String, latinSp: Float = 17f, arabic: Boolean = true, arabicSp: Float = 22f) {
         val ctx = tv.context
         tv.text = name
         if (arabic && ARABIC.containsMatchIn(name)) {
             tv.typeface = font(ctx, R.font.amiri_regular)
-            tv.textSize = 22f
+            tv.textSize = arabicSp
             tv.textDirection = View.TEXT_DIRECTION_RTL
             androidx.core.widget.TextViewCompat.setLineHeight(
-                tv, android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 22f * 1.4f, ctx.resources.displayMetrics).toInt()
+                tv, android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, arabicSp * 1.4f, ctx.resources.displayMetrics).toInt()
             )
         } else {
             tv.typeface = font(ctx, R.font.dm_sans_bold)

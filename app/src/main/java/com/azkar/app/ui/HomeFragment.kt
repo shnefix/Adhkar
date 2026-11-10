@@ -1,10 +1,14 @@
 package com.azkar.app.ui
 
+import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -13,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.azkar.app.R
 import com.azkar.app.data.AzkarContent
 import com.azkar.app.data.Folder
+import com.azkar.app.data.HomePrefs
 import com.azkar.app.data.Store
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -20,6 +25,8 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
     private val viewModel: HomeViewModel by viewModels()
+
+    private enum class Kind { SMALL, HERO, WIDE }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val ctx = requireContext()
@@ -31,6 +38,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
 
         fun render(content: AzkarContent) {
             sections.removeAllViews()
+            val tinted = Store.homeStyle() != HomePrefs.STYLE_PLAIN
 
             fun open(f: Folder) {
                 when {
@@ -44,40 +52,95 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
                 }
             }
 
-            fun card(f: Folder): View {
-                return if (Store.isDefaultFolder(f.id)) {
-                    layoutInflater.inflate(R.layout.item_home_collection, null, false).apply {
-                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_book_1p75)
-                        Ui.folderName(findViewById(R.id.title), f.name, latinSp = 16f)
-                        findViewById<TextView>(R.id.sub_ar).text = ""
-                        setOnClickListener { open(f) }
+            fun card(f: Folder, kind: Kind): View {
+                val v = layoutInflater.inflate(if (kind == Kind.WIDE) R.layout.item_home_wide else R.layout.item_home_card, null, false)
+                val builtIn = Store.isDefaultFolder(f.id)
+                Ui.folderIcon(v.findViewById(R.id.ic), v.findViewById(R.id.emoji), f.icon, if (builtIn) R.drawable.ic_book_1p75 else R.drawable.ic_folder_1p75)
+                Ui.folderName(
+                    v.findViewById(R.id.title), f.name,
+                    latinSp = when (kind) { Kind.HERO -> 24f; Kind.WIDE -> 18f; Kind.SMALL -> 16f },
+                    arabicSp = when (kind) { Kind.HERO -> 32f; Kind.WIDE -> 24f; Kind.SMALL -> 22f }
+                )
+                val sub = v.findViewById<TextView>(R.id.sub)
+                val n = Store.zikrsIn(f.id).size
+                val subText = when {
+                    n > 0 -> getString(R.string.azkar_count, n)
+                    !builtIn -> getString(R.string.your_folder)
+                    else -> ""
+                }
+                sub.text = subText
+                sub.visibility = if (subText.isEmpty()) View.GONE else View.VISIBLE
+
+                val base = ctx.getColor(R.color.card)
+                val border = ctx.getColor(R.color.border)
+                val iconBg = ctx.getColor(R.color.card2)
+                if (tinted) {
+                    val tint = TINTS[(f.id.hashCode() and 0x7fffffff) % TINTS.size]
+                    v.background = Ui.shape(ctx, ColorUtils.blendARGB(base, tint, 0.10f), ColorUtils.blendARGB(border, tint, 0.25f), 24f)
+                    v.findViewById<View>(R.id.ic_wrap).background = Ui.shape(ctx, ColorUtils.blendARGB(iconBg, tint, 0.22f), null, 13f)
+                    v.findViewById<android.widget.ImageView>(R.id.ic).imageTintList = ColorStateList.valueOf(tint)
+                    v.findViewById<View>(R.id.mark).apply {
+                        visibility = View.VISIBLE
+                        background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(ColorUtils.setAlphaComponent(tint, 36)) }
                     }
                 } else {
-                    layoutInflater.inflate(R.layout.item_home_folder, null, false).apply {
-                        Ui.folderIcon(findViewById(R.id.ic), findViewById(R.id.emoji), f.icon, R.drawable.ic_folder_1p75)
-                        Ui.folderName(findViewById(R.id.title), f.name)
-                        setOnClickListener { open(f) }
-                    }
+                    v.background = Ui.shape(ctx, base, border, 24f)
+                    v.findViewById<View>(R.id.ic_wrap).background = Ui.shape(ctx, iconBg, null, 13f)
                 }
+                v.clipToOutline = true
+                v.setOnClickListener { open(f) }
+                return v
             }
 
             val foldersById = content.folders.associateBy { it.id }
             val hidden = Store.hidden()
             val shown = Store.homeOrder().filter { it !in hidden }.mapNotNull { foldersById[it] }
+            if (shown.isEmpty()) return
 
-            fun section(label: String?, cards: List<View>): View? {
-                if (cards.isEmpty()) return null
-                val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                if (label != null) box.addView(Ui.caps(ctx, label))
-                box.addView(Ui.grid(ctx, cards, 2, 12), Ui.lp(top = if (label != null) 12 else 0, ctx = ctx))
-                return box
+            val gap = Ui.pxi(ctx, 10f)
+            val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            fun addRow(v: View) {
+                box.addView(v, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
+                    if (box.childCount > 0) it.topMargin = gap
+                })
+            }
+            fun pair(a: Folder, b: Folder?): View = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                addView(card(a, Kind.SMALL), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                addView(b?.let { card(it, Kind.SMALL) } ?: View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = gap })
             }
 
-            // One section in the order set in Customize (drag); built-in and own folders mix freely.
-            val parts: List<View?> = listOf(section(getString(R.string.daily_collections), shown.map { card(it) }))
-            parts.filterNotNull().forEachIndexed { i, v ->
-                sections.addView(v, Ui.lp(top = if (i == 0) 16 else 20, ctx = ctx))
+            // First folder in your order is the big card, beside the next two; then one wide row, then pairs.
+            var i = 0
+            if (shown.size >= 3) {
+                val left = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(card(shown[1], Kind.SMALL), Ui.lp())
+                    addView(card(shown[2], Kind.SMALL), Ui.lp(top = 10, ctx = ctx))
+                }
+                val row = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(card(shown[0], Kind.HERO), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).also { it.marginStart = gap })
+                }
+                addRow(row)
+                i = 3
             }
+            var wideNext = shown.size >= 3
+            while (i < shown.size) {
+                if (wideNext || shown.size - i == 1) {
+                    addRow(card(shown[i], Kind.WIDE)); i++; wideNext = false
+                } else {
+                    addRow(pair(shown[i], shown[i + 1])); i += 2
+                }
+            }
+
+            val section = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(Ui.caps(ctx, getString(R.string.daily_collections)))
+                addView(box, Ui.lp(top = 12, ctx = ctx))
+            }
+            sections.addView(section, Ui.lp(top = 16, ctx = ctx))
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -87,5 +150,9 @@ class HomeFragment : Fragment(R.layout.fragment_home), HandlesOwnInsets {
                 }
             }
         }
+    }
+
+    private companion object {
+        val TINTS = intArrayOf(0xFFE8B44A.toInt(), 0xFF9B8CFF.toInt(), 0xFF7FD1B9.toInt(), 0xFFF29B8B.toInt(), 0xFF6FB6F0.toInt())
     }
 }

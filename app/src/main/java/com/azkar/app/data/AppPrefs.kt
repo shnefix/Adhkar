@@ -19,7 +19,6 @@ object AppPrefs {
     private const val K_FOCUS = "reader_focus"
     private const val K_NOTIF_ID = "notif_id_"
     private const val K_NOTIF_NEXT = "notif_id_next"
-    private const val K_COMPLETE = "completion_screen"
     private const val K_SOURCES = "sources_on"
     private const val K_SRC_OFF_FOLDERS = "sources_off_folders"   // folder ids whose sources are hidden
     private const val K_SRC_OFF_ZIKRS = "sources_off_zikrs"       // zikr ids whose source is hidden
@@ -79,8 +78,6 @@ object AppPrefs {
     fun focusMode() = sp.getBoolean(K_FOCUS, false)
     fun setFocusMode(v: Boolean) = sp.edit().putBoolean(K_FOCUS, v).apply()
     /** Show the "collection complete" screen after the last zikr (off: straight back to Home). */
-    fun completionScreen() = sp.getBoolean(K_COMPLETE, false)
-    fun setCompletionScreen(v: Boolean) = sp.edit().putBoolean(K_COMPLETE, v).apply()
 
     // ---------- Sources: hidden for the whole app, a folder, or one zikr ----------
     /** The reader's source button, for the whole app (on by default). */

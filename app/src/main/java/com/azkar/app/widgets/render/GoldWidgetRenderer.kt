@@ -46,7 +46,11 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         c.save()
         val clip = Path().apply { addRoundRect(RectF(1f, 1f, w - 1f, h - 1f), rad, rad, Path.Direction.CW) }
         c.clipPath(clip)
-        if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) c.drawRect(0f, 0f, w, h, fill(GOLD))
+        val z6Session = if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) AzkarSessionClock.activeSession() else null
+        if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) {
+            // Gold in the morning; black in the evening and when no session is due (the star).
+            c.drawRect(0f, 0f, w, h, fill(if (z6Session == PrayerSessions.Session.MORNING) GOLD else INK))
+        }
         val k = min(w / dw, h / dh)
         c.translate((w - dw * k) / 2f, (h - dh * k) / 2f)
         c.scale(k, k)
@@ -60,7 +64,11 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
             AzkarWidgetFamily.I_COUNTERS_LARGE -> counters(c, m, widgetId)
             AzkarWidgetFamily.N_TALL_STACK -> tallStack(c, m)
             AzkarWidgetFamily.U_FRIDAY_MEDIUM -> friday(c, m)
-            AzkarWidgetFamily.Z6_MORNING_SMALL -> morningSmall(c)
+            AzkarWidgetFamily.Z6_MORNING_SMALL -> when (z6Session) {
+                PrayerSessions.Session.MORNING -> morningSmall(c)
+                PrayerSessions.Session.EVENING -> eveningSmall(c)
+                else -> star(c)
+            }
             AzkarWidgetFamily.G5_STAR_SMALL -> star(c)
             AzkarWidgetFamily.G_ROSETTE_SMALL -> rosette(c)
             AzkarWidgetFamily.M8_SUNRISE -> when (AzkarSessionClock.activeSession()) {
@@ -324,8 +332,10 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
                     val aw = arabicFit(c, arabic, 240f, 404f, cy, 26f, color, Paint.Align.RIGHT)
                     nameMax = 404f - aw - 12f - 76f
                 }
-                label(c, name, 76f, cy - 8f, 15.5f, color, true, maxW = nameMax)
-                label(c, "${if (isDone) m.items[i].target else 0} / ${m.items[i].target}", 76f, cy + 12f, 12f, MUTED, false)
+                // Centred in the room between the check mark and the Arabic (or the card edge).
+                val midX = 76f + nameMax / 2f
+                label(c, name, midX, cy - 8f, 15.5f, color, true, Paint.Align.CENTER, nameMax)
+                label(c, "${if (isDone) m.items[i].target else 0} / ${m.items[i].target}", midX, cy + 12f, 12f, MUTED, false, Paint.Align.CENTER, nameMax)
                 y += 54f + 10f
             }
         }
@@ -440,6 +450,16 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         icon(c, SUNRISE, 103f, 46f, 30f, GOLD, 1.8f)
         arabicFit(c, "أَصْبَحْنَا", 10f, 196f, 115f, 44f, INK)
         label(c, str(R.string.widget_morning_azkar), 103f, 168.3f, 17f, INK, true, Paint.Align.CENTER, 190f)
+    }
+
+    /** The morning small design inverted: black tile, gold lattice, a crescent where the sun was. */
+    private fun eveningSmall(c: Canvas) {
+        listOf(Z6_A to 1.5f, Z6_B to 1.2f, Z6_C to 1.2f).forEach { (pts, sw) -> poly(c, pts, null, GOLD_SHADE, sw) }
+        c.drawCircle(103f, 46f, 28f, fill(GOLD))
+        c.drawCircle(112f, 40f, 22f, fill(INK))
+        listOf(Triple(150f, 30f, 2f), Triple(58f, 62f, 1.8f), Triple(160f, 70f, 1.4f)).forEach { (x, y, r) -> c.drawCircle(x, y, r, fill(GOLD)) }
+        arabicFit(c, "أَمْسَيْنَا", 10f, 196f, 115f, 44f, GOLD)
+        label(c, str(R.string.widget_evening_azkar), 103f, 168.3f, 17f, CREAM, true, Paint.Align.CENTER, 190f)
     }
 
     private fun star(c: Canvas) {
@@ -658,6 +678,7 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         private const val CHIP = 0xFF1A1A1A.toInt()
         private const val LINE = 0xFF1F1F1F.toInt()
         private const val SHADE = 0x1F000000
+        private const val GOLD_SHADE = 0x38E3C06E
 
         /** Design canvas of each family, in the mock-up's pixels. */
         val DESIGN: Map<AzkarWidgetFamily, Pair<Float, Float>> = mapOf(
