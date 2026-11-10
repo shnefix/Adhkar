@@ -106,4 +106,26 @@ class WidgetChangesTest {
         assertEquals(AzkarWidgetFamily.G5_STAR_SMALL, items[13 - 1])
         assertEquals(AzkarWidgetFamily.G_ROSETTE_SMALL, items[14 - 1])
     }
+
+    // ── second round ──
+
+    @Test
+    fun stripsAndTodayAreRetired() {
+        assertEquals(setOf(AzkarWidgetFamily.J_STRIP_DHIKR, AzkarWidgetFamily.J_STRIP_PROGRESS, AzkarWidgetFamily.T_TODAY_MEDIUM), AzkarWidgetFamily.RETIRED)
+    }
+
+    @Test
+    fun dialsOpenTasabihOutsideTheWindows() {
+        assertEquals(SESSION_OR_TASABIH, AzkarWidgetFamily.A_DIAL_SMALL.openFolder)
+        assertEquals(SESSION_OR_TASABIH, AzkarWidgetFamily.A_DIAL_MEDIUM.openFolder)
+    }
+
+    @Test
+    fun mediumPickerNoLongerListsTheRetiredOnes() {
+        val offered = AzkarWidgetFamily.values().filter { it !in AzkarWidgetFamily.RETIRED }
+        val medium = pickerFamilies(WidgetKind.MEDIUM, offered)
+        assertTrue(medium.none { it in AzkarWidgetFamily.RETIRED })
+        assertEquals(AzkarWidgetFamily.M7_TAHLIL_FULL, medium.last())
+        assertEquals(AzkarWidgetFamily.M8_SUNRISE, medium[medium.size - 2])
+    }
 }

@@ -32,8 +32,11 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     in ACTION_COUNTERS -> WidgetStore.addCounter(context, id, ACTION_COUNTERS.indexOf(intent.action))
                 }
             }
-            // Every widget on the same folder moved with this tap (classic and new designs alike), so redraw them all.
-            WidgetUpdater.updateAll(context)
+            // The tapped widget first, so its number changes at once; then every other widget, since those on the
+            // same folder moved with this tap too.
+            val manager = AppWidgetManager.getInstance(context)
+            if (family != null) NewWidgetUpdater.update(context, manager, family, id) else WidgetUpdater.update(context, manager, id, kind)
+            WidgetUpdater.updateAll(context, except = id)
         }
     }
 

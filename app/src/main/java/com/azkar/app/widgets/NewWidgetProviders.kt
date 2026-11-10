@@ -45,8 +45,8 @@ enum class AzkarWidgetFamily(
     // Black & yellow designs.
     K_RINGS_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
     K_RINGS_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
-    A_DIAL_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
-    A_DIAL_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
+    A_DIAL_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
+    A_DIAL_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
     P_AFTER_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_medium_info, WidgetKind.MEDIUM),
     P_AFTER_LARGE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_large_info, WidgetKind.LARGE),
     I_COUNTERS_LARGE(R.layout.azkar_widget_counters, R.xml.azkar_widget_i_counters_large_info, WidgetKind.LARGE, tap = WidgetTap.COUNTERS),
@@ -57,7 +57,12 @@ enum class AzkarWidgetFamily(
     G_ROSETTE_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_g_rosette_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = WIDGET_FOLDER),
     /** Morning azkar in the morning window, evening azkar in the evening window, the tahlil card otherwise. */
     M8_SUNRISE(R.layout.azkar_widget_share, R.xml.azkar_widget_m8_sunrise_info, WidgetKind.MEDIUM, tap = WidgetTap.SESSION),
-    M7_TAHLIL_FULL(R.layout.azkar_widget_share, R.xml.azkar_widget_m7_tahlil_full_info, WidgetKind.MEDIUM, tap = WidgetTap.SHARE),
+    M7_TAHLIL_FULL(R.layout.azkar_widget_share, R.xml.azkar_widget_m7_tahlil_full_info, WidgetKind.MEDIUM, tap = WidgetTap.SHARE);
+
+    companion object {
+        /** No longer offered: the two strips and the "today" bar. Their receivers are disabled in the manifest. */
+        val RETIRED = setOf(J_STRIP_DHIKR, J_STRIP_PROGRESS, T_TODAY_MEDIUM)
+    }
 }
 
 /** [AzkarWidgetFamily.openFolder] value: whichever of the morning / evening folders is current. */
@@ -65,6 +70,9 @@ const val SESSION_FOLDER = "@session"
 
 /** [AzkarWidgetFamily.openFolder] value: the folder this widget is set to show. */
 const val WIDGET_FOLDER = "@widget"
+
+/** [AzkarWidgetFamily.openFolder] value: the morning or evening folder during its window, تسابيح otherwise. */
+const val SESSION_OR_TASABIH = "@session-or-tasabih"
 
 abstract class BaseAzkarWidgetProvider(private val family: AzkarWidgetFamily) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -151,7 +159,7 @@ object NewWidgetUpdater {
     fun syncTrackingProviders(context: Context) {
         val state = if (com.azkar.app.data.Tracking.anyTracked()) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        AzkarWidgetFamily.values().filter { it.tracking }.forEach { family ->
+        AzkarWidgetFamily.values().filter { it.tracking && it !in AzkarWidgetFamily.RETIRED }.forEach { family ->
             val component = ComponentName(context, providers.getValue(family))
             if (context.packageManager.getComponentEnabledSetting(component) != state) {
                 context.packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
@@ -159,11 +167,11 @@ object NewWidgetUpdater {
         }
     }
 
-    fun updateAll(context: Context) {
+    fun updateAll(context: Context, except: Int = AppWidgetManager.INVALID_APPWIDGET_ID) {
         val manager = AppWidgetManager.getInstance(context)
         providers.forEach { (family, provider) ->
             manager.getAppWidgetIds(ComponentName(context, provider)).forEach {
-                update(context, manager, family, it)
+                if (it != except) update(context, manager, family, it)
             }
         }
     }
@@ -207,7 +215,6 @@ object NewWidgetUpdater {
                     val session = AzkarSessionClock.activeSession(now)
                     if (session == null) {
                         rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
-                        rv.setOnClickPendingIntent(R.id.azkar_widget_share, share(context, family, id))
                     } else {
                         rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id,
                             session.folderId.takeIf { com.azkar.app.data.Store.folder(it) != null }))
@@ -219,12 +226,12 @@ object NewWidgetUpdater {
                 }
                 WidgetTap.SHARE -> {
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
-                    rv.setOnClickPendingIntent(R.id.azkar_widget_share, share(context, family, id))
                 }
                 else -> {
                     val folder = when (family.openFolder) {
                         SESSION_FOLDER -> if (AzkarSessionClock.morningActive()) com.azkar.app.data.DefaultFolders.MORNING else com.azkar.app.data.DefaultFolders.EVENING
                         WIDGET_FOLDER -> config.folder
+                        SESSION_OR_TASABIH -> AzkarSessionClock.activeSession()?.folderId ?: com.azkar.app.data.DefaultFolders.TASABIH
                         else -> family.openFolder
                     }
                     rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, folder?.takeIf { com.azkar.app.data.Store.folder(it) != null }))

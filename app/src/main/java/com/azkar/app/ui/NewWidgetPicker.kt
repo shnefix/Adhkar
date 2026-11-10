@@ -62,7 +62,7 @@ internal val FAMILY_LABELS = linkedMapOf(
 
 /** Families the pickers offer: tracking widgets only while at least one folder is tracked. */
 internal fun offeredFamilies(): List<AzkarWidgetFamily> =
-    AzkarWidgetFamily.values().filter { !it.tracking || com.azkar.app.data.Tracking.anyTracked() }
+    AzkarWidgetFamily.values().filter { it !in AzkarWidgetFamily.RETIRED && (!it.tracking || com.azkar.app.data.Tracking.anyTracked()) }
 
 /** Full-screen list of the new widget designs with live previews. Tap one to pin it to the home screen. */
 fun showNewWidgetPicker(context: Context) {

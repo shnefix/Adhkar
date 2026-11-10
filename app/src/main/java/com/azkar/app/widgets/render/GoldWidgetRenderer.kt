@@ -253,8 +253,9 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── P · after prayer ─────────────────────────
 
+    /** A step's zikr text on one line, as the main card shows it (not its title or note). */
     private fun shortName(m: WidgetModel, i: Int): String =
-        (m.labels.getOrNull(i)?.takeIf { !it.startsWith("×") } ?: m.items[i].arabic).replace(Regex("\\s+"), " ").trim()
+        m.items[i].arabic.replace(Regex("\\s+"), " ").trim()
 
     private fun stepFrac(m: WidgetModel, i: Int) = when {
         m.finished || i < m.idx -> 1f
@@ -292,9 +293,9 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         label(c, m.folderName, 22f, 37.2f, 21f, CREAM, true, maxW = 290f)
         label(c, str(R.string.widget_step_total, m.position, m.n, total), 22f, 67f, 14.5f, MUTED, false, maxW = 290f)
         chip(c, "$done / $total", 420f, 22f)
-        // The step before, the current one as a big card, then the ones after (three rows in all).
-        val first = (m.curIdx - 1).coerceIn(0, max(0, m.n - 3))
-        val rows = (first until min(m.n, first + 3)).toList()
+        // The step before, the current one as a big card, then the ones after (four rows in all).
+        val first = (m.curIdx - 1).coerceIn(0, max(0, m.n - 4))
+        val rows = (first until min(m.n, first + 4)).toList()
         var y = 86f
         for (i in rows) {
             if (i == m.curIdx) {
@@ -484,8 +485,6 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         label(c, str(R.string.widget_tahlil), 418f, 26f, 14f, GOLD, true, Paint.Align.RIGHT, 200f)
         arabicFit(c, "لَا إِلَهَ إِلَّا اللَّهُ", 130f, 418f, 85f, 40f, GOLD)
         arabicFit(c, "وَحْدَهُ لَا شَرِيكَ لَهُ", 130f, 418f, 146.25f, 30f, CREAM)
-        c.drawCircle(400f, 172f, 22f, fill(CHIP))
-        icon(c, SHARE, 400f, 172f, 20f, GOLD, 1.9f)
     }
 
     private fun emptyState(c: Canvas, dw: Float, dh: Float) {

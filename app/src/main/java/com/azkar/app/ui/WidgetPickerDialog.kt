@@ -76,8 +76,8 @@ internal class WidgetPickerDialog(
             it.setMargins(margin, margin, margin, margin)
         })
         val catalog = WidgetKind.values().flatMap { kind ->
-            WidgetStyle.values().filter { kind in it.offered }.map { style -> PickerItem(kind, style) } +
-                offeredFamilies().filter { it.kind == kind }.map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
+            pickerStyles(kind).map { style -> PickerItem(kind, style) } +
+                pickerFamilies(kind).map { PickerItem(kind, WidgetStyle.CLASSIC, it) }
         }
         var selectedItem = catalog.first()
         val title = horizontal()

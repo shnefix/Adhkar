@@ -84,12 +84,12 @@ object WidgetUpdater {
     }
 
     /** Re-draws every widget (call it when the app's data may have changed, e.g. MainActivity.onStop). */
-    fun updateAll(ctx: Context) {
+    fun updateAll(ctx: Context, except: Int = AppWidgetManager.INVALID_APPWIDGET_ID) {
         val mgr = AppWidgetManager.getInstance(ctx)
         WidgetKind.values().forEach { k ->
-            mgr.getAppWidgetIds(ComponentName(ctx, providerClass(k))).forEach { update(ctx, mgr, it, k) }
+            mgr.getAppWidgetIds(ComponentName(ctx, providerClass(k))).forEach { if (it != except) update(ctx, mgr, it, k) }
         }
-        NewWidgetUpdater.updateAll(ctx)
+        NewWidgetUpdater.updateAll(ctx, except)
     }
 
     /** Real size of this widget on the launcher grid, in dp (falls back to the default size for its kind). */

@@ -371,8 +371,8 @@ class NewWidgetRenderer(private val ctx: Context) {
     private fun tallRing(c: Canvas, w: Float, h: Float, m: WidgetModel) {
         val s = min(h / 354f, w / 158f).coerceIn(0.7f, 1.3f)
         val l = 14f; val r = w - 14f
-        val hs = listOf(12f, 112f * s, 38f * s, 13f, 44f)
-        val gap = ((h - 30f) - hs.sum()) / 4f
+        val hs = listOf(12f, 112f * s, 38f * s, 13f)
+        val gap = ((h - 30f) - hs.sum()) / 3f
         var y = 16f
         val ys = hs.map { val top = y; y += it + gap; top }
         eyebrow(c, m.folderName, w / 2, ys[0] + 6f, Paint.Align.CENTER, maxW = r - l)
@@ -382,7 +382,6 @@ class NewWidgetRenderer(private val ctx: Context) {
         text(c, str(R.string.widget_of, m.target), cx, cy + 20f * s, 10f * s, muted, dmReg, Paint.Align.CENTER)
         arabicBox(c, m.cur!!.arabic, l, ys[2], r, ys[2] + hs[2], 27f * s, goldSoft)
         caption(c, str(R.string.widget_next_label, nextLabel(m)), w / 2, ys[3] + 6f, Paint.Align.CENTER, maxW = r - l)
-        solid(c, RectF(l, ys[4], r, ys[4] + 44f), "+1")
     }
 
     private fun tallTimeline(c: Canvas, w: Float, h: Float, m: WidgetModel) {
