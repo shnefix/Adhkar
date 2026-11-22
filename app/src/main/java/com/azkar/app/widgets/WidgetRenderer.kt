@@ -71,14 +71,17 @@ class WidgetRenderer(ctx: Context) {
         wDp: Float,
         hDp: Float,
         density: Float,
-        appearance: WidgetStore.Appearance = WidgetStore.Appearance()
+        appearance: WidgetStore.Appearance = WidgetStore.Appearance(),
+        maxPixels: Float = WidgetSizing.MAX_PIXELS,
+        withCard: Boolean = true,
     ): Bitmap {
         this.appearance = appearance
+        this.withCard = withCard
         val widthDp = wDp.coerceAtLeast(1f)
         val heightDp = hDp.coerceAtLeast(1f)
         var s = density
         val px = widthDp * heightDp * s * s
-        if (px > MAX_PIXELS) s *= sqrt(MAX_PIXELS / px)       // RemoteViews bitmaps must stay small
+        if (px > maxPixels) s *= sqrt(maxPixels / px)       // RemoteViews bitmaps must stay small
         val bmp = Bitmap.createBitmap(max(1, (widthDp * s).roundToInt()), max(1, (heightDp * s).roundToInt()), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.scale(s, s)
@@ -277,7 +280,29 @@ class WidgetRenderer(ctx: Context) {
         chip(c, chipText, r, t)
     }
 
+    /**
+     * Just the card ([appearance]'s colour and corners), [wDp]×[hDp]: a home-screen widget shows it stretched to fill,
+     * under the picture drawn with withCard false, which keeps its own proportions.
+     */
+    fun renderCard(wDp: Float, hDp: Float, density: Float, appearance: WidgetStore.Appearance, maxPixels: Float): Bitmap {
+        this.appearance = appearance
+        val widthDp = wDp.coerceAtLeast(1f)
+        val heightDp = hDp.coerceAtLeast(1f)
+        var s = density
+        val px = widthDp * heightDp * s * s
+        if (px > maxPixels) s *= sqrt(maxPixels / px)
+        val bmp = Bitmap.createBitmap(max(1, (widthDp * s).roundToInt()), max(1, (heightDp * s).roundToInt()), Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.scale(s, s)
+        withCard = true
+        card(c, widthDp, heightDp, CARD_BORDER)
+        return bmp
+    }
+
+    private var withCard = true
+
     private fun card(c: Canvas, w: Float, h: Float, border: Int) {
+        if (!withCard) return
         val rect = RectF(.5f, .5f, w - .5f, h - .5f)
         val fill = if (appearance.backgroundColor != 0) appearance.backgroundColor else BLACK
         val radius = appearance.cornerRadiusDp.coerceIn(0f, min(w, h) / 2f)
@@ -416,6 +441,4 @@ class WidgetRenderer(ctx: Context) {
         val lay = layout(s, max(1, (r - l).toInt()), size, 1.2f, color, false, Layout.Alignment.ALIGN_NORMAL, 1)
         c.save(); c.translate(l, cy - lay.height / 2f); lay.draw(c); c.restore()
     }
-
-    private companion object { const val MAX_PIXELS = 1_100_000f }
 }

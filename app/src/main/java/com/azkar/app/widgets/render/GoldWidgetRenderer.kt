@@ -39,15 +39,25 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
 
     private fun str(id: Int, vararg a: Any): String = ctx.getString(id, *a)
 
-    /** Draws [family]; false when it isn't one of these designs. [widgetId] is 0 for previews. */
-    fun draw(c: Canvas, family: AzkarWidgetFamily, w: Float, h: Float, m: WidgetModel, widgetId: Int): Boolean {
+    /** The dial leaves its time out: the widget shows a live clock there instead. */
+    private var liveClock = false
+
+    /**
+     * Draws [family]; false when it isn't one of these designs. [widgetId] is 0 for previews. [withCard] false:
+     * the widget's layout draws the card (the morning tile's gold one too). [liveClock]: see the field.
+     */
+    fun draw(
+        c: Canvas, family: AzkarWidgetFamily, w: Float, h: Float, m: WidgetModel, widgetId: Int,
+        withCard: Boolean = true, liveClock: Boolean = false,
+    ): Boolean {
         val (dw, dh) = DESIGN[family] ?: return false
+        this.liveClock = liveClock
         val rad = min(26f, min(w, h) / 2f)
         c.save()
         val clip = Path().apply { addRoundRect(RectF(1f, 1f, w - 1f, h - 1f), rad, rad, Path.Direction.CW) }
         c.clipPath(clip)
         val z6Session = if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) AzkarSessionClock.activeSession() else null
-        if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) {
+        if (family == AzkarWidgetFamily.Z6_MORNING_SMALL && withCard) {
             // Gold in the morning; black in the evening and when no session is due (the star).
             c.drawRect(0f, 0f, w, h, fill(if (z6Session == PrayerSessions.Session.MORNING) GOLD else INK))
         }
@@ -249,6 +259,7 @@ internal class GoldWidgetRenderer(private val ctx: Context) {
         val mx = cx + cos(a).toFloat() * r; val my = cy + sin(a).toFloat() * r
         c.drawCircle(mx, my, 8.5f, fill(INK))
         c.drawCircle(mx, my, 8.5f, stroke(GOLD, 3f))
+        if (liveClock) return
         val h24 = DateFormat.is24HourFormat(ctx)
         val time = SimpleDateFormat(if (h24) "H:mm" else "h:mm", Locale.US).format(Date(now))
         if (h24) {

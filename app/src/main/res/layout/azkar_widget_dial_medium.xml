@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from GoldWidgetRenderer's dial (442×206 design, dial centre 99, 103, time 32 px).
+     The picture keeps its own proportions; the box around it takes its size, so these weights put the live
+     clock on the dial's centre at any widget size, and autosize scales the time with it. The clock is a TextClock
+     so it is always right: the picture itself is only redrawn every quarter of an hour. Widgets can't use
+     the app's own fonts (the launcher inflates them in a restricted context), so it is the system font in bold. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/azkar_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/azkar_widget_card">
+    <!-- Taps anywhere on the card, the margins around the picture included. -->
+    <FrameLayout android:id="@+id/azkar_widget_hit" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center">
+        <ImageView
+            android:id="@+id/azkar_widget_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+        <!-- FrameLayout stretches its match_parent children to its own size only when it has two or more; this keeps it so. -->
+        <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+        <LinearLayout android:id="@+id/azkar_widget_clock_24" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="82.17" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="41.66" android:orientation="horizontal" android:layoutDirection="ltr">
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="41" />
+                <TextClock
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="116"
+                    android:autoSizeMaxTextSize="200sp"
+                    android:autoSizeMinTextSize="4sp"
+                    android:autoSizeTextType="uniform"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="H:mm"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFEF8"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="285" />
+            </LinearLayout>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="82.17" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/azkar_widget_clock_12" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="71.17" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="41.66" android:orientation="horizontal" android:layoutDirection="ltr">
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="41" />
+                <TextClock
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="116"
+                    android:autoSizeMaxTextSize="200sp"
+                    android:autoSizeMinTextSize="4sp"
+                    android:autoSizeTextType="uniform"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="H:mm"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFEF8"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="285" />
+            </LinearLayout>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="93.17" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/azkar_widget_clock_ampm" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="110.94" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="16.93" android:orientation="horizontal" android:layoutDirection="ltr">
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="64" />
+                <TextClock
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="70"
+                    android:autoSizeMaxTextSize="200sp"
+                    android:autoSizeMinTextSize="4sp"
+                    android:autoSizeTextType="uniform"
+                    android:format12Hour="a"
+                    android:format24Hour="a"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#FF8C8B87"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="308" />
+            </LinearLayout>
+            <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="78.14" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

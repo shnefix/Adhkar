@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
@@ -93,16 +92,8 @@ object WidgetUpdater {
     }
 
     /** Real size of this widget on the launcher grid, in dp (falls back to the default size for its kind). */
-    fun sizeDp(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind): Pair<Float, Float> {
-        val o = mgr.getAppWidgetOptions(id)
-        val land = ctx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val def = DEFAULT_DP.getValue(kind)
-        val w = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH))
-            .takeIf { it > 0 }?.toFloat() ?: def.first
-        val h = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
-            .takeIf { it > 0 }?.toFloat() ?: def.second
-        return w to h
-    }
+    fun sizeDp(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind): Pair<Float, Float> =
+        WidgetSizing.current(ctx, mgr.getAppWidgetOptions(id), DEFAULT_DP.getValue(kind)).let { it.width to it.height }
 
     /** Draws widget [id] exactly as the home screen shows it, but with [cfg] (e.g. an unapplied draft). */
     fun renderBitmap(ctx: Context, id: Int, kind: WidgetKind, cfg: WidgetStore.Config): android.graphics.Bitmap {
@@ -114,61 +105,58 @@ object WidgetUpdater {
     fun update(ctx: Context, mgr: AppWidgetManager, id: Int, kind: WidgetKind) {
         val cfg = WidgetStore.config(ctx, id, kind)
         val model = WidgetModel.load(ctx, id, cfg.folder)
-        val (w, h) = sizeDp(ctx, mgr, id, kind)
-
-        val bmp = WidgetRenderer(ctx).render(
-            cfg.style, kind, model, w, h, ctx.resources.displayMetrics.density, cfg.appearance
-        )
+        val options = mgr.getAppWidgetOptions(id)
+        val plan = WidgetSizing.plan(ctx, options, DEFAULT_DP.getValue(kind), id)
+        // The card is a picture of its own, stretched to fill: exact when the launcher gave sizes, else its best guess.
+        val guess = WidgetSizing.current(ctx, options, DEFAULT_DP.getValue(kind))
+        val maxPixels = WidgetSizing.maxPixels(ctx, plan.sizes.size * 2)
+        val density = ctx.resources.displayMetrics.density
+        val renderer = WidgetRenderer(ctx)
 
         val layout = when {
             cfg.style == WidgetStyle.CLASSIC && kind == WidgetKind.LARGE -> R.layout.widget_classic_large
             cfg.style == WidgetStyle.TASBIH && kind == WidgetKind.LARGE -> R.layout.widget_tasbih_large
             else -> R.layout.widget_plain
         }
-        val rv = RemoteViews(ctx.packageName, layout)
-        rv.setImageViewBitmap(R.id.img, bmp)
-        rv.setContentDescription(
-            R.id.img,
-            if (model.n == 0) ctx.getString(R.string.widget_no_azkar_description)
+        val description = if (model.n == 0) ctx.getString(R.string.widget_no_azkar_description)
             else "${model.folderName}: " + ctx.getString(R.string.widget_count_of, model.shown, model.target)
-        )
-        rv.setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
-        rv.setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
-
         val primary = openApp(ctx, id, cfg.folder)
-        rv.setOnClickPendingIntent(R.id.hit_open, primary)
-        val count = action(ctx, id, kind, ACTION_COUNT)
         val click = when (cfg.appearance.tapAction) {
-            WidgetStore.TapAction.INCREMENT -> count
+            WidgetStore.TapAction.INCREMENT -> action(ctx, id, kind, ACTION_COUNT)
             WidgetStore.TapAction.NEXT_ZIKR -> action(ctx, id, kind, ACTION_NEXT)
-            WidgetStore.TapAction.OPEN_APP, WidgetStore.TapAction.OPEN_READER -> openApp(ctx, id, cfg.folder)
+            WidgetStore.TapAction.OPEN_APP, WidgetStore.TapAction.OPEN_READER -> primary
         }
-        rv.setOnClickPendingIntent(R.id.hit_count, click)
-        if (layout == R.layout.widget_classic_large) {
-            rv.setContentDescription(R.id.hit_count2, ctx.getString(R.string.widget_action_count))
-            rv.setContentDescription(R.id.btn_plus, ctx.getString(R.string.widget_action_count))
-            rv.setOnClickPendingIntent(R.id.hit_count2, click)
-            rv.setOnClickPendingIntent(R.id.btn_plus, click)
-        }
+        val reset = action(ctx, id, kind, ACTION_RESET)
 
-        if (layout == R.layout.widget_tasbih_large) {
-            rv.setContentDescription(R.id.btn_main, ctx.getString(R.string.widget_action_count))
-            rv.setContentDescription(R.id.btn_reset, ctx.getString(R.string.widget_action_reset))
-            rv.setOnClickPendingIntent(R.id.btn_main, click)
-            rv.setOnClickPendingIntent(R.id.btn_reset, action(ctx, id, kind, ACTION_RESET))
+        val rv = WidgetSizing.views(plan.sizes) { size ->
+            RemoteViews(ctx.packageName, layout).apply {
+                val card = if (plan.exact) size else guess
+                setImageViewBitmap(R.id.img_bg, renderer.renderCard(card.width, card.height, density, cfg.appearance, maxPixels))
+                val picture = renderer.render(
+                    cfg.style, kind, model, size.width, size.height, density * plan.scale, cfg.appearance, maxPixels, withCard = false
+                )
+                setImageViewBitmap(R.id.img, WidgetSizing.prepare(ctx, picture))
+                setContentDescription(R.id.img, description)
+                setContentDescription(R.id.hit_open, ctx.getString(R.string.widget_action_open))
+                setContentDescription(R.id.hit_count, ctx.getString(R.string.widget_action_count))
+                setOnClickPendingIntent(R.id.hit_open, primary)
+                setOnClickPendingIntent(R.id.hit_count, click)
+                setOnClickPendingIntent(R.id.hit_bg, click)
+                if (layout == R.layout.widget_classic_large) {
+                    setContentDescription(R.id.hit_count2, ctx.getString(R.string.widget_action_count))
+                    setContentDescription(R.id.btn_plus, ctx.getString(R.string.widget_action_count))
+                    setOnClickPendingIntent(R.id.hit_count2, click)
+                    setOnClickPendingIntent(R.id.btn_plus, click)
+                }
+                if (layout == R.layout.widget_tasbih_large) {
+                    setContentDescription(R.id.btn_main, ctx.getString(R.string.widget_action_count))
+                    setContentDescription(R.id.btn_reset, ctx.getString(R.string.widget_action_reset))
+                    setOnClickPendingIntent(R.id.btn_main, click)
+                    setOnClickPendingIntent(R.id.btn_reset, reset)
+                }
+            }
         }
-
         mgr.updateAppWidget(id, rv)
-    }
-
-    fun preview(ctx: Context, kind: WidgetKind, style: WidgetStyle, folder: String): RemoteViews {
-        val bmp = previewBitmap(ctx, kind, style, folder)
-        val layout = when {
-            style == WidgetStyle.CLASSIC && kind == WidgetKind.LARGE -> R.layout.widget_classic_large
-            style == WidgetStyle.TASBIH && kind == WidgetKind.LARGE -> R.layout.widget_tasbih_large
-            else -> R.layout.widget_plain
-        }
-        return RemoteViews(ctx.packageName, layout).apply { setImageViewBitmap(R.id.img, bmp) }
     }
 
     fun previewBitmap(ctx: Context, kind: WidgetKind, style: WidgetStyle, folder: String): android.graphics.Bitmap {

@@ -7,8 +7,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.net.Uri
+import android.view.View
 import android.widget.RemoteViews
 import com.azkar.app.R
 import com.azkar.app.launchWhenReady
@@ -45,8 +45,9 @@ enum class AzkarWidgetFamily(
     // Black & yellow designs.
     K_RINGS_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
     K_RINGS_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_k_rings_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_FOLDER),
-    A_DIAL_SMALL(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
-    A_DIAL_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_a_dial_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
+    // The dials' layouts put a live clock on the dial (NewWidgetUpdater.LIVE_CLOCK).
+    A_DIAL_SMALL(R.layout.azkar_widget_dial_small, R.xml.azkar_widget_a_dial_small_info, WidgetKind.SMALL, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
+    A_DIAL_MEDIUM(R.layout.azkar_widget_dial_medium, R.xml.azkar_widget_a_dial_medium_info, WidgetKind.MEDIUM, tap = WidgetTap.OPEN, openFolder = SESSION_OR_TASABIH),
     P_AFTER_MEDIUM(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_medium_info, WidgetKind.MEDIUM),
     P_AFTER_LARGE(R.layout.azkar_widget_tracking, R.xml.azkar_widget_p_after_large_info, WidgetKind.LARGE),
     I_COUNTERS_LARGE(R.layout.azkar_widget_counters, R.xml.azkar_widget_i_counters_large_info, WidgetKind.LARGE, tap = WidgetTap.COUNTERS),
@@ -152,6 +153,9 @@ object NewWidgetUpdater {
     )
     const val COUNTDOWN_REFRESH_MINUTES = 15
 
+    /** Families whose layout shows the time with a TextClock, so it is never out of date between redraws. */
+    val LIVE_CLOCK = setOf(AzkarWidgetFamily.A_DIAL_SMALL, AzkarWidgetFamily.A_DIAL_MEDIUM)
+
     /**
      * Tracking widgets are only listed by the launcher while tracking is on: their providers start disabled
      * in the manifest and are enabled here once a folder is tracked (disabling removes placed ones).
@@ -186,73 +190,91 @@ object NewWidgetUpdater {
         com.azkar.app.data.Store.init(context)
         val config = WidgetStore.config(context, id, family.kind)
         val model = WidgetModel.load(context, id, config.folder)
+        val tracking = if (family.tracking) TrackingModel.load(context, config.folder) else null
+        val now = System.currentTimeMillis()
 
-        val o = manager.getAppWidgetOptions(id)
-        val land = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val def = AzkarWidgetSizes.design(family)
-        val width = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH))
-            .takeIf { it > 0 }?.toFloat() ?: def.first
-        val height = (if (land) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT))
-            .takeIf { it > 0 }?.toFloat() ?: def.second
-
-        val rv = RemoteViews(context.packageName, family.layout)
-        if (family.tracking) {
-            val t = TrackingModel.load(context, config.folder)
-            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, t))
-            rv.setContentDescription(R.id.azkar_widget_image, context.getString(R.string.widget_tracking_description, t.title, t.streak, t.best))
-            // A tracking widget has nothing to count: a tap opens the session it shows (or the app).
-            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, t.primaryFolder))
-            scheduleBoundary(context, family, id, t)
-        } else if (family.tap != WidgetTap.COUNT) {
-            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, widgetId = id))
-            rv.setContentDescription(R.id.azkar_widget_image, context.getString(FAMILY_LABEL_IDS.getValue(family)))
-            when (family.tap) {
-                WidgetTap.COUNTERS -> COUNTER_HITS.forEachIndexed { i, hit -> rv.setOnClickPendingIntent(hit, action(context, family, id, ACTION_COUNTERS[i])) }
-                WidgetTap.FRIDAY -> {
-                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, ACTION_KAHF))
-                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit_end, action(context, family, id, ACTION_COUNT))
-                }
-                WidgetTap.SESSION -> {
-                    val now = System.currentTimeMillis()
-                    val session = AzkarSessionClock.activeSession(now)
-                    if (session == null) {
-                        rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
-                    } else {
-                        rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id,
-                            session.folderId.takeIf { com.azkar.app.data.Store.folder(it) != null }))
+        // What the widget says to screen readers and which view does what when tapped: the same at every size.
+        val description: String
+        val hits: List<Pair<Int, PendingIntent>>
+        when {
+            tracking != null -> {
+                description = context.getString(R.string.widget_tracking_description, tracking.title, tracking.streak, tracking.best)
+                // A tracking widget has nothing to count: a tap opens the session it shows (or the app).
+                hits = listOf(R.id.azkar_widget_hit to openApp(context, family, id, tracking.primaryFolder))
+            }
+            family.tap != WidgetTap.COUNT -> {
+                description = context.getString(FAMILY_LABEL_IDS.getValue(family))
+                hits = when (family.tap) {
+                    WidgetTap.COUNTERS -> COUNTER_HITS.mapIndexed { i, hit -> hit to action(context, family, id, ACTION_COUNTERS[i]) }
+                    WidgetTap.FRIDAY -> listOf(
+                        R.id.azkar_widget_hit to action(context, family, id, ACTION_KAHF),
+                        R.id.azkar_widget_hit_end to action(context, family, id, ACTION_COUNT),
+                    )
+                    WidgetTap.SESSION -> listOf(R.id.azkar_widget_hit to openApp(context, family, id,
+                        AzkarSessionClock.activeSession(now)?.folderId?.takeIf { com.azkar.app.data.Store.folder(it) != null }))
+                    WidgetTap.SHARE -> listOf(R.id.azkar_widget_hit to openApp(context, family, id, null))
+                    else -> {
+                        val folder = when (family.openFolder) {
+                            SESSION_FOLDER -> if (AzkarSessionClock.morningActive()) com.azkar.app.data.DefaultFolders.MORNING else com.azkar.app.data.DefaultFolders.EVENING
+                            WIDGET_FOLDER -> config.folder
+                            SESSION_OR_TASABIH -> AzkarSessionClock.activeSession()?.folderId ?: com.azkar.app.data.DefaultFolders.TASABIH
+                            else -> family.openFolder
+                        }
+                        listOf(R.id.azkar_widget_hit to openApp(context, family, id, folder?.takeIf { com.azkar.app.data.Store.folder(it) != null }))
                     }
-                    AzkarSessionClock.nextBoundary(now)?.let {
-                        (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
-                            .set(android.app.AlarmManager.RTC, it + 1_000L, action(context, family, id, ACTION_BOUNDARY))
-                    }
-                }
-                WidgetTap.SHARE -> {
-                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, null))
-                }
-                else -> {
-                    val folder = when (family.openFolder) {
-                        SESSION_FOLDER -> if (AzkarSessionClock.morningActive()) com.azkar.app.data.DefaultFolders.MORNING else com.azkar.app.data.DefaultFolders.EVENING
-                        WIDGET_FOLDER -> config.folder
-                        SESSION_OR_TASABIH -> AzkarSessionClock.activeSession()?.folderId ?: com.azkar.app.data.DefaultFolders.TASABIH
-                        else -> family.openFolder
-                    }
-                    rv.setOnClickPendingIntent(R.id.azkar_widget_hit, openApp(context, family, id, folder?.takeIf { com.azkar.app.data.Store.folder(it) != null }))
                 }
             }
-        } else {
-            rv.setImageViewBitmap(R.id.azkar_widget_image, NewWidgetRenderer(context).render(family, model, width, height, widgetId = id))
-            rv.setContentDescription(
-                R.id.azkar_widget_image,
-                if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
-                else "${model.folderName}: " + context.getString(R.string.widget_count_of, model.shown, model.target)
-            )
-            // The progress strip shows no repeat count, so on the morning and evening folders a tap moves to the next zikr.
-            val stepFolder = config.folder == com.azkar.app.data.DefaultFolders.MORNING || config.folder == com.azkar.app.data.DefaultFolders.EVENING
-            val tapAction = if (family == AzkarWidgetFamily.J_STRIP_PROGRESS && stepFolder) ACTION_STEP else ACTION_COUNT
-            rv.setOnClickPendingIntent(R.id.azkar_widget_hit, action(context, family, id, tapAction))
-            if (family == AzkarWidgetFamily.H_LARGE) {
-                rv.setOnClickPendingIntent(R.id.azkar_widget_undo, action(context, family, id, ACTION_UNDO))
+            else -> {
+                description = if (model.n == 0) context.getString(R.string.widget_no_azkar_description)
+                    else "${model.folderName}: " + context.getString(R.string.widget_count_of, model.shown, model.target)
+                // The progress strip shows no repeat count, so on the morning and evening folders a tap moves to the next zikr.
+                val stepFolder = config.folder == com.azkar.app.data.DefaultFolders.MORNING || config.folder == com.azkar.app.data.DefaultFolders.EVENING
+                val tap = if (family == AzkarWidgetFamily.J_STRIP_PROGRESS && stepFolder) ACTION_STEP else ACTION_COUNT
+                hits = listOfNotNull(
+                    R.id.azkar_widget_hit to action(context, family, id, tap),
+                    if (family == AzkarWidgetFamily.H_LARGE) R.id.azkar_widget_undo to action(context, family, id, ACTION_UNDO) else null,
+                )
             }
+        }
+
+        // The dials always draw their design: their layout puts the live clock by the design's proportions.
+        val liveClock = family in LIVE_CLOCK
+        val plan = WidgetSizing.plan(context, manager.getAppWidgetOptions(id), AzkarWidgetSizes.design(family), id, fill = !liveClock)
+        val maxPixels = WidgetSizing.maxPixels(context, plan.sizes.size)
+        val session = AzkarSessionClock.activeSession(now)
+        val layout = when {
+            // The sun rises from the card's bottom edge, so that picture is kept at the bottom.
+            family == AzkarWidgetFamily.M8_SUNRISE && session == com.azkar.app.reminders.PrayerSessions.Session.MORNING -> R.layout.azkar_widget_share_bottom
+            else -> family.layout
+        }
+        val h24 = android.text.format.DateFormat.is24HourFormat(context)
+        val renderer = NewWidgetRenderer(context)
+        val rv = WidgetSizing.views(plan.sizes) { size ->
+            RemoteViews(context.packageName, layout).apply {
+                val picture = renderer.render(family, model, size.width, size.height, tracking, widgetId = id, maxPixels = maxPixels,
+                    withCard = false, liveClock = liveClock, pixelScale = plan.scale)
+                setImageViewBitmap(R.id.azkar_widget_image, WidgetSizing.prepare(context, picture))
+                setContentDescription(R.id.azkar_widget_image, description)
+                hits.forEach { (view, tap) -> setOnClickPendingIntent(view, tap) }
+                if (family == AzkarWidgetFamily.Z6_MORNING_SMALL) {
+                    // Gold in the morning; black in the evening and when no session is due (the star).
+                    setInt(R.id.azkar_widget_root, "setBackgroundResource",
+                        if (session == com.azkar.app.reminders.PrayerSessions.Session.MORNING) R.drawable.azkar_widget_card_gold
+                        else R.drawable.azkar_widget_card)
+                }
+                if (liveClock) {
+                    setViewVisibility(R.id.azkar_widget_clock_24, if (h24) View.VISIBLE else View.GONE)
+                    setViewVisibility(R.id.azkar_widget_clock_12, if (h24) View.GONE else View.VISIBLE)
+                    setViewVisibility(R.id.azkar_widget_clock_ampm, if (h24) View.GONE else View.VISIBLE)
+                }
+            }
+        }
+
+        // Redraw when a session starts or ends, so "now" / "next" (and the session widgets' picture) flip on time.
+        if (tracking != null) scheduleBoundary(context, family, id, tracking)
+        if (family.tap == WidgetTap.SESSION) AzkarSessionClock.nextBoundary(now)?.let {
+            (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
+                .set(android.app.AlarmManager.RTC, it + 1_000L, action(context, family, id, ACTION_BOUNDARY))
         }
         manager.updateAppWidget(id, rv)
     }

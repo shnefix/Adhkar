@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The sunrise card: the sun rises from the card's bottom edge, so the picture keeps its proportions and sits at
+     the bottom (as wide as the card, or as tall as it when the card is the wider of the two). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/azkar_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/azkar_widget_card">
+    <ImageView
+        android:id="@+id/azkar_widget_image"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:adjustViewBounds="true"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter" />
+    <FrameLayout android:id="@+id/azkar_widget_hit" android:layout_width="match_parent" android:layout_height="match_parent" />
+</FrameLayout>

@@ -1,28 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/azkar_widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <ImageView
-        android:id="@+id/azkar_widget_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:scaleType="fitXY" />
+    android:layout_height="match_parent"
+    android:background="@drawable/azkar_widget_card">
+    <!-- Taps anywhere on the card, the margins around the picture included. -->
+    <FrameLayout android:id="@+id/azkar_widget_hit" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <!-- Sized to the picture, which keeps its own proportions, so the undo area stays on the drawn button. -->
     <FrameLayout
-        android:id="@+id/azkar_widget_hit"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-    <!-- Undo button area: 16dp margins, 44dp tall, 56dp wide (matches the bitmap). -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingBottom="16dp">
-        <FrameLayout
-            android:id="@+id/azkar_widget_undo"
-            android:layout_width="56dp"
-            android:layout_height="match_parent" />
-    </LinearLayout>
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center">
+        <ImageView
+            android:id="@+id/azkar_widget_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+        <!-- FrameLayout stretches its match_parent children to its own size only when it has two or more; this keeps it so. -->
+        <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" />
+        <!-- Undo button area: 16dp margins, 44dp tall, 56dp wide (matches the bitmap, which is drawn left to right in
+             every language, so this row is too). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom"
+            android:layoutDirection="ltr"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingBottom="16dp">
+            <FrameLayout android:id="@+id/azkar_widget_undo" android:layout_width="56dp" android:layout_height="match_parent" />
+        </LinearLayout>
+    </FrameLayout>
 </FrameLayout>

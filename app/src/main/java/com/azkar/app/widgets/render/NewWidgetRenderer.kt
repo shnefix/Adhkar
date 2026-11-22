@@ -131,17 +131,26 @@ class NewWidgetRenderer(private val ctx: Context) {
 
     // ───────────────────────── entry ─────────────────────────
 
-    /** [tracking] feeds the tracking families; previews may leave it null to show every tracked folder. */
-    fun render(family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float, tracking: TrackingModel? = null, widgetId: Int = 0): Bitmap {
+    /**
+     * [tracking] feeds the tracking families; previews may leave it null to show every tracked folder.
+     * [maxPixels] caps the bitmap (RemoteViews bitmaps must stay small). Home-screen widgets pass [withCard] false
+     * (their layout draws the card) and [liveClock] true for the dials (a TextClock shows the time);
+     * [pixelScale] draws more pixels per dp, for a picture the layout will shrink.
+     */
+    fun render(
+        family: AzkarWidgetFamily, m: WidgetModel, widthDp: Float, heightDp: Float, tracking: TrackingModel? = null,
+        widgetId: Int = 0, maxPixels: Float = WidgetSizing.MAX_PIXELS, withCard: Boolean = true,
+        liveClock: Boolean = false, pixelScale: Float = 1f,
+    ): Bitmap {
         val w = widthDp.coerceAtLeast(1f)
         val h = heightDp.coerceAtLeast(1f)
-        var s = ctx.resources.displayMetrics.density
+        var s = ctx.resources.displayMetrics.density * pixelScale
         val px = w * h * s * s
-        if (px > MAX_PIXELS) s *= sqrt(MAX_PIXELS / px) // RemoteViews bitmaps must stay small
+        if (px > maxPixels) s *= sqrt(maxPixels / px)
         val bmp = Bitmap.createBitmap(max(1, (w * s).roundToInt()), max(1, (h * s).roundToInt()), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.scale(s, s)
-        card(c, w, h)
+        if (withCard) card(c, w, h)
         if (family.tracking) {
             val t = tracking ?: TrackingModel.load(ctx, null)
             if (!t.hasFolders) { trackingOff(c, w, h); return bmp }
@@ -155,7 +164,7 @@ class NewWidgetRenderer(private val ctx: Context) {
             }
             return bmp
         }
-        if (GoldWidgetRenderer(ctx).draw(c, family, w, h, m, widgetId)) return bmp
+        if (GoldWidgetRenderer(ctx).draw(c, family, w, h, m, widgetId, withCard, liveClock)) return bmp
         if (m.n == 0) { empty(c, w, h); return bmp }
         when (family) {
             AzkarWidgetFamily.B_SMALL -> discSmall(c, w, h, m)
@@ -765,5 +774,4 @@ class NewWidgetRenderer(private val ctx: Context) {
         c.save(); c.translate(l, cy - lay.height / 2f); lay.draw(c); c.restore()
     }
 
-    private companion object { const val MAX_PIXELS = 1_100_000f }
 }

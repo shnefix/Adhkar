@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The morning tile's gold card (Z6 during the morning window). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/azkar_widget_gold" />
+    <corners android:radius="26dp" />
+</shape>
