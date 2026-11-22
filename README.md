@@ -11,9 +11,9 @@
 
 ## Why Adhkar
 
-Most azkar apps need an account, show ads, or send data to a server. Adhkar does none of that. It has
-no internet permission at all, so it can't track you or send anything anywhere. Your azkar, folders and
-progress stay on your phone.
+Most azkar apps need an account, show ads, or send data to a server. Adhkar does none of that. It uses
+the internet for one thing only: asking GitHub whether a new version is out, so it can offer to install it.
+Nothing about you is sent, and you can turn the check off. Your azkar, folders and progress stay on your phone.
 
 It comes with more than 850 azkar, most with their source from the Quran or the Sunnah, and you can add
 your own: write any zikr or dua, choose how many times to repeat it, and organise it into your own folders.
@@ -80,11 +80,15 @@ your own: write any zikr or dua, choose how many times to repeat it, and organis
    file manager; allow it for this install.
 3. Requires Android 8.0 or newer.
 
+After that the app tells you when a new version is out, with **Install** and **Later**. Install downloads it
+from GitHub and opens Android's installer; the first time, Android asks you to allow Adhkar to install apps.
+
 ## Privacy
 
 | | |
 | --- | --- |
-| Internet access | **None.** The app does not request the `INTERNET` permission, so it cannot send or receive data. |
+| Internet access | **Only for updates.** When you open the app (at most twice a day) it asks GitHub's public API for the latest release, and when you tap Install it downloads that APK from GitHub. Nothing about you or your azkar is sent. Turn it off in Settings › Updates; "Check now" there checks by hand. |
+| Installing updates | `REQUEST_INSTALL_PACKAGES`, so Install can hand the downloaded APK to Android's own installer, which asks you to confirm. The APK must be signed with the same key as the app you have. |
 | Ads, analytics, tracking | None. No third-party SDKs for ads, analytics or crash reporting. |
 | Account | None needed. |
 | Location | Optional, approximate only (`ACCESS_COARSE_LOCATION`). Used on the phone to calculate prayer times for reminders. Deny it and choose a city or enter coordinates instead, or keep the fixed times. |
@@ -130,8 +134,9 @@ base64-encoded), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep the app offline and free of tracking, run the unit
-tests and lint before opening a pull request, and describe how you tested your change.
+Issues and pull requests are welcome. Please keep the app free of tracking (its only network use is the
+update check), run the unit tests and lint before opening a pull request, and describe how you tested
+your change.
 
 ## License
 

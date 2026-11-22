@@ -96,5 +96,22 @@
 </LinearLayout>
 <TextView style="@style/T" android:text="@string/prayer_times_hint" android:textSize="13sp" android:textColor="@color/muted" android:lineHeight="18sp" android:layout_marginTop="8dp" android:paddingHorizontal="4dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="24dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/Caps" android:text="@string/updates" android:textSize="13sp" android:textColor="@color/muted" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<LinearLayout android:orientation="vertical" android:layout_marginTop="10dp" android:background="@drawable/bg_card24" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="14dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:orientation="vertical" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/update_auto" android:textSize="16sp" android:textColor="@color/text" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:text="@string/update_auto_summary" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+<com.azkar.app.ui.ToggleSwitch android:id="@+id/sw_updates" android:layout_width="56dp" android:layout_height="44dp" android:contentDescription="@string/update_auto"/>
+</LinearLayout>
+<View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="18dp" android:background="@color/border"/>
+<LinearLayout android:orientation="vertical" android:id="@+id/update_row" android:clickable="true" android:focusable="true" android:minHeight="64dp" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="18dp" android:paddingEnd="18dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<TextView style="@style/TB" android:text="@string/update_check_now" android:textSize="16sp" android:textColor="@color/text" android:lineHeight="22sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+<TextView style="@style/T" android:id="@+id/version_sub" android:text="" android:textSize="14sp" android:textColor="@color/muted" android:layout_marginTop="2dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+</LinearLayout>
+</LinearLayout>
 </LinearLayout>
 </ScrollView>

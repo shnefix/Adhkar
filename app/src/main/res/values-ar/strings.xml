@@ -620,4 +620,25 @@
     <string name="home_style_colorful">ملوّن</string>
     <string name="home_style_plain">بسيط</string>
     <string name="azkar_count">%d ذكر</string>
+    <!-- التحديثات -->
+    <string name="update_title">تحديث جديد</string>
+    <string name="update_message">الإصدار %1$s من «أذكار» جاهز للتثبيت. الإصدار المثبّت لديك %2$s.</string>
+    <string name="update_whats_new">الجديد:</string>
+    <string name="update_install">تثبيت</string>
+    <string name="update_later">لاحقًا</string>
+    <string name="update_downloading">جارٍ تنزيل «أذكار» %1$s…</string>
+    <string name="update_percent">%1$d٪</string>
+    <string name="update_download_failed">لم يكتمل تنزيل التحديث. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.</string>
+    <string name="update_bad_file">الملف الذي نُزِّل ليس إصدارًا أحدث من «أذكار»، فلم يُثبَّت.</string>
+    <string name="update_other_signature_title">لا يمكن تحديث هذه النسخة</string>
+    <string name="update_other_signature_message">وُقِّعت هذه النسخة من «أذكار» بمفتاح يختلف عن مفتاح إصدار GitHub (فهي نسخة تجريبية)، لذلك لن يثبّت أندرويد التحديث فوقها. للانتقال: خذ نسخة احتياطية من المكتبة › تصدير › كل شيء، ثم احذف هذه النسخة، وثبّت الإصدار من GitHub، ثم استورد النسخة الاحتياطية.</string>
+    <string name="update_open_github">فتح GitHub</string>
+    <string name="update_checking">جارٍ البحث عن تحديث…</string>
+    <string name="update_up_to_date">لديك أحدث إصدار (%1$s).</string>
+    <string name="update_check_failed">تعذّر الوصول إلى GitHub. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.</string>
+    <string name="updates">التحديثات</string>
+    <string name="update_auto">البحث عن تحديثات</string>
+    <string name="update_auto_summary">عند فتح التطبيق، مرتين في اليوم على الأكثر، يُسأل GitHub إن صدر إصدار جديد. لا يُرسَل أي شيء عنك.</string>
+    <string name="update_check_now">ابحث الآن</string>
+    <string name="update_version">الإصدار %1$s</string>
 </resources>

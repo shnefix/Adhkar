@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
                         AppPrefs.setLocationAsked()
                         locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
                     }
+                    // A newer version on GitHub: "Install / Later" (at most two checks a day; off in Settings).
+                    com.azkar.app.ui.UpdatePrompt.checkOnStart(this@MainActivity)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Azkar", "Unable to initialize application data", e)

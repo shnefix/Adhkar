@@ -18,6 +18,7 @@ import com.azkar.app.data.AppPrefs
 import com.azkar.app.reminders.Cities
 import com.azkar.app.reminders.LocationUpdater
 import com.azkar.app.reminders.ReminderScheduler
+import com.azkar.app.update.Updates
 import com.azkar.app.widgets.WidgetUpdater
 
 /** Prayer-time methods offered in Settings: adhan CalculationMethod names and their labels. */
@@ -182,6 +183,12 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 .show()
         }
 
+        // Updates: the automatic check when the app opens, and a check right now.
+        view.findViewById<ToggleSwitch>(R.id.sw_updates).apply { on = Updates.autoCheck(ctx); onToggle = { Updates.setAutoCheck(ctx, it) } }
+        view.findViewById<TextView>(R.id.version_sub).text = getString(R.string.update_version, Updates.installedVersion(ctx))
+        view.findViewById<View>(R.id.update_row).setOnClickListener {
+            (activity as? androidx.appcompat.app.AppCompatActivity)?.let(UpdatePrompt::checkNow)
+        }
     }
 
     /** Latitude / longitude typed by hand, when the phone's location is off. */

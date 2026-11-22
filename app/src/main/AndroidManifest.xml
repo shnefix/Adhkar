@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Only for updates: asking GitHub whether a new version is out, and downloading it when Install is tapped
+         (update/Updates.kt). Android's installer then asks the user to confirm. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".AzkarApp"
@@ -106,6 +110,16 @@
         <receiver android:name=".widgets.WidgetPinReceiver" android:exported="false" />
         <!-- Widget taps that change counts: not exported, so other apps can't send them. -->
         <receiver android:name=".widgets.WidgetActionReceiver" android:exported="false" />
+        <!-- Hands a downloaded update to Android's installer (read access for that one file only). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
         <!-- Widget config activity -->
         <activity
             android:name=".widgets.WidgetConfigActivity"
